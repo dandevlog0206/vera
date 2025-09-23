@@ -1,0 +1,260 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{330a320d-04ca-4b5c-bf55-5e4e478dca1d}</ProjectGuid>
+    <RootNamespace>vera</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>vera_core</TargetName>
+    <OutDir>$(SolutionDir)lib\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetName>vera_core</TargetName>
+    <OutDir>$(SolutionDir)lib\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="include\vera\core\assertion.h" />
+    <ClInclude Include="include\vera\core\buffer_view.h" />
+    <ClInclude Include="include\vera\core\shader_reflection.h" />
+    <ClInclude Include="include\vera\math\matrix_types.h" />
+    <ClInclude Include="include\vera\shader\shader_variable.h" />
+    <ClInclude Include="include\vera\util\colormap.h" />
+    <ClInclude Include="include\vera\util\stack_allocator.h" />
+    <ClInclude Include="source\impl\buffer_impl.h" />
+    <ClInclude Include="source\impl\device_memory_impl.h" />
+    <ClInclude Include="source\impl\sampler_impl.h" />
+    <ClInclude Include="source\impl\semaphore_impl.h" />
+    <ClInclude Include="source\impl\context_impl.h" />
+    <ClInclude Include="include\core\coredefs.hpp" />
+    <ClInclude Include="include\core\device.hpp" />
+    <ClInclude Include="include\core\exception.hpp" />
+    <ClInclude Include="include\core\swapchain.hpp" />
+    <ClInclude Include="include\os\window.hpp" />
+    <ClInclude Include="include\util\enum_info.hpp" />
+    <ClInclude Include="include\util\property.hpp" />
+    <ClInclude Include="include\vera\core\buffer.h" />
+    <ClInclude Include="include\vera\core\color.h" />
+    <ClInclude Include="include\vera\core\context.h" />
+    <ClInclude Include="include\vera\core\coredefs.h" />
+    <ClInclude Include="include\vera\core\core_object.h" />
+    <ClInclude Include="include\vera\core\logger.h" />
+    <ClInclude Include="include\vera\core\resource_layout.h" />
+    <ClInclude Include="include\vera\core\device.h" />
+    <ClInclude Include="include\vera\core\exception.h" />
+    <ClInclude Include="include\vera\core\fence.h" />
+    <ClInclude Include="include\vera\core\format.h" />
+    <ClInclude Include="include\vera\core\graphics_state.h" />
+    <ClInclude Include="include\vera\core\device_memory.h" />
+    <ClInclude Include="include\vera\shader\shader_parameter.h" />
+    <ClInclude Include="include\vera\util\rect.h" />
+    <ClInclude Include="include\vera\util\small_vector.h" />
+    <ClInclude Include="source\impl\device_impl.h" />
+    <ClInclude Include="source\impl\fence_impl.h" />
+    <ClInclude Include="source\impl\object_impl.h" />
+    <ClInclude Include="include\vera\core\pipeline.h" />
+    <ClInclude Include="include\vera\core\pipeline_layout.h" />
+    <ClInclude Include="include\vera\core\render_context.h" />
+    <ClInclude Include="include\vera\core\sampler.h" />
+    <ClInclude Include="include\vera\core\shader.h" />
+    <ClInclude Include="include\vera\core\semaphore.h" />
+    <ClInclude Include="include\vera\core\swapchain.h" />
+    <ClInclude Include="include\vera\core\texture.h" />
+    <ClInclude Include="include\vera\math\vector_types.h" />
+    <ClInclude Include="include\vera\os\keyboard.h" />
+    <ClInclude Include="include\vera\os\mouse.h" />
+    <ClInclude Include="include\vera\os\window.h" />
+    <ClInclude Include="include\vera\os\window_event.h" />
+    <ClInclude Include="include\vera\core\render_command.h" />
+    <ClInclude Include="include\vera\pass\graphics_pass.h" />
+    <ClInclude Include="include\vera\util\enum_traits.h" />
+    <ClInclude Include="include\vera\util\extent.h" />
+    <ClInclude Include="include\vera\util\flag.h" />
+    <ClInclude Include="include\vera\util\hash.h" />
+    <ClInclude Include="include\vera\util\property.h" />
+    <ClInclude Include="include\vera\util\static_vector.h" />
+    <ClInclude Include="include\vera\util\uuid.h" />
+    <ClInclude Include="include\vera\util\version.h" />
+    <ClInclude Include="include\vera\vera.h" />
+    <ClInclude Include="source\impl\pipeline_impl.h" />
+    <ClInclude Include="source\impl\pipeline_layout_impl.h" />
+    <ClInclude Include="source\impl\render_command_impl.h" />
+    <ClInclude Include="source\impl\render_context_impl.h" />
+    <ClInclude Include="source\impl\resource_layout_impl.h" />
+    <ClInclude Include="source\impl\shader_impl.h" />
+    <ClInclude Include="source\impl\swapchain_impl.h" />
+    <ClInclude Include="source\impl\texture_impl.h" />
+    <ClInclude Include="include\vera\core\texture_view.h" />
+    <ClInclude Include="source\internal\include_vulkan.h" />
+    <ClInclude Include="source\internal\format.h" />
+    <ClInclude Include="source\impl\window_impl.h" />
+    <ClCompile Include="source\core_object\texture_view.cpp" />
+    <ClCompile Include="source\core_object\buffer.cpp" />
+    <ClCompile Include="source\colormap.cpp" />
+    <ClCompile Include="source\core_object\device_memory.cpp" />
+    <ClInclude Include="source\impl\shader_reflection_impl.h" />
+    <ClCompile Include="source\logger.cpp" />
+    <ClCompile Include="source\core_object\render_context.cpp" />
+    <ClCompile Include="source\core_object\resource_layout.cpp" />
+    <ClCompile Include="source\core_object\sampler.cpp" />
+    <ClInclude Include="source\shader\shader_storage.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\core_object\fence.cpp" />
+    <ClCompile Include="source\core_object\device.cpp" />
+    <ClCompile Include="source\core_object\context.cpp" />
+    <ClCompile Include="source\graphics_state.cpp" />
+    <ClCompile Include="source\pass\graphics_pass.cpp" />
+    <ClCompile Include="source\core_object\pipeline.cpp" />
+    <ClCompile Include="source\core_object\pipeline_layout.cpp" />
+    <ClCompile Include="source\core_object\shader.cpp" />
+    <ClCompile Include="source\core_object\render_command.cpp" />
+    <ClCompile Include="source\core_object\semaphore.cpp" />
+    <ClCompile Include="source\shader\shader_parameter.cpp" />
+    <ClCompile Include="source\shader\shader_variable.cpp" />
+    <ClCompile Include="source\core_object\shader_reflection.cpp" />
+    <ClCompile Include="source\core_object\swapchain.cpp" />
+    <ClCompile Include="source\core_object\texture.cpp" />
+    <ClCompile Include="source\window.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

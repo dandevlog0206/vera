@@ -1,0 +1,45 @@
+#define VERA_VERSION_MAJOR 1
+#define VERA_VERSION_MINOR 0
+#define VERA_VERSION_PATCH 0
+
+// namespace
+#define VERA_NAMESPACE_BEGIN namespace vr {
+#define VERA_NAMESPACE_END }
+#define VERA_OS_NAMESPACE_BEGIN namespace os {
+#define VERA_OS_NAMESPACE_END }
+#define VERA_PRIV_NAMESPACE_BEGIN namespace priv {
+#define VERA_PRIV_NAMESPACE_END }
+
+// utilities
+#define VERA_LENGTHOF(arr) (sizeof(arr) / sizeof(arr[0]))
+
+#define VERA_NOCOPY(cls) cls(const cls&) = delete;
+#define VERA_NOMOVE(cls) cls(cls&&) = delete;
+
+#define VERA_SPAN(cont) cont.begin(), cont.end()
+
+#define VERA_MAKE_VERSION(major, minor, patch) \
+    ((((uint32_t)(major)) << 22U) | (((uint32_t)(minor)) << 12U) | ((uint32_t)(patch)))
+
+#define VERA_VERSION VERA_MAKE_VERSION(VERA_VERSION_MAJOR, VERA_VERSION_MINOR, VERA_VERSION_PATCH)
+
+// keywords
+#define VERA_INLINE inline
+#define VERA_NOEXCEPT noexcept
+#define VERA_CONSTEXPR constexpr
+
+#ifdef _MSC_VER
+#define VERA_NO_UNIQUE_ADRESS [[msvc::no_unique_address]]
+#else
+#define VERA_NO_UNIQUE_ADRESS [[no_unique_address]]
+#endif
+#define VERA_DEPRECATED [[deprecated]]
+#define VERA_DEPRECATED_MSG(msg) [[deprecated(msg)]]
+#define VERA_NODISCARD [[nodiscard]]
+#define VERA_FALLTHROUGH [[fallthrough]]
+
+// defines
+#define VERA_ENUM : uint32_t
+#define VERA_ENUM64 : uint32_t
+#define VERA_FLAG_BITS : uint32_t
+#define VERA_FLAG_BITS64 : uint32_t

@@ -1,0 +1,34 @@
+#pragma once
+
+#include "texture.h"
+
+VERA_NAMESPACE_BEGIN
+
+struct TextureViewCreateInfo
+{
+	TextureType       type;
+	Format            format;
+	uint32_t          width;
+	uint32_t          height;
+	uint32_t          depth;
+	uint32_t          arraySize;
+	uint32_t          mipLevels;
+	uint32_t          sampleCount;
+};
+
+class TextureView : public CoreObject
+{
+	VERA_CORE_OBJECT(TextureView)
+public:
+	static ref<TextureView> create(ref<Texture> texture, const TextureViewCreateInfo& info);
+	~TextureView();
+
+	ref<Texture> getTexture();
+
+	uint32_t width() const;
+	uint32_t height() const;
+	uint32_t depth() const;
+	extent3d extent() const;
+};
+
+VERA_NAMESPACE_END
