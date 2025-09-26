@@ -36,26 +36,25 @@ static vk::SampleCountFlagBits get_sample_count(uint32_t count)
 	throw Exception("invalid sample count");
 }
 
-static size_t allocate_device_memory(
-	DeviceMemoryImpl&       impl,
-	ref<Device>             device,
-	vk::Image               image,
-	vk::MemoryPropertyFlags flags
+static void allocate_device_memory(
+	DeviceMemoryImpl&   impl,
+	ref<Device>         device,
+	vk::Image           image,
+	MemoryPropertyFlags flags
 ) {
-	auto& device_impl = CoreObject::getImpl(device);
-	auto  req         = device_impl.device.getImageMemoryRequirements(image);
+	auto& device_impl    = CoreObject::getImpl(device);
+	auto  req            = device_impl.device.getImageMemoryRequirements(image);
 
 	vk::MemoryAllocateInfo info;
 	info.allocationSize  = req.size;
-	info.memoryTypeIndex = get_memory_type_index(device_impl, req.memoryTypeBits, flags);
+	info.memoryTypeIndex = find_memory_type_idx(device_impl, flags, req.memoryTypeBits);
 
 	impl.device        = std::move(device);
 	impl.memory        = device_impl.device.allocateMemory(info);
 	impl.propertyFlags = flags;
+	impl.allocated     = info.allocationSize;
 	impl.typeIndex     = info.memoryTypeIndex;
 	impl.mapPtr        = nullptr;
-
-	return info.allocationSize;
 }
 
 vk::Image get_vk_image(const ref<Texture>& texture)
@@ -100,17 +99,19 @@ ref<Texture> Texture::create(ref<Device> device, const TextureCreateInfo& info)
 
 	impl.image = vk_device.createImage(image_info);
 
-	auto alloc_size = allocate_device_memory(
+	allocate_device_memory(
 		memory_impl,
 		impl.device,
 		impl.image,
-		vk::MemoryPropertyFlagBits::eDeviceLocal);
+		MemoryPropertyFlagBits::DeviceLocal);
 
 	auto& binding = memory_impl.resourceBind.emplace_back();
 	binding.resourceType = MemoryResourceType::Texture;
-	binding.size         = alloc_size;
+	binding.size         = memory_impl.allocated;
 	binding.offset       = 0;
 	binding.resourcePtr  = obj.get();
+
+	impl.size = memory_impl.allocated;
 
 	vk_device.bindImageMemory(impl.image, memory_impl.memory, 0);
 

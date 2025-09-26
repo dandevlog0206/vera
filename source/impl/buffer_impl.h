@@ -15,9 +15,9 @@ struct BufferImpl
 
 	vk::Buffer        buffer;
 
+	size_t            size;
 	BufferUsageFlags  usage;
 	IndexType         indexType;
-	size_t            size;
 };
 
 struct BufferViewImpl

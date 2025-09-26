@@ -49,7 +49,7 @@ public:
 	static ref<Buffer> create(ref<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info);
 	~Buffer();
 
-	void resize(size_t size);
+	void resize(size_t new_size);
 
 	ref<DeviceMemory> getDeviceMemory();
 

@@ -20,22 +20,35 @@ static size_t get_index_size(IndexType type)
 	return 0;
 }
 
+static uint32_t find_buffer_bind_idx(DeviceMemoryImpl& impl, Buffer* this_ptr)
+{
+	auto iter = std::find_if(VERA_SPAN(impl.resourceBind),
+		[=](const auto& bind) {
+			return bind.resourcePtr == this_ptr;
+		});
+
+	VERA_ASSERT(iter != impl.resourceBind.end());
+
+	return iter - impl.resourceBind.cbegin();
+}
+
 static void allocate_device_memory(
-	DeviceMemoryImpl&       impl,
-	ref<Device>             device,
-	vk::Buffer              buffer,
-	vk::MemoryPropertyFlags flags
+	DeviceMemoryImpl&   impl,
+	ref<Device>         device,
+	vk::Buffer          buffer,
+	MemoryPropertyFlags flags
 ) {
 	auto& device_impl = CoreObject::getImpl(device);
 	auto  req         = device_impl.device.getBufferMemoryRequirements(buffer);
 
 	vk::MemoryAllocateInfo info;
 	info.allocationSize  = req.size;
-	info.memoryTypeIndex = get_memory_type_index(device_impl, req.memoryTypeBits, flags);
+	info.memoryTypeIndex = find_memory_type_idx(device_impl, flags, req.memoryTypeBits);
 
 	impl.device        = std::move(device);
 	impl.memory        = device_impl.device.allocateMemory(info);
 	impl.propertyFlags = flags;
+	impl.allocated     = info.allocationSize;
 	impl.typeIndex     = info.memoryTypeIndex;
 	impl.mapPtr        = nullptr;
 }
@@ -146,8 +159,8 @@ ref<Buffer> Buffer::create(ref<Device> device, const BufferCreateInfo& info)
 	impl.device = device;
 	impl.memory = std::move(memory_obj);
 	impl.buffer = device_impl.device.createBuffer(buffer_info);
-	impl.usage  = info.usage;
 	impl.size   = info.size;
+	impl.usage  = info.usage;
 
 	allocate_device_memory(memory_impl, std::move(device), impl.buffer, property_flags);
 
@@ -177,8 +190,8 @@ ref<Buffer> Buffer::create(ref<DeviceMemory> memory, size_t offset, const Buffer
 	impl.device = memory_impl.device;
 	impl.memory = std::move(memory);
 	impl.buffer = device_impl.device.createBuffer(buffer_info);
-	impl.usage  = info.usage;
 	impl.size   = info.size;
+	impl.usage  = info.usage;
 
 	auto& binding = memory_impl.resourceBind.emplace_back();
 	binding.resourceType = MemoryResourceType::Buffer;
@@ -193,31 +206,44 @@ ref<Buffer> Buffer::create(ref<DeviceMemory> memory, size_t offset, const Buffer
 
 Buffer::~Buffer()
 {
-	auto& impl          = getImpl(this);
-	auto& resource_bind = getImpl(impl.memory).resourceBind;
-	auto  vk_device     = get_vk_device(impl.device);
+	auto& impl        = getImpl(this);
+	auto& memory_impl = getImpl(impl.memory);
+	auto  vk_device   = get_vk_device(impl.device);
 	
-	auto iter = std::find_if(VERA_SPAN(resource_bind), [this](const auto& bind) {
-		return bind.resourcePtr == this;
-	});
+	auto idx = find_buffer_bind_idx(memory_impl, this);
 
-	VERA_ASSERT(iter != resource_bind.end());
-
-	std::iter_swap(iter, resource_bind.end() - 1);
-	resource_bind.pop_back();
+	std::swap(memory_impl.resourceBind[idx], memory_impl.resourceBind.back());
+	memory_impl.resourceBind.pop_back();
 	
 	vk_device.destroy(impl.buffer);
 
 	destroyObjectImpl(this);
 }
 
-void Buffer::resize(size_t size)
+void Buffer::resize(size_t new_size)
 {
-	auto& impl        = getImpl(this);
-	auto& device_impl = getImpl(impl.device);
-	auto& memory_impl = getImpl(impl.memory);
+	auto& impl = getImpl(this);
 
-	// TODO: implement
+	if (impl.size == new_size) return;
+
+	auto& memory_impl = getImpl(impl.memory);
+	auto  vk_device   = get_vk_device(impl.device);
+	auto  idx         = find_buffer_bind_idx(memory_impl, this);
+	auto& binding     = memory_impl.resourceBind[idx];
+
+	vk::BufferCreateInfo buffer_info;
+	buffer_info.size        = impl.size;
+	buffer_info.usage       = to_vk_buffer_usage_flags(impl.usage);
+	buffer_info.sharingMode = vk::SharingMode::eExclusive;
+
+	vk_device.destroy(impl.buffer);
+	impl.buffer = vk_device.createBuffer(buffer_info);
+	impl.size   = new_size;
+
+	if (memory_impl.allocated < binding.offset + new_size)
+		impl.memory->resize(binding.offset + new_size);
+
+	binding.size = new_size;
 }
 
 ref<DeviceMemory> Buffer::getDeviceMemory()

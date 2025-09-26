@@ -58,7 +58,7 @@ public:
 			.vertexCount    = 6 * 100
 		});
 
-		auto image = vr::Image::loadFromFile("resource/image1.png");
+		auto image = vr::Image::loadFromFile("resource/vulkan.png");
 
 		m_texture = vr::Texture::create(m_device, vr::TextureCreateInfo{
 			.format = image.format(),

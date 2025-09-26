@@ -7,6 +7,8 @@
 VERA_NAMESPACE_BEGIN
 
 class Device;
+class Buffer;
+class Texture;
 
 enum class AccessFlagBits VERA_FLAG_BITS
 {
@@ -33,7 +35,7 @@ enum class AccessFlagBits VERA_FLAG_BITS
 struct DeviceMemoryCreateInfo
 {
 	size_t              size;
-	MemoryPropertyFlags memoryProperties;
+	MemoryPropertyFlags propertyFlags;
 	std::bitset<32>     memoryTypeMask;
 };
 
@@ -45,6 +47,9 @@ public:
 	~DeviceMemory();
 
 	void resize(size_t new_size, bool keep_contents = false);
+
+	void bindBuffer(ref<Buffer> buffer, size_t offset);
+	void bindTexture(ref<Texture> texture, size_t offset);
 
 	void* map();
 	void unmap();

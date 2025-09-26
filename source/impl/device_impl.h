@@ -4,6 +4,7 @@
 
 #include "../../include/vera/core/device.h"
 #include <unordered_map>
+#include <bitset>
 
 VERA_NAMESPACE_BEGIN
 
@@ -53,15 +54,11 @@ struct DeviceImpl
 	ref<Sampler>                        defaultSampler;
 };
 
-static uint32_t get_memory_type_index(DeviceImpl& device_impl, uint32_t type_bits, vk::MemoryPropertyFlags flags)
+static uint32_t find_memory_type_idx(const DeviceImpl& impl, MemoryPropertyFlags flags, std::bitset<32> type_mask)
 {
-	auto& props = device_impl.deviceMemoryProperties;
-
-	for (uint32_t i = 0; i < props.memoryTypeCount; ++i)
-		if (type_bits & (1 << i) && (props.memoryTypes[i].propertyFlags & flags) == flags)
+	for (uint32_t i = 0; i < impl.memoryTypes.size(); ++i)
+		if (type_mask[i] && impl.memoryTypes[i].propertyFlags.has(flags))
 			return i;
-
-	throw Exception("cannot find adequate memory type index");
 }
 
 static vk::MemoryHeapFlags to_vk_memory_heap_flags(MemoryHeapFlags flags)

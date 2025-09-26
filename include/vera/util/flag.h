@@ -44,7 +44,7 @@ public:
 
 	VERA_CONSTEXPR bool has(const Flags<BitType>& rhs) const VERA_NOEXCEPT
 	{
-		return m_mask & rhs.m_mask;
+		return (m_mask & rhs.m_mask) == rhs.m_mask;
 	}
 
 	VERA_CONSTEXPR bool operator<(const Flags<BitType>& rhs) const VERA_NOEXCEPT

@@ -9,9 +9,7 @@ VERA_NAMESPACE_BEGIN
 enum class MemoryResourceType VERA_ENUM
 {
 	Buffer,
-	BufferView,
-	Texture,
-	TextureView
+	Texture
 };
 
 struct MemoryResourceBind
@@ -27,9 +25,10 @@ struct DeviceMemoryImpl
 	ref<Device>                     device;
 
 	vk::DeviceMemory                memory;
-	vk::MemoryPropertyFlags         propertyFlags;
 
+	MemoryPropertyFlags             propertyFlags;
 	std::vector<MemoryResourceBind> resourceBind;
+	size_t                          allocated;
 	uint32_t                        typeIndex;
 	void*                           mapPtr;
 };

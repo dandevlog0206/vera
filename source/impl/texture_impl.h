@@ -21,6 +21,7 @@ struct TextureImpl
 	uint32_t             width;
 	uint32_t             height;
 	uint32_t             depth;
+	size_t               size;
 	bool                 isSwapchainImage;
 };
 
