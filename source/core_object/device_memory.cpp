@@ -6,17 +6,6 @@
 
 VERA_NAMESPACE_BEGIN
 
-static uint32_t get_memory_type_index(DeviceImpl& device_impl, uint32_t type_bits, vk::MemoryPropertyFlags flags)
-{
-	auto& props = device_impl.memoryProperties;
-
-	for (uint32_t i = 0; i < props.memoryTypeCount; ++i)
-		if (type_bits & (1 << i) && (props.memoryTypes[i].propertyFlags & flags) == flags)
-			return i;
-
-	throw Exception("cannot find adequate memory type index");
-}
-
 ref<DeviceMemory> DeviceMemory::create(ref<Device> device, const DeviceMemoryCreateInfo& info)
 {
 	auto  obj         = createNewObject<DeviceMemory>();
@@ -48,8 +37,6 @@ void DeviceMemory::resize(size_t new_size, bool keep_contents)
 {
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
-
-	// device_impl.device.;
 }
 
 void* DeviceMemory::map()

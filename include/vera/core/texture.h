@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core_object.h"
-#include "format.h"
+#include "../graphics/format.h"
 #include "../util/extent.h"
 
 VERA_NAMESPACE_BEGIN
@@ -9,6 +9,7 @@ VERA_NAMESPACE_BEGIN
 class Device;
 class DeviceMemory;
 class TextureView;
+class Image;
 
 enum class TextureType VERA_ENUM
 {
@@ -44,14 +45,14 @@ enum class ImageLayout VERA_ENUM
 
 struct TextureCreateInfo
 {
-	TextureType       type;
-	Format            format;
-	uint32_t          width;
-	uint32_t          height;
-	uint32_t          depth;
-	uint32_t          arraySize;
-	uint32_t          mipLevels;
-	uint32_t          sampleCount;
+	TextureType       type        = TextureType::Texture2D;
+	Format            format      = {};
+	uint32_t          width       = {};
+	uint32_t          height      = {};
+	uint32_t          depth       = 1;
+	uint32_t          arraySize   = 1;
+	uint32_t          mipLevels   = 1;
+	uint32_t          sampleCount = 1;
 	// ResourceBindFlags bindFlags;
 };
 
@@ -61,6 +62,8 @@ class Texture : protected CoreObject
 public:
 	static ref<Texture> create(ref<Device> device, const TextureCreateInfo& info);
 	~Texture();
+
+	void upload(const Image& image);
 
 	ref<DeviceMemory> getDeviceMemory();
 

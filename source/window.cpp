@@ -11,6 +11,19 @@ static void glfw_window_pos_callback(GLFWwindow* window, int x_pos, int y_pos)
 {
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
+	// TODO: fix bug => on window maximize pos_callback -> maximize_callback -> size_callback
+	int2 framebuffer_size;
+	glfwGetFramebufferSize(window, &framebuffer_size.x, &framebuffer_size.y);
+
+	if (impl.swapchain) {
+		auto& swapchain_impl = CoreObject::getImpl(impl.swapchain);
+
+		swapchain_impl.width = framebuffer_size.x;
+		swapchain_impl.height = framebuffer_size.y;
+
+		impl.swapchain->recreate();
+	}
+
 	WindowMoveArgs args = {
 		.pos   = { x_pos, y_pos },
 		.delta = { x_pos - impl.prevPosition.x, y_pos - impl.prevPosition.y }
@@ -35,7 +48,7 @@ static void glfw_window_size_callback(GLFWwindow* window, int width, int height)
 	if (impl.swapchain) {
 		auto& swapchain_impl = CoreObject::getImpl(impl.swapchain);
 
-		swapchain_impl.width  = framebuffer_size.x;
+		swapchain_impl.width = framebuffer_size.x;
 		swapchain_impl.height = framebuffer_size.y;
 
 		impl.swapchain->recreate();

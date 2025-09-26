@@ -1,9 +1,10 @@
 #pragma once
 
 #include "pipeline.h"
+#include "buffer.h"
 #include "texture.h"
 #include "device_memory.h"
-#include "color.h"
+#include "../graphics/color.h"
 #include "../util/rect.h"
 #include <vector>
 
@@ -73,7 +74,7 @@ struct RenderingInfo
 	std::optional<StencilAtttachmentInfo> stencilAttachment;
 };
 
-class RenderCommand : protected CoreObject
+class RenderCommand : protected CoreObject // TODO: consider rename to command buffer
 {
 	VERA_CORE_OBJECT(RenderCommand)
 public:
@@ -84,6 +85,8 @@ public:
 
 	void setViewport(const Viewport& viewport);
 	void setScissor(const Scissor& scissor);
+	void setVertexBuffer(ref<Buffer> buffer);
+	void setIndexBuffer(ref<Buffer> buffer);
 	void setPipeline(ref<Pipeline> pipeline);
 
 	void transitionImageLayout(
@@ -94,6 +97,15 @@ public:
 		AccessFlags        dst_access_mask,
 		ImageLayout        old_layout,
 		ImageLayout        new_layout);
+
+	void copyBufferToTexture(
+		ref<Texture> dst,
+		ref<Buffer>  src,
+		size_t       buffer_offset,
+		uint32_t     buffer_row_length,
+		uint32_t     buffer_image_height,
+		uint3        image_offset,
+		extent3d     image_extent);
 
 	void beginRendering(const RenderingInfo& info);
 

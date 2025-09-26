@@ -22,6 +22,16 @@ public:
 	void pushScissor(const Scissor& viewport);
 	void popScissor();
 
+	void setVertexBuffer(ref<Buffer> buffer);
+	ref<Buffer> getVertexBuffer() const;
+	void pushVertexBuffer(ref<Buffer> buffer);
+	void popVertexBuffer();
+
+	void setIndexBuffer(ref<Buffer> buffer);
+	ref<Buffer> getIndexBuffer() const;
+	void pushIndexBuffer(ref<Buffer> buffer);
+	void popIndexBuffer();
+
 	void setRenderingInfo(const RenderingInfo& info);
 	const RenderingInfo& getRenderingInfo() const;
 	void pushRenderingInfo(const RenderingInfo& info);
@@ -39,6 +49,8 @@ public:
 private:
 	std::vector<Viewport>      m_viewports;
 	std::vector<Scissor>       m_scissors;
+	std::vector<ref<Buffer>>   m_vertex_buffers;
+	std::vector<ref<Buffer>>   m_index_buffers;
 	std::vector<RenderingInfo> m_renderingInfos;
 	std::vector<ref<Pipeline>> m_pipelines;
 };

@@ -89,6 +89,64 @@ void GraphicsState::popScissor()
 	m_scissors.pop_back();
 }
 
+void GraphicsState::setVertexBuffer(ref<Buffer> buffer)
+{
+	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::VertexBuffer))
+		throw Exception("buffer is not for vertex");
+
+	if (m_vertex_buffers.empty())
+		m_vertex_buffers.push_back(buffer);
+	else
+		m_vertex_buffers.back() = buffer;
+}
+
+ref<Buffer> GraphicsState::getVertexBuffer() const
+{
+	return m_vertex_buffers.back();
+}
+
+void GraphicsState::pushVertexBuffer(ref<Buffer> buffer)
+{
+	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::VertexBuffer))
+		throw Exception("buffer is not for vertex");
+
+	m_vertex_buffers.push_back(buffer);
+}
+
+void GraphicsState::popVertexBuffer()
+{
+	m_vertex_buffers.pop_back();
+}
+
+void GraphicsState::setIndexBuffer(ref<Buffer> buffer)
+{
+	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::IndexBuffer))
+		throw Exception("buffer is not for index");
+
+	if (m_index_buffers.empty())
+		m_index_buffers.push_back(buffer);
+	else
+		m_index_buffers.back() = buffer;
+}
+
+ref<Buffer> GraphicsState::getIndexBuffer() const
+{
+	return m_index_buffers.back();
+}
+
+void GraphicsState::pushIndexBuffer(ref<Buffer> buffer)
+{
+	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::IndexBuffer))
+		throw Exception("buffer is not for index");
+
+	m_index_buffers.push_back(buffer);
+}
+
+void GraphicsState::popIndexBuffer()
+{
+	m_index_buffers.pop_back();
+}
+
 void GraphicsState::setRenderingInfo(const RenderingInfo& info)
 {
 	if (m_renderingInfos.empty())
@@ -145,7 +203,13 @@ void GraphicsState::bindRenderCommand(ref<RenderCommand> cmd) const
 	if (!m_scissors.empty())
 		cmd->setScissor(m_scissors.back());
 
-	if (!m_pipelines.empty())
+	if (!m_vertex_buffers.empty() && m_vertex_buffers.back() != cmd_impl.currentVertexBuffer)
+		cmd->setVertexBuffer(m_vertex_buffers.back());
+
+	if (!m_index_buffers.empty() && m_index_buffers.back() != cmd_impl.currentIndexBuffer)
+		cmd->setIndexBuffer(m_index_buffers.back());
+
+	if (!m_pipelines.empty() && m_pipelines.back() != cmd_impl.currentPipeline)
 		cmd->setPipeline(m_pipelines.back());
 
 	if (!m_renderingInfos.empty()) {

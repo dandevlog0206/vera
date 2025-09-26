@@ -1,9 +1,8 @@
 #pragma once
 
-#include "coredefs.h"
+#include "../core/coredefs.h"
 
 VERA_NAMESPACE_BEGIN
-
 
 /*
 Unorm   : 0~1
@@ -170,7 +169,7 @@ enum class Format
 	D32FloatS8Uint,
 
 	// Alpha
-	A8Unorm,
+	A8Unorm
 };
 
 enum class VectorFormat

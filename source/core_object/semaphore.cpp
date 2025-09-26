@@ -5,6 +5,16 @@
 
 VERA_NAMESPACE_BEGIN
 
+static bool check_same_device(std::span<ref<Semaphore>> semaphores)
+{
+	auto vk_device = CoreObject::getImpl(semaphores.front()).device;
+
+	for (size_t i = 1; i < semaphores.size(); ++i)
+		if (CoreObject::getImpl(semaphores[i]).device != vk_device)
+			return false;
+	return true;
+}
+
 static bool wait_semaphores(vk::Device vk_device, std::span<ref<Semaphore>> semaphores, uint64_t timeout, bool wait_all)
 {
 	static std::vector<vk::Semaphore> s_semaphores;
@@ -43,6 +53,8 @@ bool Semaphore::waitAll(std::span<ref<Semaphore>> semaphores, uint64_t timeout)
 	if (semaphores.empty())
 		return true;
 
+	VERA_ASSERT_MSG(check_same_device(semaphores), "semaphores don't share same device");
+
 	auto vk_device = get_vk_device(getImpl(semaphores.front()).device);
 
 	return wait_semaphores(vk_device, semaphores, true, timeout);
@@ -52,6 +64,8 @@ bool Semaphore::waitAny(std::span<ref<Semaphore>> semaphores, uint64_t timeout)
 {
 	if (semaphores.empty())
 		return true;
+
+	VERA_ASSERT_MSG(check_same_device(semaphores), "semaphores don't share same device");
 
 	auto vk_device = get_vk_device(getImpl(semaphores.front()).device);
 

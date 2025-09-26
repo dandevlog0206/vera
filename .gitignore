@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Private image files
+resource/pjw.png
+resource/lsm.png
+
 # User-specific files
 *.rsuser
 *.suo

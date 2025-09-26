@@ -268,7 +268,7 @@ static ReflectionPrimitiveType reflect_matrix_type(const SpvReflectTypeDescripti
 	throw Exception("failed to reflect matrix type");
 }
 
-static ReflectionPrimitiveType reflect_primitive_type(ShaderImpl& impl, const SpvReflectTypeDescription& desc)
+static ReflectionPrimitiveType reflect_primitive_type(const SpvReflectTypeDescription& desc)
 {
 	if (desc.type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX)
 		return reflect_matrix_type(desc);
@@ -317,7 +317,7 @@ static ReflectionDesc* reflect_block_variable(ShaderImpl& impl, const SpvReflect
 	auto* result = new ReflectionPrimitiveDesc{};
 	result->type          = ReflectionType::Primitive;
 	result->name          = impl.namePool.insert(block.name).first->c_str();
-	result->primitiveType = reflect_primitive_type(impl, *block.type_description);
+	result->primitiveType = reflect_primitive_type(*block.type_description);
 	result->offset        = block.offset;
 
 	return result;
@@ -438,16 +438,18 @@ static void parse_shader(ShaderImpl& impl, const uint32_t* spirv_code, size_t si
 {
 	spv_reflect::ShaderModule parser(size_in_byte, spirv_code);
 
-	std::vector<ResourceLayoutBinding> bindings;
-	uint32_t                           desc_set_count;
-	uint32_t                           pc_count;
+	uint32_t input_vars_count;
+	uint32_t desc_set_count;
+	uint32_t pc_count;
 
 	impl.entryPointName   = parser.GetEntryPointName();
 	impl.shaderStageFlags = to_shader_stage(parser.GetShaderStage());
 
+	std::vector<ResourceLayoutBinding> bindings;
 	parser.EnumerateDescriptorSets(&desc_set_count, nullptr);
 	for (uint32_t i = 0; i < desc_set_count; ++i) {
-		auto& set = *parser.GetDescriptorSet(i);
+		auto& set         = *parser.GetDescriptorSet(i);
+		auto  refl_offset = impl.reflections.size();
 
 		bindings.clear();
 		bindings.reserve(set.binding_count);
@@ -466,7 +468,12 @@ static void parse_shader(ShaderImpl& impl, const uint32_t* spirv_code, size_t si
 			impl.reflections.push_back(reflect_resource(impl, binding));
 		}
 
-		impl.resourceLayouts.push_back(ResourceLayout::create(impl.device, bindings));
+		auto resource_layout = ResourceLayout::create(impl.device, bindings);
+
+		for (size_t i = refl_offset; i < impl.reflections.size(); ++i)
+			impl.reflections[i]->resourceLayout = resource_layout;
+
+		impl.resourceLayouts.push_back(resource_layout);
 	}
 
 	parser.EnumeratePushConstantBlocks(&pc_count, nullptr);

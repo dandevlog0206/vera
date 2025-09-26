@@ -3,6 +3,7 @@
 #include "../impl/device_impl.h"
 
 #include "../../include/vera/core/context.h"
+#include "../../include/vera/core/render_command.h"
 #include "../../include/vera/core/pipeline.h"
 #include "../../include/vera/core/shader.h"
 #include "../../include/vera/core/sampler.h"
@@ -11,6 +12,38 @@
 #include <fstream>
 
 VERA_NAMESPACE_BEGIN
+
+static MemoryHeapFlags to_memory_heap_flags(vk::MemoryHeapFlags flags)
+{
+	MemoryHeapFlags result;
+
+	if (flags & vk::MemoryHeapFlagBits::eDeviceLocal)
+		result |= MemoryHeapFlagBits::DeviceLocal;
+	if (flags & vk::MemoryHeapFlagBits::eMultiInstance)
+		result |= MemoryHeapFlagBits::MultiInstance;
+
+	return result;
+}
+
+static MemoryPropertyFlags to_memory_property_flags(vk::MemoryPropertyFlags flags)
+{
+	MemoryPropertyFlags result;
+
+	if (flags & vk::MemoryPropertyFlagBits::eDeviceLocal)
+		result |= MemoryPropertyFlagBits::DeviceLocal;
+	if (flags & vk::MemoryPropertyFlagBits::eHostVisible)
+		result |= MemoryPropertyFlagBits::HostVisible;
+	if (flags & vk::MemoryPropertyFlagBits::eHostCoherent)
+		result |= MemoryPropertyFlagBits::HostCoherent;
+	if (flags & vk::MemoryPropertyFlagBits::eHostCached)
+		result |= MemoryPropertyFlagBits::HostCached;
+	if (flags & vk::MemoryPropertyFlagBits::eLazilyAllocated)
+		result |= MemoryPropertyFlagBits::LazilyAllocated;
+	if (flags & vk::MemoryPropertyFlagBits::eProtected)
+		result |= MemoryPropertyFlagBits::Protected;
+
+	return result;
+}
 
 static void clean_device_cache(DeviceImpl& impl)
 {
@@ -143,7 +176,7 @@ ref<Device> Device::create(ref<Context> context, const DeviceCreateInfo& info)
 	device_info.pNext                   = &dynamic_rendering;
 
 	impl.physicalDeviceProperties = physical_device.getProperties();
-	impl.memoryProperties         = physical_device.getMemoryProperties();
+	impl.deviceMemoryProperties   = physical_device.getMemoryProperties();
 	impl.physicalDevice           = physical_device;
 	impl.device                   = physical_device.createDevice(device_info);
 	impl.graphicsQueue            = impl.device.getQueue(graphics_family, 0);
@@ -180,6 +213,19 @@ ref<Device> Device::create(ref<Context> context, const DeviceCreateInfo& info)
 		impl.pipelineCache = impl.device.createPipelineCache(cache_info);
 	}
 
+	for (uint32_t i = 0; i < impl.deviceMemoryProperties.memoryTypeCount; ++i) {
+		uint32_t heap_idx   = impl.deviceMemoryProperties.memoryTypes[i].heapIndex;
+		auto     flags      = impl.deviceMemoryProperties.memoryTypes[i].propertyFlags;
+		size_t   heap_size  = impl.deviceMemoryProperties.memoryHeaps[heap_idx].size;
+		auto     heap_flags = impl.deviceMemoryProperties.memoryHeaps[heap_idx].flags;
+
+		auto& prop = impl.memoryTypes.emplace_back();
+		prop.heapID        = heap_idx;
+		prop.size          = heap_size;
+		prop.heapFlags     = to_memory_heap_flags(heap_flags);
+		prop.propertyFlags = to_memory_property_flags(flags);
+	}
+
 	return obj;
 }
 
@@ -202,11 +248,25 @@ Device::~Device()
 	destroyObjectImpl<Device>(this);
 }
 
-void Device::waitIdle() const
+const std::vector<DeviceMemoryType>& Device::getMemoryTypes() const
+{
+	return getImpl(this).memoryTypes;
+}
+
+void Device::submitCommand(ref<RenderCommand> command)
 {
 	auto& impl = getImpl(this);
+	
+	vk::SubmitInfo submit_info;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers    = &get_vk_command_buffer(command);
 
-	impl.device.waitIdle();
+	impl.graphicsQueue.submit(submit_info, nullptr);
+}
+
+void Device::waitIdle() const
+{
+	getImpl(this).device.waitIdle();
 }
 
 VERA_NAMESPACE_END

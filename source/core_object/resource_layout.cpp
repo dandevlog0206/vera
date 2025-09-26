@@ -23,6 +23,16 @@ static size_t hash_resource_binding(const std::vector<ResourceLayoutBinding>& bi
 	return seed;
 }
 
+vk::DescriptorSetLayout get_descriptor_set_layout(const ref<ResourceLayout>& resource_layout)
+{
+	return CoreObject::getImpl(resource_layout).layout;
+}
+
+vk::DescriptorSetLayout& get_descriptor_set_layout(ref<ResourceLayout>& resource_layout)
+{
+	return CoreObject::getImpl(resource_layout).layout;
+}
+
 ref<ResourceLayout> ResourceLayout::create(ref<Device> device, const std::vector<ResourceLayoutBinding>& bindings)
 {
 	auto&  device_impl = getImpl(device);

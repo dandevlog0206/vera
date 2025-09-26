@@ -4,6 +4,21 @@
 
 using namespace std;
 
+random_device                     rd;
+mt19937                           rnd(rd());
+uniform_real_distribution<float>  pos_dist(-1.f, 1.f);
+uniform_real_distribution<float>  color_dist(0.f, 1.f);
+
+static vr::float2 get_random_pos()
+{
+	return { pos_dist(rnd), pos_dist(rnd) };
+}
+
+static vr::float4 get_random_color()
+{
+	return { color_dist(rnd), color_dist(rnd), color_dist(rnd), 1.f };
+}
+
 static float elapsed_s()
 {
 	static auto s_clock_begin = std::chrono::high_resolution_clock::now();
@@ -39,8 +54,21 @@ public:
 
 		m_pass = std::make_unique<vr::GraphicsPass>(m_device, vr::GraphicsPassCreateInfo{
 			.vertexShader   = vr::Shader::create(m_device, "shaders/default.vert.glsl.spv"),
-			.fragmentShader = vr::Shader::create(m_device, "shaders/default.frag.glsl.spv")
+			.fragmentShader = vr::Shader::create(m_device, "shaders/default.frag.glsl.spv"),
+			.vertexCount    = 6 * 100
 		});
+
+		auto image = vr::Image::loadFromFile("resource/image1.png");
+
+		m_texture = vr::Texture::create(m_device, vr::TextureCreateInfo{
+			.format = image.format(),
+			.width  = image.width(),
+			.height = image.height()
+		});
+
+		m_texture->upload(image);
+
+		m_pass->getShaderParameter()["sTexture"] = m_texture;
 
 		m_window.Focussed = true;
 	}
@@ -65,7 +93,7 @@ public:
 		while (!m_exit) {
 			m_window.handleEvent();
 			drawFrame();
-			this_thread::sleep_for(1ms);
+			this_thread::sleep_for(30ms);
 		}
 
 		m_device->waitIdle();
@@ -81,10 +109,46 @@ public:
 
 		auto& params = m_pass->getShaderParameter();
 		params["pc"]["time"]      = time; // for block variable
-		params["pc"]["scale"]     = std::abs(sinf(time) + 2) / 2; // for block variable
-		params["pc"]["colors"][0] = vr::Colormaps::plasma(abs(fmodf(0.5f * time, 1.9f) - 1.f)).unorm();
-		params["pc"]["colors"][1] = vr::Colormaps::plasma(abs(fmodf(0.5f * time + 0.66666f, 1.9f) - 1.f)).unorm();
-		params["pc"]["colors"][2] = vr::Colormaps::plasma(abs(fmodf(0.5f * time + 1.33333f, 1.9f) - 1.f)).unorm();
+		params["pc"]["scale"]     = std::abs(sinf(2 * time) + 2) / 2; // for block variable
+		params["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
+		params["pc"]["colors"][1] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.71666f, 1.9f) - 1.f)).unorm();
+		params["pc"]["colors"][2] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 1.38333f, 1.9f) - 1.f)).unorm();
+
+		auto  vertex_memory = m_pass->getVertexBuffer()->getDeviceMemory();
+		auto* map           = reinterpret_cast<vr::GraphicsPass::Vertex*>(vertex_memory->map());
+
+		for (uint32_t i = 0; i < 6 * 100; i += 6) {
+			vr::float2 v0  = { -0.5, -0.5 };
+			vr::float2 v1  = { 0.5, -0.5 };
+			vr::float2 v2  = { 0.5, 0.5 };
+			vr::float2 v3  = { -0.5, 0.5 };
+			vr::float2 uv0 = { 0.0, 0.0 };
+			vr::float2 uv1 = { 1.0, 0.0 };
+			vr::float2 uv2 = { 1.0, 1.0 };
+			vr::float2 uv3 = { 0.0, 1.0 };
+
+			auto offset = 1.5f * get_random_pos();
+			auto color  = vr::Color(vr::Colors::White).unorm();
+
+			map[i + 0].pos   = v0 + offset;
+			map[i + 0].color = color;
+			map[i + 0].uv    = uv0;
+			map[i + 1].pos   = v1 + offset;
+			map[i + 1].color = color;
+			map[i + 1].uv    = uv1;
+			map[i + 2].pos   = v2 + offset;
+			map[i + 2].color = color;
+			map[i + 2].uv    = uv2;
+			map[i + 3].pos   = v0 + offset;
+			map[i + 3].color = color;
+			map[i + 3].uv    = uv0;
+			map[i + 4].pos   = v2 + offset;
+			map[i + 4].color = color;
+			map[i + 4].uv    = uv2;
+			map[i + 5].pos   = v3 + offset;
+			map[i + 5].color = color;
+			map[i + 5].uv    = uv3;
+		}
 
 		m_pass->execute(m_render_ctx, m_swapchain->acquireNextImage());
 
@@ -97,6 +161,7 @@ private:
 	vr::ref<vr::Device>               m_device;
 	vr::ref<vr::RenderContext>        m_render_ctx;
 	vr::ref<vr::Swapchain>            m_swapchain;
+	vr::ref<vr::Texture>              m_texture;
 	std::unique_ptr<vr::GraphicsPass> m_pass;
 
 	vr::os::Window                    m_window;

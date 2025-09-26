@@ -6,6 +6,7 @@
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/resource_layout.h"
 #include "../../include/vera/core/shader.h"
+#include "../../include/vera/core/texture.h"
 #include "../../include/vera/util/static_vector.h"
 #include "../../include/vera/util/hash.h"
 
@@ -72,6 +73,96 @@ static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShade
 
 		shader_infos.push_back(shader_info);
 		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Fragment, info.fragmentShader));
+	}
+}
+
+static vk::Format get_vertex_format(VertexFormat format, uint32_t& attribute_count)
+{
+	switch (format) {
+	case VertexFormat::Char:      attribute_count = 1; return vk::Format::eR8Sint;
+	case VertexFormat::Char2:     attribute_count = 1; return vk::Format::eR8G8Sint;
+	case VertexFormat::Char3:     attribute_count = 1; return vk::Format::eR8G8B8Sint;
+	case VertexFormat::Char4:     attribute_count = 1; return vk::Format::eR8G8B8A8Sint;
+	case VertexFormat::UChar:     attribute_count = 1; return vk::Format::eR8Uint;
+	case VertexFormat::UChar2:    attribute_count = 1; return vk::Format::eR8G8Uint;
+	case VertexFormat::UChar3:    attribute_count = 1; return vk::Format::eR8G8B8Uint;
+	case VertexFormat::UChar4:    attribute_count = 1; return vk::Format::eR8G8B8A8Uint;
+	case VertexFormat::Short:     attribute_count = 1; return vk::Format::eR16Sint;
+	case VertexFormat::Short2:    attribute_count = 1; return vk::Format::eR16G16Sint;
+	case VertexFormat::Short3:    attribute_count = 1; return vk::Format::eR16G16B16Sint;
+	case VertexFormat::Short4:    attribute_count = 1; return vk::Format::eR16G16B16A16Sint;
+	case VertexFormat::UShort:    attribute_count = 1; return vk::Format::eR16Uint;
+	case VertexFormat::UShort2:   attribute_count = 1; return vk::Format::eR16G16Uint;
+	case VertexFormat::UShort3:   attribute_count = 1; return vk::Format::eR16G16B16Uint;
+	case VertexFormat::UShort4:   attribute_count = 1; return vk::Format::eR16G16B16A16Uint;
+	case VertexFormat::Int:       attribute_count = 1; return vk::Format::eR32Sint;
+	case VertexFormat::Int2:      attribute_count = 1; return vk::Format::eR32G32Sint;
+	case VertexFormat::Int3:      attribute_count = 1; return vk::Format::eR32G32B32Sint;
+	case VertexFormat::Int4:      attribute_count = 1; return vk::Format::eR32G32B32A32Sint;
+	case VertexFormat::UInt:      attribute_count = 1; return vk::Format::eR32Uint;
+	case VertexFormat::UInt2:     attribute_count = 1; return vk::Format::eR32G32Uint;
+	case VertexFormat::UInt3:     attribute_count = 1; return vk::Format::eR32G32B32Uint;
+	case VertexFormat::UInt4:     attribute_count = 1; return vk::Format::eR32G32B32A32Uint;
+	case VertexFormat::Long:      attribute_count = 1; return vk::Format::eR64Sint;
+	case VertexFormat::Long2:     attribute_count = 1; return vk::Format::eR64G64Sint;
+	case VertexFormat::Long3:     attribute_count = 1; return vk::Format::eR64G64B64Sint;
+	case VertexFormat::Long4:     attribute_count = 1; return vk::Format::eR64G64B64A64Sint;
+	case VertexFormat::ULong:     attribute_count = 1; return vk::Format::eR64Uint;
+	case VertexFormat::ULong2:    attribute_count = 1; return vk::Format::eR64G64Uint;
+	case VertexFormat::ULong3:    attribute_count = 1; return vk::Format::eR64G64B64Uint;
+	case VertexFormat::ULong4:    attribute_count = 1; return vk::Format::eR64G64B64A64Uint;
+	case VertexFormat::Float:     attribute_count = 1; return vk::Format::eR32Sfloat;
+	case VertexFormat::Float2:    attribute_count = 1; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float3:    attribute_count = 1; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float4:    attribute_count = 1; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Float2x2:  attribute_count = 2; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float2x3:  attribute_count = 2; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float2x4:  attribute_count = 2; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Float3x2:  attribute_count = 3; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float3x3:  attribute_count = 3; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float3x4:  attribute_count = 3; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Float4x2:  attribute_count = 4; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float4x3:  attribute_count = 4; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float4x4:  attribute_count = 4; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Double:    attribute_count = 1; return vk::Format::eR64Sfloat;
+	case VertexFormat::Double2:   attribute_count = 1; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double3:   attribute_count = 1; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double4:   attribute_count = 1; return vk::Format::eR64G64B64A64Sfloat;
+	case VertexFormat::Double2x2: attribute_count = 2; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double2x3: attribute_count = 2; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double2x4: attribute_count = 2; return vk::Format::eR64G64B64A64Sfloat;
+	case VertexFormat::Double3x2: attribute_count = 3; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double3x3: attribute_count = 3; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double3x4: attribute_count = 3; return vk::Format::eR64G64B64A64Sfloat;
+	case VertexFormat::Double4x2: attribute_count = 4; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double4x3: attribute_count = 4; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double4x4: attribute_count = 4; return vk::Format::eR64G64B64A64Sfloat;
+	}
+
+	VERA_ASSERT_MSG(false, "invalid vertex format");
+	return {};
+}
+
+static void fill_vertex_input_attributes(
+	std::vector<vk::VertexInputAttributeDescription>& attributes,
+	uint32_t                                          binding,
+	uint32_t                                          input_attribute_count,
+	const VertexInputAttribute*                       input_attributes,
+	uint32_t&                                         location
+) {
+	uint32_t attribute_count;
+
+	for (uint32_t i = 0; i < input_attribute_count; ++i) {
+		auto& input_attribute = input_attributes[i];
+		auto  vk_format       = get_vertex_format(input_attribute.format, attribute_count);
+
+		for (uint32_t i = 0; i < attribute_count; ++i) {
+			auto& attribute = attributes.emplace_back();
+			attribute.location = location++;
+			attribute.binding  = binding;
+			attribute.format   = vk_format;
+			attribute.offset   = input_attribute.offset;
+		}
 	}
 }
 
@@ -152,7 +243,54 @@ ref<Pipeline> Pipeline::create(ref<Device> device, const GraphicsPipelineCreateI
 	static_vector<vk::PipelineShaderStageCreateInfo, 10> shader_infos;
 	fill_shader_info(impl, shader_infos, info);
 
+	std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
+	vk::VertexInputBindingDescription                vertex_binding_descs[2];
+	uint32_t                                         vertex_binding_desc_count = 1;
+	uint32_t                                         vertex_location           = 0;
+
+	if (info.vertexInputInfo.has_value()) {
+		auto& vertex_info = info.vertexInputInfo.value();
+
+		if (!vertex_info.vertexInputDescriptor.empty()) {
+			auto& desc    = vertex_info.vertexInputDescriptor;
+			auto& binding = vertex_binding_descs[0];
+			
+			fill_vertex_input_attributes(
+				vertex_attributes,
+				0,
+				desc.attributeSize(),
+				desc.attributeData(),
+				vertex_location);
+
+			binding.binding   = 0;
+			binding.stride    = desc.vertexSize();
+			binding.inputRate = vk::VertexInputRate::eVertex;
+		} else {
+			throw Exception("vertex input attribute cannot be empty");
+		}
+
+		if (!vertex_info.instanceInputDescriptor.empty()) {
+			auto& desc    = vertex_info.vertexInputDescriptor;
+			auto& binding = vertex_binding_descs[vertex_binding_desc_count++];
+
+			fill_vertex_input_attributes(
+				vertex_attributes,
+				1,
+				desc.attributeSize(),
+				desc.attributeData(),
+				vertex_location);
+
+			binding.binding   = 1;
+			binding.stride    = desc.vertexSize();
+			binding.inputRate = vk::VertexInputRate::eInstance;
+		}
+	}
+
 	vk::PipelineVertexInputStateCreateInfo vi_info;
+	vi_info.vertexBindingDescriptionCount   = vertex_binding_desc_count;
+	vi_info.pVertexBindingDescriptions      = vertex_binding_descs;
+	vi_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attributes.size());
+	vi_info.pVertexAttributeDescriptions    = vertex_attributes.data();
 
 	vk::PipelineInputAssemblyStateCreateInfo ia_info;
 	if (info.primitiveInfo) {

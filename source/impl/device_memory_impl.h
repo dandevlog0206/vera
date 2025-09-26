@@ -6,14 +6,32 @@
 
 VERA_NAMESPACE_BEGIN
 
+enum class MemoryResourceType VERA_ENUM
+{
+	Buffer,
+	BufferView,
+	Texture,
+	TextureView
+};
+
+struct MemoryResourceBind
+{
+	MemoryResourceType resourceType;
+	size_t             size;
+	size_t             offset;
+	void*              resourcePtr;
+};
+
 struct DeviceMemoryImpl
 {
-	ref<Device>             device;
+	ref<Device>                     device;
 
-	vk::DeviceMemory        memory;
-	vk::MemoryPropertyFlags memoryProperties;
+	vk::DeviceMemory                memory;
+	vk::MemoryPropertyFlags         propertyFlags;
 
-	void* mapPtr;
+	std::vector<MemoryResourceBind> resourceBind;
+	uint32_t                        typeIndex;
+	void*                           mapPtr;
 };
 
 static vk::AccessFlags to_vk_access_flags(AccessFlags flags)

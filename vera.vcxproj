@@ -113,7 +113,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -135,7 +135,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -154,6 +154,11 @@
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
+    <ClInclude Include="include\vera\core\shader_storage.h" />
+    <ClInclude Include="include\vera\graphics\format_traits.h" />
+    <ClInclude Include="include\vera\graphics\image.h" />
+    <ClInclude Include="include\vera\graphics\image_sampler.h" />
+    <ClInclude Include="include\vera\graphics\vertex_input.h" />
     <ClInclude Include="include\vera\math\matrix_types.h" />
     <ClInclude Include="include\vera\shader\shader_variable.h" />
     <ClInclude Include="include\vera\util\colormap.h" />
@@ -171,7 +176,7 @@
     <ClInclude Include="include\util\enum_info.hpp" />
     <ClInclude Include="include\util\property.hpp" />
     <ClInclude Include="include\vera\core\buffer.h" />
-    <ClInclude Include="include\vera\core\color.h" />
+    <ClInclude Include="include\vera\graphics\color.h" />
     <ClInclude Include="include\vera\core\context.h" />
     <ClInclude Include="include\vera\core\coredefs.h" />
     <ClInclude Include="include\vera\core\core_object.h" />
@@ -180,7 +185,7 @@
     <ClInclude Include="include\vera\core\device.h" />
     <ClInclude Include="include\vera\core\exception.h" />
     <ClInclude Include="include\vera\core\fence.h" />
-    <ClInclude Include="include\vera\core\format.h" />
+    <ClInclude Include="include\vera\graphics\format.h" />
     <ClInclude Include="include\vera\core\graphics_state.h" />
     <ClInclude Include="include\vera\core\device_memory.h" />
     <ClInclude Include="include\vera\shader\shader_parameter.h" />
@@ -219,22 +224,25 @@
     <ClInclude Include="source\impl\render_context_impl.h" />
     <ClInclude Include="source\impl\resource_layout_impl.h" />
     <ClInclude Include="source\impl\shader_impl.h" />
+    <ClInclude Include="source\impl\shader_storage_impl.h" />
     <ClInclude Include="source\impl\swapchain_impl.h" />
     <ClInclude Include="source\impl\texture_impl.h" />
     <ClInclude Include="include\vera\core\texture_view.h" />
     <ClInclude Include="source\internal\include_vulkan.h" />
     <ClInclude Include="source\internal\format.h" />
     <ClInclude Include="source\impl\window_impl.h" />
+    <ClCompile Include="source\core_object\shader_storage.cpp" />
     <ClCompile Include="source\core_object\texture_view.cpp" />
     <ClCompile Include="source\core_object\buffer.cpp" />
     <ClCompile Include="source\colormap.cpp" />
     <ClCompile Include="source\core_object\device_memory.cpp" />
     <ClInclude Include="source\impl\shader_reflection_impl.h" />
+    <ClCompile Include="source\format_traits.cpp" />
+    <ClCompile Include="source\image.cpp" />
     <ClCompile Include="source\logger.cpp" />
     <ClCompile Include="source\core_object\render_context.cpp" />
     <ClCompile Include="source\core_object\resource_layout.cpp" />
     <ClCompile Include="source\core_object\sampler.cpp" />
-    <ClInclude Include="source\shader\shader_storage.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\core_object\fence.cpp" />

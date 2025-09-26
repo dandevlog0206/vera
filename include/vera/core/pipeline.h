@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shader.h"
+#include "../graphics/vertex_input.h"
 #include <vector>
 #include <optional>
 
@@ -120,6 +121,12 @@ struct StencilOpState
 	uint32_t  reference    = 0;
 };
 
+struct VertexInputInfo
+{
+	VertexInputDescriptor vertexInputDescriptor;
+	VertexInputDescriptor instanceInputDescriptor;
+};
+
 struct PrimitiveInfo
 {
 	bool              enableRestart;
@@ -174,6 +181,7 @@ struct GraphicsPipelineCreateInfo
 	ref<Shader>                      geometryShader;
 	ref<Shader>                      fragmentShader;
 
+	std::optional<VertexInputInfo>   vertexInputInfo;
 	std::optional<PrimitiveInfo>     primitiveInfo;
 	std::optional<RasterizationInfo> rasterizationInfo;
 	std::optional<uint32_t>          tesselationPatchControlPoints;

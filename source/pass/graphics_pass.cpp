@@ -4,6 +4,8 @@
 #include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/core/shader_reflection.h"
 
+#include <random>
+
 VERA_NAMESPACE_BEGIN
 
 GraphicsPass::GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& info) :
@@ -13,6 +15,9 @@ GraphicsPass::GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& inf
 	GraphicsPipelineCreateInfo pipeline_info = {
 		.vertexShader                  = info.vertexShader,
 		.fragmentShader                = info.fragmentShader,
+		.vertexInputInfo               = VertexInputInfo{
+			.vertexInputDescriptor = GraphicsPass::Vertex{}
+		},
 		.primitiveInfo                 = PrimitiveInfo{
 			.enableRestart = false,
 			.topology      = PrimitiveTopology::TriangleList
@@ -23,8 +28,10 @@ GraphicsPass::GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& inf
 		.colorBlendInfo                = ColorBlendInfo{}
 	};
 
-	m_pipeline = Pipeline::create(device, pipeline_info);
+	m_pipeline      = Pipeline::create(device, pipeline_info);
+	m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * sizeof(Vertex));
 
+	m_states.setVertexBuffer(m_vertex_buffer);
 	m_states.setPipeline(m_pipeline);
 }
 
@@ -33,9 +40,19 @@ GraphicsPass::~GraphicsPass()
 
 }
 
+ref<Device> GraphicsPass::getDevice()
+{
+	return m_device;
+}
+
 ref<Pipeline> GraphicsPass::getPipeline()
 {
 	return m_pipeline;
+}
+
+ref<Buffer> GraphicsPass::getVertexBuffer()
+{
+	return m_vertex_buffer;
 }
 
 ShaderParameter& GraphicsPass::getShaderParameter()
@@ -72,11 +89,12 @@ void GraphicsPass::execute(ref<RenderContext> ctx, ref<Texture> texture)
 		ColorAtttachmentInfo{
 			.texture = texture,
 			.loadOp  = LoadOp::Clear,
-			.storeOp = StoreOp::Store});
+			.storeOp = StoreOp::Store
+		});
 
 	m_states.setRenderingInfo(rendering_info);
 
-	ctx->draw(m_states, m_parameter, 3, 0);
+	ctx->draw(m_states, m_parameter, 300, 0);
 }
 
 VERA_NAMESPACE_END

@@ -44,6 +44,16 @@ static size_t hash_sampler(const SamplerCreateInfo& info)
 	return seed;
 }
 
+vk::Sampler get_vk_sampler(const ref<Sampler>& sampler)
+{
+	return CoreObject::getImpl(sampler).sampler;
+}
+
+vk::Sampler& get_vk_sampler(ref<Sampler>& sampler)
+{
+	return CoreObject::getImpl(sampler).sampler;
+}
+
 ref<Sampler> Sampler::create(ref<Device> device, const SamplerCreateInfo& info)
 {
 	auto&  device_impl = getImpl(device);

@@ -11,15 +11,33 @@ struct GraphicsPassCreateInfo
 {
 	ref<Shader> vertexShader;
 	ref<Shader> fragmentShader;
+
+	uint32_t    vertexCount;
 };
 
 class GraphicsPass
 {
 public:
+	struct Vertex
+	{
+		vr::float2 pos;
+		vr::float4 color;
+		vr::float2 uv;
+
+		VERA_VERTEX_DESCRIPTOR_BEGIN(Vertex)
+			VERA_VERTEX_ATTRIBUTE(0, pos),
+			VERA_VERTEX_ATTRIBUTE(1, color),
+			VERA_VERTEX_ATTRIBUTE(1, uv),
+		VERA_VERTEX_DESCRIPTOR_END
+	};
+
 	GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& info);
 	virtual ~GraphicsPass();
 
+	ref<Device> getDevice();
 	ref<Pipeline> getPipeline();
+	ref<Buffer> getVertexBuffer();
+
 	ShaderParameter& getShaderParameter();
 
 	virtual void execute(ref<RenderContext> cmd, ref<Texture> texture);
@@ -27,6 +45,7 @@ public:
 private:
 	ref<Device>     m_device;
 	ref<Pipeline>   m_pipeline;
+	ref<Buffer>     m_vertex_buffer;
 	ShaderParameter m_parameter;
 	GraphicsState   m_states;
 };

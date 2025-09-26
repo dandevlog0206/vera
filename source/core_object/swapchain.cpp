@@ -7,6 +7,7 @@
 #include "../impl/window_impl.h"
 
 #include "../../include/vera/core/device.h"
+#include "../../include/vera/core/device_memory.h"
 #include "../../include/vera/core/fence.h"
 #include "../../include/vera/core/semaphore.h"
 #include "../../include/vera/core/render_context.h"
@@ -72,9 +73,8 @@ static void clear_swapchain_frames(SwapchainImpl& impl)
 	impl.frames.clear();
 }
 
-static void recreate_swapchain(DeviceImpl& device_impl, Swapchain* this_ptr)
+static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 {
-	auto& impl         = CoreObject::getImpl(this_ptr);
 	auto old_swapchain = impl.swapchain;
 
 	device_impl.device.waitIdle();
@@ -159,7 +159,7 @@ ref<Swapchain> Swapchain::create(ref<RenderContext> render_ctx, os::Window& wind
 
 	impl.syncs.reserve(impl.imageCount);
 
-	recreate_swapchain(device_impl, obj.get());
+	recreate_swapchain(device_impl, impl);
 
 	return obj;
 }
@@ -210,7 +210,7 @@ ref<Texture> Swapchain::acquireNextImage()
 			impl.width  = new_extent.width;
 			impl.height = new_extent.height;
 
-			recreate_swapchain(device_impl, this);
+			recreate_swapchain(device_impl, impl);
 		} else {
 			throw Exception("failed to acquire next swapchain image");
 		}
@@ -224,7 +224,7 @@ void Swapchain::recreate()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
-	recreate_swapchain(device_impl, this);
+	recreate_swapchain(device_impl, impl);
 }
 
 void Swapchain::present()

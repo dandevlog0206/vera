@@ -1,13 +1,39 @@
 #pragma once
 
 #include "core_object.h"
-#include "format.h"
+#include "../graphics/format.h"
+#include "../util/flag.h"
 #include <vector>
 #include <string_view>
 
 VERA_NAMESPACE_BEGIN
 
 class Context;
+class RenderCommand;
+
+enum class MemoryHeapFlagBits VERA_FLAG_BITS
+{
+	DeviceLocal,
+	MultiInstance
+} VERA_ENUM_FLAGS(MemoryHeapFlagBits, MemoryHeapFlags)
+
+enum class MemoryPropertyFlagBits VERA_FLAG_BITS
+{
+	DeviceLocal     = 1 << 0,
+	HostVisible     = 1 << 1,
+	HostCoherent    = 1 << 2,
+	HostCached      = 1 << 3,
+	LazilyAllocated = 1 << 4,
+	Protected       = 1 << 5
+} VERA_ENUM_FLAGS(MemoryPropertyFlagBits, MemoryPropertyFlags)
+
+struct DeviceMemoryType
+{
+	uint32_t            heapID;
+	size_t              size;
+	MemoryHeapFlags     heapFlags;
+	MemoryPropertyFlags propertyFlags;
+};
 
 struct DeviceCreateInfo
 {
@@ -29,6 +55,10 @@ class Device : protected CoreObject
 public:
 	static ref<Device> create(ref<Context> context, const DeviceCreateInfo& info);
 	~Device();
+
+	const std::vector<DeviceMemoryType>& getMemoryTypes() const;
+
+	void submitCommand(ref<RenderCommand> command);
 
 	void waitIdle() const;
 };

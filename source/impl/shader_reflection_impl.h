@@ -123,8 +123,9 @@ struct ReflectionArrayTraits
 
 struct ReflectionDesc
 {
-	ReflectionType type;
-	const char*    name;
+	ReflectionType      type;
+	const char*         name;
+	ref<ResourceLayout> resourceLayout;
 };
 
 struct ReflectionPrimitiveDesc : ReflectionDesc

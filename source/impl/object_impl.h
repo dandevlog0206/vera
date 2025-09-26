@@ -3,7 +3,7 @@
 #include "../internal/include_vulkan.h"
 #include "../../include/vera/core/core_object.h"
 #include "../../include/vera/core/exception.h"
-#include "../../include/vera/core/format.h"
+#include "../../include/vera/graphics/format.h"
 #include "../../include/vera/util/rect.h"
 
 VERA_NAMESPACE_BEGIN
@@ -35,6 +35,10 @@ vk::Fence& get_vk_fence(ref<Fence>& fence);
 vk::PipelineLayout get_vk_pipeline_layout(const ref<PipelineLayout>& pipeline_layout);
 vk::CommandBuffer get_vk_command_buffer(const ref<RenderCommand>& render_command);
 vk::CommandBuffer& get_vk_command_buffer(ref<RenderCommand>& render_command);
+vk::DescriptorSetLayout get_descriptor_set_layout(const ref<ResourceLayout>& resource_layout);
+vk::DescriptorSetLayout& get_descriptor_set_layout(ref<ResourceLayout>& resource_layout);
+vk::Sampler get_vk_sampler(const ref<Sampler>& sampler);
+vk::Sampler& get_vk_sampler(ref<Sampler>& sampler);
 vk::Semaphore get_vk_semaphore(const ref<Semaphore>& semaphore);
 vk::Semaphore& get_vk_semaphore(ref<Semaphore>& semaphore);
 vk::Image get_vk_image(const ref<Texture>& texture);

@@ -16,7 +16,7 @@ struct TextureViewCreateInfo
 	uint32_t          sampleCount;
 };
 
-class TextureView : public CoreObject
+class TextureView : protected CoreObject
 {
 	VERA_CORE_OBJECT(TextureView)
 public:

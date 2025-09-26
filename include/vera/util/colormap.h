@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/color.h"
+#include "../graphics/color.h"
 
 VERA_NAMESPACE_BEGIN
 

@@ -1,4 +1,5 @@
 #include "../../include/vera/core/render_command.h"
+#include "../impl/buffer_impl.h"
 #include "../impl/render_command_impl.h"
 #include "../impl/pipeline_impl.h"
 #include "../impl/texture_impl.h"
@@ -107,6 +108,32 @@ void RenderCommand::setScissor(const Scissor& scissor)
 	impl.currentScissor = scissor;
 }
 
+void RenderCommand::setVertexBuffer(ref<Buffer> buffer)
+{
+	auto& impl        = getImpl(this);
+	auto& buffer_impl = getImpl(buffer);
+	auto  offset      = vk::DeviceSize{0};
+
+	if (!buffer_impl.usage.has(BufferUsageFlagBits::VertexBuffer))
+		throw Exception("buffer is not for vertex");
+
+	impl.commandBuffer.bindVertexBuffers(0, 1, &buffer_impl.buffer, &offset);
+	impl.currentVertexBuffer = buffer;
+}
+
+void RenderCommand::setIndexBuffer(ref<Buffer> buffer)
+{
+	auto& impl        = getImpl(this);
+	auto& buffer_impl = getImpl(buffer);
+
+	if (!buffer_impl.usage.has(BufferUsageFlagBits::IndexBuffer))
+		throw Exception("buffer is not for index");
+
+	// consider unbinding index buffer
+	impl.commandBuffer.bindIndexBuffer(buffer_impl.buffer, 0, to_vk_index_type(buffer_impl.indexType));
+	impl.currentIndexBuffer = buffer;
+}
+
 void RenderCommand::setPipeline(ref<Pipeline> pipeline)
 {
 	auto& impl          = getImpl(this);
@@ -153,6 +180,41 @@ void RenderCommand::transitionImageLayout(
 		nullptr,
 		1,
 		&barrier);
+}
+
+void RenderCommand::copyBufferToTexture(
+	ref<Texture> dst,
+	ref<Buffer>  src,
+	size_t       buffer_offset,
+	uint32_t     buffer_row_length,
+	uint32_t     buffer_image_height,
+	uint3        image_offset,
+	extent3d     image_extent
+) {
+	auto& impl         = getImpl(this);
+	auto& texture_impl = getImpl(dst);
+	auto& buffer_impl  = getImpl(src);
+
+	vk::BufferImageCopy copy_info;
+	copy_info.bufferOffset                    = buffer_offset;
+	copy_info.bufferRowLength                 = buffer_row_length;
+	copy_info.bufferImageHeight               = buffer_image_height;
+	copy_info.imageSubresource.aspectMask     = vk::ImageAspectFlagBits::eColor;
+	copy_info.imageSubresource.mipLevel       = 0;
+	copy_info.imageSubresource.baseArrayLayer = 0;
+	copy_info.imageSubresource.layerCount     = 1;
+	copy_info.imageOffset.x                   = image_offset.x;
+	copy_info.imageOffset.y                   = image_offset.y;
+	copy_info.imageOffset.z                   = image_offset.z;
+	copy_info.imageExtent.width               = image_extent.width;
+	copy_info.imageExtent.height              = image_extent.height;
+	copy_info.imageExtent.depth               = image_extent.depth;
+
+	impl.commandBuffer.copyBufferToImage(
+		buffer_impl.buffer,
+		texture_impl.image,
+		vk::ImageLayout::eTransferDstOptimal,
+		copy_info);
 }
 
 void RenderCommand::beginRendering(const RenderingInfo& info)
@@ -257,9 +319,6 @@ void RenderCommand::end()
 	auto& impl = getImpl(this);
 
 	impl.commandBuffer.end();
-
-	impl.currentViewport = {};
-	impl.currentScissor  = {};
 }
 
 void RenderCommand::reset()
@@ -267,10 +326,12 @@ void RenderCommand::reset()
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 	
-	impl.currentViewport = {};
-	impl.currentScissor  = {};
+	impl.currentViewport     = {};
+	impl.currentScissor      = {};
+	impl.currentVertexBuffer = {};
+	impl.currentIndexBuffer  = {};
 	clear_rendering_info(impl.currentRenderingInfo);
-	impl.currentPipeline = {};
+	impl.currentPipeline     = {};
 
 	vk_device.resetCommandPool(impl.commandPool);
 }

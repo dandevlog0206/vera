@@ -1,7 +1,6 @@
 #pragma once
 
 // core
-#include "core/color.h"
 #include "core/context.h"
 #include "core/core_object.h"
 #include "core/coredefs.h"
@@ -9,7 +8,6 @@
 #include "core/device_memory.h"
 #include "core/exception.h"
 #include "core/fence.h"
-#include "core/format.h"
 #include "core/graphics_state.h"
 #include "core/logger.h"
 #include "core/pipeline.h"
@@ -24,6 +22,14 @@
 #include "core/swapchain.h"
 #include "core/texture.h"
 #include "core/texture_view.h"
+
+// graphics
+#include "graphics/color.h"
+#include "graphics/format.h"
+#include "graphics/format_traits.h"
+#include "graphics/image.h"
+#include "graphics/image_sampler.h"
+#include "graphics/vertex_input.h"
 
 // math
 #include "math/vector_types.h"

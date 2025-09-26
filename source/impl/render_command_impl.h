@@ -15,6 +15,8 @@ struct RenderCommandImpl
 
 	Viewport          currentViewport;
 	Scissor           currentScissor;
+	ref<Buffer>       currentVertexBuffer;
+	ref<Buffer>       currentIndexBuffer;
 	RenderingInfo     currentRenderingInfo;
 	ref<Pipeline>     currentPipeline;
 };

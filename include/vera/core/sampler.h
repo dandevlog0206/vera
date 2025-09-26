@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core_object.h"
-#include "color.h"
+#include "../graphics/color.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -25,7 +25,7 @@ enum class SamplerAddressMode
 	MirroredRepeat,
 	ClampToEdge,
 	ClampToBorder,
-	MirrorClampToEdge,
+	MirrorClampToEdge
 };
 
 enum class SamplerCompareOp

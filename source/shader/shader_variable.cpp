@@ -1,10 +1,13 @@
 #include "../../include/vera/shader/shader_variable.h"
-#include "shader_storage.h"
 #include "../impl/shader_reflection_impl.h"
+#include "../impl/shader_storage_impl.h"
+#include "../impl/resource_layout_impl.h"
+#include "../impl/texture_impl.h"
 
 #include "../../include/vera/shader/shader_parameter.h"
 #include "../../include/vera/core/sampler.h"
 #include "../../include/vera/core/texture.h"
+#include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/core/buffer.h"
 
 VERA_NAMESPACE_BEGIN
@@ -107,11 +110,11 @@ static int32_t find_member(const MemberDesc& desc, const char* name)
 }
 
 template <class T>
-static void store_scalar_impl(ShaderStorage* storage_ptr, ReflectionDesc* desc_ptr, uint32_t offset, const T& value)
+static void store_scalar_impl(ShaderStorageData* storage_ptr, ReflectionDesc* desc_ptr, uint32_t offset, const T& value)
 {
 	VERA_ASSERT(desc_ptr && desc_ptr->type == ReflectionType::Primitive);
-	VERA_ASSERT(storage_ptr && (storage_ptr->storageType == ShaderStorageType::BufferBlock ||
-		storage_ptr->storageType == ShaderStorageType::PushConstant));
+	VERA_ASSERT(storage_ptr && (storage_ptr->storageType == ShaderStorageDataType::BufferBlock ||
+		storage_ptr->storageType == ShaderStorageDataType::PushConstant));
 
 	auto& desc    = *static_cast<ReflectionPrimitiveDesc*>(desc_ptr);
 	auto& storage = *static_cast<BlockStorage*>(storage_ptr);
@@ -156,11 +159,11 @@ static void store_scalar_impl(ShaderStorage* storage_ptr, ReflectionDesc* desc_p
 }
 
 template <class Type>
-static void store_primitive_impl(ShaderStorage* storage_ptr, ReflectionDesc* desc_ptr, uint32_t offset, const Type& value)
+static void store_primitive_impl(ShaderStorageData* storage_ptr, ReflectionDesc* desc_ptr, uint32_t offset, const Type& value)
 {
 	VERA_ASSERT(desc_ptr && desc_ptr->type == ReflectionType::Primitive);
-	VERA_ASSERT(storage_ptr->storageType == ShaderStorageType::BufferBlock ||
-		storage_ptr->storageType == ShaderStorageType::PushConstant);
+	VERA_ASSERT(storage_ptr->storageType == ShaderStorageDataType::BufferBlock ||
+		storage_ptr->storageType == ShaderStorageDataType::PushConstant);
 
 	auto& desc    = *static_cast<ReflectionPrimitiveDesc*>(desc_ptr);
 	auto& storage = *static_cast<BlockStorage*>(storage_ptr);
@@ -170,7 +173,7 @@ static void store_primitive_impl(ShaderStorage* storage_ptr, ReflectionDesc* des
 	*reinterpret_cast<Type*>(&storage.blockStorage[offset]) = value;
 }
 
-ShaderVariable::ShaderVariable(ShaderStorage* storage, ReflectionDesc* desc, uint32_t offset) :
+ShaderVariable::ShaderVariable(ShaderStorageData* storage, ReflectionDesc* desc, uint32_t offset) :
 	m_storage(storage),
 	m_desc(desc),
 	m_offset(offset) {}
@@ -543,16 +546,16 @@ void ShaderVariable::operator=(ref<Sampler> obj)
 
 void ShaderVariable::setSampler(ref<Sampler> sampler)
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageType::Sampler ||
-		m_storage->storageType == ShaderStorageType::CombinedImageSampler));
+	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Sampler ||
+		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
 	static_cast<SamplerStorage*>(m_storage)->sampler = std::move(sampler);
 }
 
 ref<Sampler> ShaderVariable::getSampler()
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageType::Sampler ||
-		m_storage->storageType == ShaderStorageType::CombinedImageSampler));
+	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Sampler ||
+		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
 	return static_cast<SamplerStorage*>(m_storage)->sampler;
 }
@@ -564,16 +567,40 @@ void ShaderVariable::operator=(ref<Texture> obj)
 
 void ShaderVariable::setTexture(ref<Texture> texture)
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageType::Texture ||
-		m_storage->storageType == ShaderStorageType::CombinedImageSampler));
+	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Texture ||
+		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
-	static_cast<TextureStorage*>(m_storage)->texture = std::move(texture);
+	// TODO: check if reflection and texture share same device
+	auto& desc      = *static_cast<ReflectionResourceDesc*>(m_desc);
+	auto  vk_device = get_vk_device(CoreObject::getImpl(texture).device);
+
+	if (desc.resourceType == ResourceType::CombinedImageSampler) {
+		auto& storage = *static_cast<CombinedImageSamplerStorage*>(m_storage);
+	
+		vk::DescriptorImageInfo image_info;
+		image_info.sampler     = get_vk_sampler(storage.sampler);
+		image_info.imageView   = get_vk_image_view(texture->getTextureView());
+		image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+		vk::WriteDescriptorSet write_info;
+		write_info.dstSet          = storage.descriptorSet;
+		write_info.dstBinding      = desc.binding;
+		write_info.dstArrayElement = 0;
+		write_info.descriptorCount = 1;
+		write_info.descriptorType  = to_vk_descriptor_type(desc.resourceType);
+		write_info.pImageInfo      = &image_info;
+
+		vk_device.updateDescriptorSets(write_info, {});
+
+		storage.texture = std::move(texture);
+	}
+	// implement ShaderVariable::setTexture(ref<Texture> texture)
 }
 
 ref<Texture> ShaderVariable::getTexture()
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageType::Texture ||
-		m_storage->storageType == ShaderStorageType::CombinedImageSampler));
+	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Texture ||
+		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
 	return static_cast<TextureStorage*>(m_storage)->texture;
 }
@@ -585,16 +612,16 @@ void ShaderVariable::operator=(ref<Buffer> obj)
 
 void ShaderVariable::setBuffer(ref<Buffer> buffer)
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageType::Buffer ||
-		m_storage->storageType == ShaderStorageType::BufferBlock));
+	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Buffer ||
+		m_storage->storageType == ShaderStorageDataType::BufferBlock));
 
 	static_cast<BufferStorage*>(m_storage)->buffer = std::move(buffer);
 }
 
 ref<Buffer> ShaderVariable::getBuffer()
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageType::Buffer ||
-		m_storage->storageType == ShaderStorageType::BufferBlock));
+	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Buffer ||
+		m_storage->storageType == ShaderStorageDataType::BufferBlock));
 
 	return static_cast<BufferStorage*>(m_storage)->buffer;
 }

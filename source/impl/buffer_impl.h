@@ -16,6 +16,8 @@ struct BufferImpl
 	vk::Buffer        buffer;
 
 	BufferUsageFlags  usage;
+	IndexType         indexType;
+	size_t            size;
 };
 
 struct BufferViewImpl
@@ -25,6 +27,18 @@ struct BufferViewImpl
 
 	vk::BufferView bufferView;
 };
+
+static vk::IndexType to_vk_index_type(IndexType type)
+{
+	switch (type) {
+	case IndexType::UInt8:	return vk::IndexType::eUint8;
+	case IndexType::UInt16:	return vk::IndexType::eUint16;
+	case IndexType::UInt32: return vk::IndexType::eUint32;
+	}
+
+	VERA_ASSERT_MSG(false, "invalid index type");
+	return {};
+}
 
 static vk::BufferUsageFlags to_vk_buffer_usage_flags(BufferUsageFlags flags)
 {

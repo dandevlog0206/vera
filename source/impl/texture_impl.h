@@ -2,7 +2,6 @@
 
 #include "object_impl.h"
 
-#include "../../include/vera/core/device_memory.h"
 #include "../../include/vera/core/texture.h"
 
 VERA_NAMESPACE_BEGIN

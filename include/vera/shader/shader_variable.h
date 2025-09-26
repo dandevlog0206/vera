@@ -8,7 +8,7 @@
 VERA_NAMESPACE_BEGIN
 
 struct ReflectionDesc;
-struct ShaderStorage;
+struct ShaderStorageData;
 class ShaderReflection;
 class Sampler;
 class Texture;
@@ -17,7 +17,7 @@ class Buffer;
 class ShaderVariable
 {
 	friend class ShaderParameter;
-	ShaderVariable(ShaderStorage* storage, ReflectionDesc* desc, uint32_t offset);
+	ShaderVariable(ShaderStorageData* storage, ReflectionDesc* desc, uint32_t offset);
 public:
 	ShaderVariable operator[](std::string_view name);
 	ShaderVariable operator[](size_t idx);
@@ -109,9 +109,9 @@ public:
 	ref<Buffer> getBuffer();
 
 private:
-	ShaderStorage*  m_storage;
-	ReflectionDesc* m_desc;
-	uint32_t        m_offset;
+	ShaderStorageData* m_storage; // TODO: rename
+	ReflectionDesc*    m_desc;
+	uint32_t           m_offset;
 };
 
 VERA_NAMESPACE_END

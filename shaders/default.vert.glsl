@@ -1,26 +1,22 @@
 #version 450
 
-layout(push_constant) uniform PCBlock {
+layout(push_constant) uniform PCBlock
+{
     float time;
     float scale;
     vec4  colors[3];
 } pc;
 
-layout(location = 0) out vec4 fragColor;
+layout(location=0) in vec2 inPos;
+layout(location=1) in vec4 inColor;
+layout(location=2) in vec2 inUV;
 
-struct Vertex
+layout(location=0) out vec4 outColor;
+layout(location=1) out vec2 outUV;
+
+void main()
 {
-    vec2 pos;
-    vec4 color;
-};
-
-Vertex vertices[3] = {
-    {{ 0.f, -0.5f }, { 1.f, 0.f, 0.f, 1.f }},
-    {{ -0.5f, 0.5f }, { 0.f, 1.f, 0.f, 1.f }},
-    {{ 0.5f, 0.5f }, { 0.f, 0.f, 1.f, 1.f }},
-};
-
-void main() {
-    gl_Position = vec4(pc.scale * vertices[gl_VertexIndex].pos, 0.0, 1.0);
-    fragColor   = pc.colors[gl_VertexIndex];
+    gl_Position = vec4(pc.scale * inPos, 0.0, 1.0);
+    outColor = inColor;
+    outUV    = inUV;
 }

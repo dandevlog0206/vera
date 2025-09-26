@@ -81,7 +81,7 @@
     <ClInclude Include="include\vera\core\texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\format.h">
+    <ClInclude Include="include\vera\graphics\format.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\version.h">
@@ -144,7 +144,7 @@
     <ClInclude Include="include\vera\util\hash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\color.h">
+    <ClInclude Include="include\vera\graphics\color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\small_vector.h">
@@ -237,10 +237,25 @@
     <ClInclude Include="include\vera\util\colormap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\shader\shader_storage.h">
+    <ClInclude Include="include\vera\core\assertion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\assertion.h">
+    <ClInclude Include="include\vera\graphics\vertex_input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\graphics\image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\graphics\image_sampler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\graphics\format_traits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\shader_storage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\impl\shader_storage_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -315,6 +330,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\texture_view.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\format_traits.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core_object\shader_storage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

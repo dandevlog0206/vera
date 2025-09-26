@@ -7,6 +7,7 @@
 VERA_NAMESPACE_BEGIN
 
 class ShaderReflection;
+class ShaderStorage;
 class PipelineLayout;
 class RenderCommand;
 struct ShaderStorage;
@@ -26,8 +27,8 @@ public:
 	bool empty() const;
 
 private:
-	ref<ShaderReflection>       m_reflection;
-	std::vector<ShaderStorage*> m_storages;
+	ref<ShaderReflection> m_reflection;
+	ref<ShaderStorage>    m_storage;
 };
 
 VERA_NAMESPACE_END

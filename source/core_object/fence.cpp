@@ -5,6 +5,16 @@
 
 VERA_NAMESPACE_BEGIN
 
+static bool check_same_device(std::span<ref<Fence>> fences)
+{
+	auto vk_device = CoreObject::getImpl(fences.front()).device;
+
+	for (size_t i = 1; i < fences.size(); ++i)
+		if (CoreObject::getImpl(fences[i]).device != vk_device)
+			return false;
+	return true;
+}
+
 static bool wait_fences(vk::Device vk_device, std::span<ref<Fence>> fences, bool wait_all, uint64_t timeout)
 {
 	static std::vector<vk::Fence> s_fences;
@@ -38,7 +48,8 @@ bool Fence::waitAll(std::span<ref<Fence>> fences, uint64_t timeout)
 	if (fences.empty())
 		return true;
 
-	// TODO: check all fences are from same device;
+	VERA_ASSERT_MSG(check_same_device(fences), "fences don't share same device");
+
 	auto vk_device = get_vk_device(getImpl(fences.front()).device);
 
 	return wait_fences(vk_device, fences, true, timeout);
@@ -49,7 +60,8 @@ bool Fence::waitAny(std::span<ref<Fence>> fences, uint64_t timeout)
 	if (fences.empty())
 		return true;
 
-	// TODO: check all fences are from same device;
+	VERA_ASSERT_MSG(check_same_device(fences), "fences don't share same device");
+
 	auto vk_device = get_vk_device(getImpl(fences.front()).device);
 
 	return wait_fences(vk_device, fences, false, timeout);

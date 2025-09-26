@@ -1,10 +1,10 @@
 #include "../../include/vera/shader/shader_parameter.h"
-#include "shader_storage.h"
 #include "../impl/shader_reflection_impl.h"
+#include "../impl/shader_storage_impl.h"
 #include "../impl/pipeline_layout_impl.h"
-#include "../impl/render_command_impl.h"
 
 #include "../../include/vera/core/shader_reflection.h"
+#include "../../include/vera/core/shader_storage.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/render_command.h"
 #include "../../include/vera/core/sampler.h"
@@ -13,145 +13,22 @@
 
 VERA_NAMESPACE_BEGIN
 
-static ShaderStorage* create_resource_storage(const ReflectionResourceDesc& desc)
-{
-	switch (desc.resourceType) {
-	case ResourceType::Sampler: {
-		auto*result = new SamplerStorage;
-		result->storageType      = ShaderStorageType::Sampler;
-		result->resourceType     = ResourceType::Sampler;
-		result->shaderStageFlags = desc.shaderStageFlags;
-		return result;
-	}
-	case ResourceType::CombinedImageSampler: {
-		auto*result = new CombinedImageSamplerStorage;
-		result->storageType      = ShaderStorageType::CombinedImageSampler;
-		result->resourceType     = ResourceType::CombinedImageSampler;
-		result->shaderStageFlags = desc.shaderStageFlags;
-		return result;
-	}
-	case ResourceType::SampledImage: {
-	}
-	case ResourceType::StorageImage: {
-	}
-	case ResourceType::UniformTexelBuffer: {
-	}
-	case ResourceType::StorageTexelBuffer: {
-	}
-	}
-
-	throw Exception("failed to create resource storage");
-}
-
-static ShaderStorage* create_resource_block_storage(const ReflectionResourceBlockDesc& desc)
-{
-	switch (desc.resourceType) {
-	case ResourceType::UniformBuffer:
-	case ResourceType::StorageBuffer: 
-	case ResourceType::UniformBufferDynamic:
-	case ResourceType::StorageBufferDynamic: {
-		auto* result = new BufferBlockStorage;
-		result->storageType      = ShaderStorageType::BufferBlock;
-		result->resourceType     = desc.resourceType;
-		result->shaderStageFlags = desc.shaderStageFlags;
-		result->blockStorage.resize(desc.sizeInByte);
-		return result;
-	}
-	}
-
-	throw Exception("failed to create resource block storage");
-}
-
-static ShaderStorage* create_push_constant_storage(const ReflectionPushConstantDesc& desc)
-{
-	auto* result = new PushConstantStorage;
-	result->storageType      = ShaderStorageType::PushConstant;
-	result->resourceType     = ResourceType::Unknown;
-	result->shaderStageFlags = desc.shaderStageFlags;
-	result->blockStorage.resize(desc.sizeInByte);
-	return result;
-}
-
-static ShaderStorage* create_resource_array_storage(const ReflectionResourceArrayDesc& desc)
-{
-	auto* result = new ResourceArrayStorage;
-	result->storageType      = ShaderStorageType::ResourceArray;
-	result->resourceType     = desc.resourceType;
-	result->shaderStageFlags = desc.shaderStageFlags;
-	result->elementCount     = desc.elementCount;
-	result->elements.reserve(desc.elementCount);
-
-	if (desc.element->type == ReflectionType::Resource) {
-		for (uint32_t i = 0; i < desc.elementCount; ++i) {
-			auto& resource_desc = *static_cast<ReflectionResourceDesc*>(desc.element);
-			result->elements.push_back(create_resource_storage(resource_desc));
-		}
-		return result;
-	} else if (desc.element->type == ReflectionType::ResourceBlock) {
-		for (uint32_t i = 0; i < desc.elementCount; ++i) {
-			auto& block_desc = *static_cast<ReflectionResourceBlockDesc*>(desc.element);
-			result->elements.push_back(create_resource_block_storage(block_desc));
-		}
-		return result;
-	}
-
-	throw Exception("failed to create resource array storage");
-}
-
-static void destroy_storage(ShaderStorage* ptr)
-{
-	if (ptr->storageType == ShaderStorageType::ResourceArray) {
-		auto& storage = *static_cast<ResourceArrayStorage*>(ptr);
-		
-		for (uint32_t i = 0; i < storage.elementCount; ++i)
-			destroy_storage(storage.elements[i]);
-	}
-
-	delete ptr;
-}
-
 ShaderParameter::ShaderParameter(ref<ShaderReflection> reflection) :
-	m_reflection(std::move(reflection))
-{
-	auto& impl = CoreObject::getImpl(m_reflection);
-
-	m_storages.reserve(impl.descriptors.size());
-	for (auto* desc_ptr : impl.descriptors) {
-		switch (desc_ptr->type) {
-		case ReflectionType::Resource: {
-			auto& desc = *static_cast<ReflectionResourceDesc*>(desc_ptr);
-			m_storages.push_back(create_resource_storage(desc));
-		} break;
-		case ReflectionType::ResourceBlock: {
-			auto& desc = *static_cast<ReflectionResourceBlockDesc*>(desc_ptr);
-			m_storages.push_back(create_resource_block_storage(desc));
-		} break;
-		case ReflectionType::PushConstant: {
-			auto& desc = *static_cast<ReflectionPushConstantDesc*>(desc_ptr);
-			m_storages.push_back(create_push_constant_storage(desc));
-		} break;
-		case ReflectionType::ResourceArray: {
-			auto& desc = *static_cast<ReflectionResourceArrayDesc*>(desc_ptr);
-			m_storages.push_back(create_resource_array_storage(desc));
-		} break;
-		default:
-			throw Exception("invalid reflection");
-		}
-	}
-}
+	m_reflection(reflection),
+	m_storage(ShaderStorage::create(std::move(reflection))) {}
 
 ShaderParameter::~ShaderParameter()
 {
-	for (auto* storage : m_storages)
-		destroy_storage(storage);
+
 }
 
 ShaderVariable ShaderParameter::operator[](std::string_view name)
 {
-	auto& impl = CoreObject::getImpl(m_reflection);
+	auto& refl_impl    = CoreObject::getImpl(m_reflection);
+	auto& storage_impl = CoreObject::getImpl(m_storage);
 
-	if (auto iter = impl.hashMap.find(name); iter != impl.hashMap.end())
-		return ShaderVariable(m_storages[iter->second], impl.descriptors[iter->second], UINT32_MAX);
+	if (auto iter = refl_impl.hashMap.find(name); iter != refl_impl.hashMap.end())
+		return ShaderVariable(storage_impl.storages[iter->second], refl_impl.descriptors[iter->second], UINT32_MAX);
 
 	throw Exception("couldn't find resource named " + std::string(name));
 }
@@ -163,28 +40,49 @@ ref<ShaderReflection> ShaderParameter::getShaderReflection()
 
 void ShaderParameter::bindRenderCommand(ref<PipelineLayout> layout, ref<RenderCommand> cmd) const
 {
-	auto& impl        = CoreObject::getImpl(cmd);
-	auto& layout_impl = CoreObject::getImpl(layout);
+	auto& storage_impl = CoreObject::getImpl(m_storage);
+	auto& layout_impl  = CoreObject::getImpl(layout);
+	auto  vk_cmd       = get_vk_command_buffer(cmd);
 
-	for (auto& storage : m_storages) {
+	for (auto& storage : storage_impl.storages) {
 		switch (storage->storageType) {
-		case ShaderStorageType::PushConstant:
+		case ShaderStorageDataType::ResourceArray: {
+		} break;
+		case ShaderStorageDataType::Sampler: {
+		} break;
+		case ShaderStorageDataType::Texture: {
+		} break;
+		case ShaderStorageDataType::CombinedImageSampler: {
+			auto& sampler = *static_cast<CombinedImageSamplerStorage*>(storage);
+
+			vk_cmd.bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics,
+				layout_impl.layout,
+				0,
+				sampler.descriptorSet,
+				{});
+		} break;
+		case ShaderStorageDataType::Buffer: {
+		} break;
+		case ShaderStorageDataType::BufferBlock: {
+		} break;
+		case ShaderStorageDataType::PushConstant: {
 			auto& pc = *static_cast<PushConstantStorage*>(storage);
 
-			impl.commandBuffer.pushConstants(
+			vk_cmd.pushConstants(
 				layout_impl.layout,
 				to_vk_shader_stage_flags(pc.shaderStageFlags),
 				0,
 				static_cast<uint32_t>(pc.blockStorage.size()),
 				pc.blockStorage.data());
-		break;
+		} break;
 		}
 	}
 }
 
 bool ShaderParameter::empty() const
 {
-	return m_storages.empty();
+	return CoreObject::getImpl(m_storage).storages.empty();
 }
 
 VERA_NAMESPACE_END
