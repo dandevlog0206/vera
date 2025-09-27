@@ -10,7 +10,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-ref<DeviceMemory> DeviceMemory::create(ref<Device> device, const DeviceMemoryCreateInfo& info)
+obj<DeviceMemory> DeviceMemory::create(obj<Device> device, const DeviceMemoryCreateInfo& info)
 {
 	auto  obj         = createNewObject<DeviceMemory>();
 	auto& impl        = getImpl(obj);
@@ -77,7 +77,7 @@ void DeviceMemory::resize(size_t new_size, bool keep_contents)
 	}
 }
 
-void DeviceMemory::bindBuffer(ref<Buffer> buffer, size_t offset)
+void DeviceMemory::bindBuffer(obj<Buffer> buffer, size_t offset)
 {
 	auto& impl        = getImpl(this);
 	auto& buffer_impl = getImpl(buffer);
@@ -99,7 +99,7 @@ void DeviceMemory::bindBuffer(ref<Buffer> buffer, size_t offset)
 	binding.resourcePtr  = buffer.get();
 }
 
-void DeviceMemory::bindTexture(ref<Texture> texture, size_t offset)
+void DeviceMemory::bindTexture(obj<Texture> texture, size_t offset)
 {
 	auto& impl         = getImpl(this);
 	auto& texture_impl = getImpl(texture);

@@ -37,29 +37,29 @@ struct BlockStorage : ShaderStorageData
 
 struct SamplerStorage : ShaderStorageData
 {
-	ref<Sampler> sampler;
+	obj<Sampler> sampler;
 };
 
 struct TextureStorage : ShaderStorageData
 {
-	ref<Texture> texture;
+	obj<Texture> texture;
 };
 
 struct CombinedImageSamplerStorage : ShaderStorageData
 {
-	ref<Sampler>      sampler;
-	ref<Texture>      texture;
+	obj<Sampler>      sampler;
+	obj<Texture>      texture;
 	vk::DescriptorSet descriptorSet;
 };
 
 struct BufferStorage : ShaderStorageData
 {
-	ref<Buffer> buffer;
+	obj<Buffer> buffer;
 };
 
 struct BufferBlockStorage : BlockStorage
 {
-	ref<Buffer> buffer;
+	obj<Buffer> buffer;
 };
 
 struct PushConstantStorage : BlockStorage
@@ -68,7 +68,8 @@ struct PushConstantStorage : BlockStorage
 
 struct ShaderStorageImpl
 {
-	ref<Device>                     device;
+	obj<Device>                     device;
+	obj<ShaderReflection>           reflection;
 
 	vk::DescriptorPool              descriptorPool;
 

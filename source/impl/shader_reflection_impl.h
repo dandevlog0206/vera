@@ -125,7 +125,7 @@ struct ReflectionDesc
 {
 	ReflectionType      type;
 	const char*         name;
-	ref<ResourceLayout> resourceLayout;
+	obj<ResourceLayout> resourceLayout;
 };
 
 struct ReflectionPrimitiveDesc : ReflectionDesc
@@ -191,8 +191,8 @@ struct ShaderReflectionImpl
 	using object_type = class ShaderReflection;
 	using hash_map    = std::unordered_map<std::string_view, uint32_t>;
 
-	ref<Device>                  device;
-	std::vector<ref<Shader>>     shaders;
+	obj<Device>                  device;
+	std::vector<obj<Shader>>     shaders;
 
 	hash_map                     hashMap;
 	std::vector<ReflectionDesc*> descriptors;

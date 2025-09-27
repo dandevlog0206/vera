@@ -17,7 +17,7 @@ struct WindowImpl
 	GLFWwindow*                 window;
 	std::deque<os::WindowEvent> eventQueue;
 
-	ref<Swapchain>              swapchain;
+	obj<Swapchain>              swapchain;
 
 	os::WindowEventHandler      eventHandler;
 	int2                        prevPosition;

@@ -8,7 +8,7 @@ VERA_NAMESPACE_BEGIN
 
 struct ResourceLayoutImpl
 {
-	ref<Device>                        device;
+	obj<Device>                        device;
 
 	vk::DescriptorSetLayout            layout;
 

@@ -8,7 +8,7 @@ VERA_NAMESPACE_BEGIN
 
 struct RenderCommandImpl
 {
-	ref<Device>       device;
+	obj<Device>       device;
 
 	vk::CommandPool   commandPool;
 	vk::CommandBuffer commandBuffer;

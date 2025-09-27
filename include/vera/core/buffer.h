@@ -38,20 +38,20 @@ struct BufferCreateInfo
 
 class Buffer : protected CoreObject
 {
-	VERA_CORE_OBJECT(Buffer)
+	VERA_CORE_OBJECT_INIT(Buffer)
 public:
-	static ref<Buffer> createVertex(ref<Device> device, size_t size);
-	static ref<Buffer> createVertex(ref<DeviceMemory> memory, size_t offset, size_t size);
-	static ref<Buffer> createIndex(ref<Device> device, IndexType type, size_t count);
-	static ref<Buffer> createIndex(ref<DeviceMemory> memory, size_t offset, IndexType type, size_t count);
-	static ref<Buffer> createStaging(ref<Device> device, size_t size);
-	static ref<Buffer> create(ref<Device> device, const BufferCreateInfo& info);
-	static ref<Buffer> create(ref<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info);
+	static obj<Buffer> createVertex(obj<Device> device, size_t size);
+	static obj<Buffer> createVertex(obj<DeviceMemory> memory, size_t offset, size_t size);
+	static obj<Buffer> createIndex(obj<Device> device, IndexType type, size_t count);
+	static obj<Buffer> createIndex(obj<DeviceMemory> memory, size_t offset, IndexType type, size_t count);
+	static obj<Buffer> createStaging(obj<Device> device, size_t size);
+	static obj<Buffer> create(obj<Device> device, const BufferCreateInfo& info);
+	static obj<Buffer> create(obj<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info);
 	~Buffer();
 
 	void resize(size_t new_size);
 
-	ref<DeviceMemory> getDeviceMemory();
+	obj<DeviceMemory> getDeviceMemory();
 
 	BufferUsageFlags getUsageFlags() const;
 

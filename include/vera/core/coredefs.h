@@ -23,6 +23,12 @@
 
 #define VERA_VERSION VERA_MAKE_VERSION(VERA_VERSION_MAJOR, VERA_VERSION_MINOR, VERA_VERSION_PATCH)
 
+#ifdef _DEBUG
+#define VERA_IS_DEBUG true
+#else
+#define VERA_IS_DEBUG false
+#endif
+
 // keywords
 #define VERA_INLINE inline
 #define VERA_NOEXCEPT noexcept

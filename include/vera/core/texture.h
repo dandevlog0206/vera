@@ -58,14 +58,15 @@ struct TextureCreateInfo
 
 class Texture : protected CoreObject
 {
-	VERA_CORE_OBJECT(Texture)
+	VERA_CORE_OBJECT_INIT(Texture)
 public:
-	static ref<Texture> create(ref<Device> device, const TextureCreateInfo& info);
+	static obj<Texture> create(obj<Device> device, const TextureCreateInfo& info);
 	~Texture();
 
 	void upload(const Image& image);
 
-	ref<DeviceMemory> getDeviceMemory();
+	obj<Device> getDevice();
+	obj<DeviceMemory> getDeviceMemory();
 
 	ref<TextureView> getTextureView();
 

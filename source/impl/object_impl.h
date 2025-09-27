@@ -28,21 +28,17 @@ class Swapchain;
 class Texture;
 class TextureView;
 
-vk::Instance get_vk_instance(const ref<Context>& context);
-vk::Device get_vk_device(const ref<Device>& device);
-vk::Fence get_vk_fence(const ref<Fence>& fence);
-vk::Fence& get_vk_fence(ref<Fence>& fence);
-vk::PipelineLayout get_vk_pipeline_layout(const ref<PipelineLayout>& pipeline_layout);
-vk::CommandBuffer get_vk_command_buffer(const ref<RenderCommand>& render_command);
-vk::CommandBuffer& get_vk_command_buffer(ref<RenderCommand>& render_command);
-vk::DescriptorSetLayout get_descriptor_set_layout(const ref<ResourceLayout>& resource_layout);
-vk::DescriptorSetLayout& get_descriptor_set_layout(ref<ResourceLayout>& resource_layout);
-vk::Sampler get_vk_sampler(const ref<Sampler>& sampler);
-vk::Sampler& get_vk_sampler(ref<Sampler>& sampler);
-vk::Semaphore get_vk_semaphore(const ref<Semaphore>& semaphore);
-vk::Semaphore& get_vk_semaphore(ref<Semaphore>& semaphore);
-vk::Image get_vk_image(const ref<Texture>& texture);
-vk::ImageView get_vk_image_view(const ref<TextureView>& texture_view);
+vk::Instance& get_vk_instance(ref<Context> context);
+const vk::Device& get_vk_device(const_ref<Device> device);
+vk::Device& get_vk_device(ref<Device> device);
+vk::Fence& get_vk_fence(ref<Fence> fence);
+vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout);
+vk::CommandBuffer& get_vk_command_buffer(ref<RenderCommand> render_command);
+vk::DescriptorSetLayout& get_descriptor_set_layout(ref<ResourceLayout> resource_layout);
+vk::Sampler& get_vk_sampler(ref<Sampler> sampler);
+vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore);
+vk::Image& get_vk_image(ref<Texture> texture);
+vk::ImageView& get_vk_image_view(ref<TextureView> texture_view);
 
 static vk::Format to_vk_format(Format format)
 {

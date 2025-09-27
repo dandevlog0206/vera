@@ -51,10 +51,12 @@ struct DeviceCreateInfo
 
 class Device : protected CoreObject
 {
-	VERA_CORE_OBJECT(Device)
+	VERA_CORE_OBJECT_INIT(Device)
 public:
-	static ref<Device> create(ref<Context> context, const DeviceCreateInfo& info = {});
+	static obj<Device> create(obj<Context> context, const DeviceCreateInfo& info = {});
 	~Device();
+
+	obj<Context> getContext();
 
 	const std::vector<DeviceMemoryType>& getMemoryTypes() const;
 

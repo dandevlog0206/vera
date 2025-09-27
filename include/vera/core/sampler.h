@@ -61,10 +61,12 @@ struct SamplerCreateInfo
 
 class Sampler : protected CoreObject
 {
-	VERA_CORE_OBJECT(Sampler)
+	VERA_CORE_OBJECT_INIT(Sampler)
 public:
-	static ref<Sampler> create(ref<Device> device, const SamplerCreateInfo& info = {});
+	static obj<Sampler> create(obj<Device> device, const SamplerCreateInfo& info = {});
 	~Sampler();
+
+	obj<Device> getDevice();
 
 	const SamplerCreateInfo& getInfo() const;
 

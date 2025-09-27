@@ -21,13 +21,13 @@ enum class ShaderStageFlagBits VERA_FLAG_BITS
 
 class Shader : protected CoreObject
 {
-	VERA_CORE_OBJECT(Shader)
+	VERA_CORE_OBJECT_INIT(Shader)
 public:
-	static ref<Shader> create(ref<Device> device, std::string_view path);
-	static ref<Shader> create(ref<Device> device, const uint32_t* spirv_code, size_t size_in_byte);
+	static obj<Shader> create(obj<Device> device, std::string_view path);
+	static obj<Shader> create(obj<Device> device, const uint32_t* spirv_code, size_t size_in_byte);
 	~Shader();
 
-	ref<Device> getDevice();
+	obj<Device> getDevice();
 	
 	ShaderStageFlags getShaderStageFlags() const;
 

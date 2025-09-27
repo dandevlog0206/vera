@@ -9,12 +9,15 @@ class Device;
 
 class Semaphore : protected CoreObject
 {
-	VERA_CORE_OBJECT(Semaphore)
+	VERA_CORE_OBJECT_INIT(Semaphore)
 public:
-	static bool waitAll(std::span<ref<Semaphore>> semaphores, uint64_t timeout = UINT64_MAX);
-	static bool waitAny(std::span<ref<Semaphore>> semaphores, uint64_t timeout = UINT64_MAX);
+	static bool waitAll(std::span<obj<Semaphore>> semaphores, uint64_t timeout = UINT64_MAX);
+	static bool waitAny(std::span<obj<Semaphore>> semaphores, uint64_t timeout = UINT64_MAX);
 
-	static ref<Semaphore> create(ref<Device> device);
+	static obj<Semaphore> create(obj<Device> device);
+	~Semaphore();
+
+	obj<Device> getDevice();
 
 	void signal(uint64_t value);
 	uint64_t value();

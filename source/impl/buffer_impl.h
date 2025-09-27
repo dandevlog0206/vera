@@ -10,8 +10,8 @@ class DeviceMemory;
 
 struct BufferImpl
 {
-	ref<Device>       device;
-	ref<DeviceMemory> memory;
+	obj<Device>       device;
+	obj<DeviceMemory> memory;
 
 	vk::Buffer        buffer;
 
@@ -22,8 +22,8 @@ struct BufferImpl
 
 struct BufferViewImpl
 {
-	ref<Device>    device;
-	ref<Buffer>    buffer;
+	obj<Device>    device;
+	obj<Buffer>    buffer;
 
 	vk::BufferView bufferView;
 };

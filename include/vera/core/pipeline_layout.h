@@ -17,18 +17,20 @@ struct PushConstantRange
 
 struct PipelineLayoutCreateInfo
 {
-	std::vector<ref<ResourceLayout>> resourceLayouts;
+	std::vector<obj<ResourceLayout>> resourceLayouts;
 	std::vector<PushConstantRange>   pushConstantRanges;
 };
 
 class PipelineLayout : protected CoreObject
 {
-	VERA_CORE_OBJECT(PipelineLayout)
+	VERA_CORE_OBJECT_INIT(PipelineLayout)
 public:
-	static ref<PipelineLayout> create(ref<Device> device, const PipelineLayoutCreateInfo& info);
+	static obj<PipelineLayout> create(obj<Device> device, const PipelineLayoutCreateInfo& info);
 	~PipelineLayout();
 
-	const std::vector<ref<ResourceLayout>>& getResourceLayouts() const;
+	obj<Device> getDevice();
+
+	const std::vector<obj<ResourceLayout>>& getResourceLayouts() const;
 	const std::vector<PushConstantRange>& getPushConstantRanges() const;
 
 	size_t hash() const;

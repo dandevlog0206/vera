@@ -6,7 +6,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static bool has_same_device(std::span<ref<Shader>> shaders)
+static bool has_same_device(std::span<obj<Shader>> shaders)
 {
 	auto& device = CoreObject::getImpl(shaders[0]).device;
 
@@ -17,7 +17,7 @@ static bool has_same_device(std::span<ref<Shader>> shaders)
 	return true;
 }
 
-static bool check_shader_stages(std::span<ref<Shader>> shaders)
+static bool check_shader_stages(std::span<obj<Shader>> shaders)
 {
 	ShaderStageFlags all_flags;
 
@@ -33,7 +33,7 @@ static bool check_shader_stages(std::span<ref<Shader>> shaders)
 	return true;
 }
 
-ref<ShaderReflection> ShaderReflection::create(std::vector<ref<Shader>> shaders)
+obj<ShaderReflection> ShaderReflection::create(std::vector<obj<Shader>> shaders)
 {
 	if (!has_same_device(shaders))
 		throw Exception("can't reflect shaders from another devices");
@@ -67,7 +67,12 @@ ShaderReflection::~ShaderReflection()
 	destroyObjectImpl(this);
 }
 
-bool ShaderReflection::isCompatible(ref<Pipeline>& pipeline) const
+obj<Device> ShaderReflection::getDevice()
+{
+	return getImpl(this).device;
+}
+
+bool ShaderReflection::isCompatible(obj<Pipeline>& pipeline) const
 {
 	// TODO: implement
 

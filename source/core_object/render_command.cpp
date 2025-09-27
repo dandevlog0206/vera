@@ -11,7 +11,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static vk::ImageView get_vk_image_view(const ref<Texture>& texture)
+static vk::ImageView get_vk_image_view(ref<Texture> texture)
 {
 	// TODO: remove
 	return get_vk_image_view(CoreObject::getImpl(texture).textureView);
@@ -26,17 +26,12 @@ static void clear_rendering_info(RenderingInfo& info)
 	info.stencilAttachment.reset();
 }
 
-vk::CommandBuffer get_vk_command_buffer(const ref<RenderCommand>& render_command)
+vk::CommandBuffer& get_vk_command_buffer(ref<RenderCommand> render_command)
 {
 	return CoreObject::getImpl(render_command).commandBuffer;
 }
 
-vk::CommandBuffer& get_vk_command_buffer(ref<RenderCommand>& render_command)
-{
-	return CoreObject::getImpl(render_command).commandBuffer;
-}
-
-ref<RenderCommand> RenderCommand::create(ref<Device> device)
+obj<RenderCommand> RenderCommand::create(obj<Device> device)
 {
 	auto  obj       = createNewObject<RenderCommand>();
 	auto& impl      = getImpl(obj);
@@ -66,6 +61,11 @@ RenderCommand::~RenderCommand()
 	vk_device.destroy(impl.commandPool);
 
 	destroyObjectImpl(this);
+}
+
+obj<Device> RenderCommand::getDevice()
+{
+	return getImpl(this).device;
 }
 
 void RenderCommand::begin()

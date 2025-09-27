@@ -31,10 +31,12 @@ struct ResourceLayoutBinding
 
 class ResourceLayout : protected CoreObject
 {
-	VERA_CORE_OBJECT(ResourceLayout)
+	VERA_CORE_OBJECT_INIT(ResourceLayout)
 public:
-	static ref<ResourceLayout> create(ref<Device> device, const std::vector<ResourceLayoutBinding>& bindings);
+	static obj<ResourceLayout> create(obj<Device> device, const std::vector<ResourceLayoutBinding>& bindings);
 	~ResourceLayout();
+
+	obj<Device> getDevice();
 
 	const std::vector<ResourceLayoutBinding>& getBindings() const;
 

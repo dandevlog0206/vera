@@ -93,10 +93,10 @@ public:
 	}
 
 private:
-	vr::ref<vr::Context>              m_context;
-	vr::ref<vr::Device>               m_device;
-	vr::ref<vr::RenderContext>        m_render_ctx;
-	vr::ref<vr::Swapchain>            m_swapchain;
+	vr::obj<vr::Context>              m_context;
+	vr::obj<vr::Device>               m_device;
+	vr::obj<vr::RenderContext>        m_render_ctx;
+	vr::obj<vr::Swapchain>            m_swapchain;
 	std::unique_ptr<vr::GraphicsPass> m_pass;
 
 	vr::os::Window                    m_window;

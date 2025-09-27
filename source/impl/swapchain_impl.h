@@ -8,20 +8,20 @@ VERA_NAMESPACE_BEGIN
 
 struct SwapchainSync
 {
-	ref<Semaphore> waitSemaphore;
-	ref<Fence>     fence;
+	obj<Semaphore> waitSemaphore;
+	obj<Fence>     fence;
 };
 
 struct SwapchainFrame
 {
-	ref<Texture> texture;
+	obj<Texture> texture;
 };
 
 struct SwapchainImpl
 {
 	os::Window* window;
-	ref<Device>                 device;
-	ref<RenderContext>          renderContext;
+	obj<Device>                 device;
+	obj<RenderContext>          renderContext;
 
 	vk::SwapchainKHR            swapchain;
 	vk::SurfaceKHR              surface;

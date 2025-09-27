@@ -83,12 +83,17 @@ static void clean_device_cache(DeviceImpl& impl)
 	}
 }
 
-vk::Device get_vk_device(const ref<Device>& device)
+const vk::Device& get_vk_device(const_ref<Device> device)
 {
 	return CoreObject::getImpl(device).device;
 }
 
-ref<Device> Device::create(ref<Context> context, const DeviceCreateInfo& info)
+vk::Device& get_vk_device(ref<Device> device)
+{
+	return CoreObject::getImpl(device).device;
+}
+
+obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 {
 	std::vector<const char*> device_layers;
 	std::vector<const char*> device_extensions;
@@ -246,6 +251,11 @@ Device::~Device()
 	impl.device.destroy();
 
 	destroyObjectImpl<Device>(this);
+}
+
+obj<Context> Device::getContext()
+{
+	return getImpl(this).context;
 }
 
 const std::vector<DeviceMemoryType>& Device::getMemoryTypes() const

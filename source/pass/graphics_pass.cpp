@@ -8,7 +8,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-GraphicsPass::GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& info) :
+GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& info) :
 	m_device(device),
 	m_parameter(ShaderReflection::create({ info.vertexShader, info.fragmentShader })),
 	m_vertex_count(info.vertexCount)
@@ -44,17 +44,17 @@ GraphicsPass::~GraphicsPass()
 
 }
 
-ref<Device> GraphicsPass::getDevice()
+obj<Device> GraphicsPass::getDevice()
 {
 	return m_device;
 }
 
-ref<Pipeline> GraphicsPass::getPipeline()
+obj<Pipeline> GraphicsPass::getPipeline()
 {
 	return m_pipeline;
 }
 
-ref<Buffer> GraphicsPass::getVertexBuffer()
+obj<Buffer> GraphicsPass::getVertexBuffer()
 {
 	return m_vertex_buffer;
 }
@@ -64,7 +64,7 @@ ShaderParameter& GraphicsPass::getShaderParameter()
 	return m_parameter;
 }
 
-void GraphicsPass::execute(ref<RenderContext> ctx, ref<Texture> texture)
+void GraphicsPass::execute(obj<RenderContext> ctx, ref<Texture> texture)
 {
 	uint32_t width  = texture->width();
 	uint32_t height = texture->height();

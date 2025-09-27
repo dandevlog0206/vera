@@ -8,9 +8,9 @@ VERA_NAMESPACE_BEGIN
 
 struct TextureImpl
 {
-	ref<Device>          device;
-	ref<DeviceMemory>    deviceMemory;
-	ref<TextureView>     textureView;
+	obj<Device>          device;
+	obj<DeviceMemory>    deviceMemory;
+	obj<TextureView>     textureView;
 
 	vk::Image            image;
 	vk::ImageUsageFlags  imageUsage;
@@ -29,8 +29,8 @@ struct TextureViewImpl
 {
 	using object_type = class TextureView;
 
-	ref<Device>   device;
-	ref<Texture>  texture;
+	obj<Device>   device;
+	obj<Texture>  texture;
 
 	vk::ImageView imageView;
 

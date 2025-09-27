@@ -12,7 +12,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static void append_shader_layout_info(PipelineLayoutCreateInfo& layout_info, ref<Shader> shader)
+static void append_shader_layout_info(PipelineLayoutCreateInfo& layout_info, obj<Shader> shader)
 {
 	if (!shader) return;
 
@@ -24,7 +24,7 @@ static void append_shader_layout_info(PipelineLayoutCreateInfo& layout_info, ref
 		layout_info.pushConstantRanges.push_back(pc);
 }
 
-static ref<PipelineLayout> register_pipeline_layout(ref<Device> device, const GraphicsPipelineCreateInfo& info)
+static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
 	PipelineLayoutCreateInfo layout_info;
 
@@ -222,7 +222,7 @@ static size_t hash_graphics_pipeline(const GraphicsPipelineCreateInfo& info)
 	return seed;
 }
 
-ref<Pipeline> Pipeline::create(ref<Device> device, const GraphicsPipelineCreateInfo& info)
+obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
 	VERA_ASSERT_MSG(info.vertexShader && info.fragmentShader,
 		"vertex shader and fragment shader are required");
@@ -431,14 +431,19 @@ Pipeline::~Pipeline()
 	destroyObjectImpl(this);
 }
 
-ref<PipelineLayout> Pipeline::getPipelineLayout()
+obj<Device> Pipeline::getDevice()
+{
+	return getImpl(this).device;
+}
+
+obj<PipelineLayout> Pipeline::getPipelineLayout()
 {
 	return getImpl(this).pipelineLayout;
 }
 
-std::vector<ref<Shader>> Pipeline::enumerateShaders()
+std::vector<obj<Shader>> Pipeline::enumerateShaders()
 {
-	std::vector<ref<Shader>> result;
+	std::vector<obj<Shader>> result;
 
 	for (auto [flag, shader] : getImpl(this).shaders)
 		result.push_back(std::move(shader));
@@ -446,14 +451,14 @@ std::vector<ref<Shader>> Pipeline::enumerateShaders()
 	return result;
 }
 
-ref<Shader> Pipeline::getShader(ShaderStageFlagBits stage)
+obj<Shader> Pipeline::getShader(ShaderStageFlagBits stage)
 {
 	auto& impl = getImpl(this);
 
 	for (auto& [flag, shader] : impl.shaders)
 		if (flag == stage) return shader;
 
-	return ref<Shader>();
+	return obj<Shader>();
 }
 
 VERA_NAMESPACE_END

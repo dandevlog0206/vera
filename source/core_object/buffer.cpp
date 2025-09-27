@@ -34,7 +34,7 @@ static uint32_t find_buffer_bind_idx(DeviceMemoryImpl& impl, Buffer* this_ptr)
 
 static void allocate_device_memory(
 	DeviceMemoryImpl&   impl,
-	ref<Device>         device,
+	obj<Device>         device,
 	vk::Buffer          buffer,
 	MemoryPropertyFlags flags
 ) {
@@ -53,7 +53,7 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
-ref<Buffer> Buffer::createVertex(ref<Device> device, size_t size)
+obj<Buffer> Buffer::createVertex(obj<Device> device, size_t size)
 {
 	BufferCreateInfo info;
 	info.size         = size;
@@ -69,7 +69,7 @@ ref<Buffer> Buffer::createVertex(ref<Device> device, size_t size)
 	return create(device, info);
 }
 
-ref<Buffer> Buffer::createVertex(ref<DeviceMemory> memory, size_t offset, size_t size)
+obj<Buffer> Buffer::createVertex(obj<DeviceMemory> memory, size_t offset, size_t size)
 {
 	BufferCreateInfo info;
 	info.size         = size;
@@ -85,7 +85,7 @@ ref<Buffer> Buffer::createVertex(ref<DeviceMemory> memory, size_t offset, size_t
 	return create(memory, offset, info);
 }
 
-ref<Buffer> Buffer::createIndex(ref<Device> device, IndexType type, size_t count)
+obj<Buffer> Buffer::createIndex(obj<Device> device, IndexType type, size_t count)
 {
 	BufferCreateInfo info;
 	info.size         = get_index_size(type) * count;
@@ -106,7 +106,7 @@ ref<Buffer> Buffer::createIndex(ref<Device> device, IndexType type, size_t count
 	return obj;
 }
 
-ref<Buffer> Buffer::createIndex(ref<DeviceMemory> memory, size_t offset, IndexType type, size_t count)
+obj<Buffer> Buffer::createIndex(obj<DeviceMemory> memory, size_t offset, IndexType type, size_t count)
 {
 	BufferCreateInfo info;
 	info.size         = get_index_size(type) * count;
@@ -127,7 +127,7 @@ ref<Buffer> Buffer::createIndex(ref<DeviceMemory> memory, size_t offset, IndexTy
 	return obj;
 }
 
-ref<Buffer> Buffer::createStaging(ref<Device> device, size_t size)
+obj<Buffer> Buffer::createStaging(obj<Device> device, size_t size)
 {
 	BufferCreateInfo info;
 	info.size         = size;
@@ -142,7 +142,7 @@ ref<Buffer> Buffer::createStaging(ref<Device> device, size_t size)
 	return create(device, info);
 }
 
-ref<Buffer> Buffer::create(ref<Device> device, const BufferCreateInfo& info)
+obj<Buffer> Buffer::create(obj<Device> device, const BufferCreateInfo& info)
 {
 	auto  obj           = createNewObject<Buffer>();
 	auto  memory_obj    = createNewObject<DeviceMemory>();
@@ -174,7 +174,7 @@ ref<Buffer> Buffer::create(ref<Device> device, const BufferCreateInfo& info)
 	return obj;
 }
 
-ref<Buffer> Buffer::create(ref<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info)
+obj<Buffer> Buffer::create(obj<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info)
 {
 	auto  obj         = createNewObject<Buffer>();
 	auto& impl        = getImpl(obj);
@@ -245,7 +245,7 @@ void Buffer::resize(size_t new_size)
 	binding.size = new_size;
 }
 
-ref<DeviceMemory> Buffer::getDeviceMemory()
+obj<DeviceMemory> Buffer::getDeviceMemory()
 {
 	return getImpl(this).memory;
 }

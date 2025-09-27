@@ -11,12 +11,13 @@ class ShaderParameter;
 
 class RenderContext : protected CoreObject
 {
-	VERA_CORE_OBJECT(RenderContext)
+	VERA_CORE_OBJECT_INIT(RenderContext)
 public:
-	static ref<RenderContext> create(ref<Device> device);
+	static obj<RenderContext> create(obj<Device> device);
 	~RenderContext();
 
-	ref<RenderCommand> getRenderCommand();
+	obj<Device> getDevice();
+	obj<RenderCommand> getRenderCommand();
 
 	void draw(
 		const GraphicsState& states,

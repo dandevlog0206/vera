@@ -11,10 +11,10 @@ class Texture;
 
 struct RenderFrame
 {
-	ref<RenderCommand> renderCommand;
-	ref<Fence>         fence;
-	ref<Semaphore>     renderCompleteSemaphore;
-	ref<Semaphore>     imageWaitSemaphore;
+	obj<RenderCommand> renderCommand;
+	obj<Fence>         fence;
+	obj<Semaphore>     renderCompleteSemaphore;
+	obj<Semaphore>     imageWaitSemaphore;
 	ref<Texture>       swapchainImage;
 	bool               isBegin;
 	bool               isSubmitted;
@@ -22,7 +22,7 @@ struct RenderFrame
 
 struct RenderContextImpl
 {
-	ref<Device>              device;
+	obj<Device>              device;
 
 	std::vector<RenderFrame> renderFrames;
 	int32_t                  frameIndex;

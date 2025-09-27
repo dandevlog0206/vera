@@ -539,12 +539,12 @@ void ShaderVariable::setValue(const double4x4& value)
 	store_primitive_impl(m_storage, m_desc, m_offset, value);
 }
 
-void ShaderVariable::operator=(ref<Sampler> obj)
+void ShaderVariable::operator=(obj<Sampler> obj)
 {
 	setSampler(std::move(obj));
 }
 
-void ShaderVariable::setSampler(ref<Sampler> sampler)
+void ShaderVariable::setSampler(obj<Sampler> sampler)
 {
 	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Sampler ||
 		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
@@ -552,7 +552,7 @@ void ShaderVariable::setSampler(ref<Sampler> sampler)
 	static_cast<SamplerStorage*>(m_storage)->sampler = std::move(sampler);
 }
 
-ref<Sampler> ShaderVariable::getSampler()
+obj<Sampler> ShaderVariable::getSampler()
 {
 	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Sampler ||
 		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
@@ -560,12 +560,12 @@ ref<Sampler> ShaderVariable::getSampler()
 	return static_cast<SamplerStorage*>(m_storage)->sampler;
 }
 
-void ShaderVariable::operator=(ref<Texture> obj)
+void ShaderVariable::operator=(obj<Texture> obj)
 {
 	setTexture(std::move(obj));
 }
 
-void ShaderVariable::setTexture(ref<Texture> texture)
+void ShaderVariable::setTexture(obj<Texture> texture)
 {
 	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Texture ||
 		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
@@ -597,7 +597,7 @@ void ShaderVariable::setTexture(ref<Texture> texture)
 	// implement ShaderVariable::setTexture(ref<Texture> texture)
 }
 
-ref<Texture> ShaderVariable::getTexture()
+obj<Texture> ShaderVariable::getTexture()
 {
 	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Texture ||
 		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
@@ -605,12 +605,12 @@ ref<Texture> ShaderVariable::getTexture()
 	return static_cast<TextureStorage*>(m_storage)->texture;
 }
 
-void ShaderVariable::operator=(ref<Buffer> obj)
+void ShaderVariable::operator=(obj<Buffer> obj)
 {
 	setBuffer(std::move(obj));
 }
 
-void ShaderVariable::setBuffer(ref<Buffer> buffer)
+void ShaderVariable::setBuffer(obj<Buffer> buffer)
 {
 	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Buffer ||
 		m_storage->storageType == ShaderStorageDataType::BufferBlock));
@@ -618,7 +618,7 @@ void ShaderVariable::setBuffer(ref<Buffer> buffer)
 	static_cast<BufferStorage*>(m_storage)->buffer = std::move(buffer);
 }
 
-ref<Buffer> ShaderVariable::getBuffer()
+obj<Buffer> ShaderVariable::getBuffer()
 {
 	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Buffer ||
 		m_storage->storageType == ShaderStorageDataType::BufferBlock));

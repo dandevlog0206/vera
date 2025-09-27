@@ -44,7 +44,7 @@ static RenderFrame& get_render_frame(RenderContextImpl& impl)
 	return impl.renderFrames[impl.frameIndex];
 }
 
-ref<RenderContext> RenderContext::create(ref<Device> device)
+obj<RenderContext> RenderContext::create(obj<Device> device)
 {
 	auto  obj  = createNewObject<RenderContext>();
 	auto& impl = getImpl(obj);
@@ -66,7 +66,12 @@ RenderContext::~RenderContext()
 	destroyObjectImpl(this);
 }
 
-ref<RenderCommand> RenderContext::getRenderCommand()
+obj<Device> RenderContext::getDevice()
+{
+	return getImpl(this).device;
+}
+
+obj<RenderCommand> RenderContext::getRenderCommand()
 {
 	auto& impl = getImpl(this);
 

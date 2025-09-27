@@ -8,7 +8,7 @@ struct SemaphoreImpl
 {
 	using object_type = class Semaphore;
 
-	ref<Device>   device;
+	obj<Device>   device;
 
 	vk::Semaphore semaphore;
 };

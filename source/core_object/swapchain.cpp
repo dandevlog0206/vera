@@ -6,6 +6,7 @@
 #include "../impl/texture_impl.h"
 #include "../impl/window_impl.h"
 
+#include "../../include/vera/core/context.h"
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/device_memory.h"
 #include "../../include/vera/core/fence.h"
@@ -23,7 +24,7 @@ VERA_NAMESPACE_BEGIN
 
 class SwapchainTextureFactory : protected CoreObject {
 public:
-	static ref<Texture> create(SwapchainImpl& swapchain_impl)
+	static obj<Texture> create(SwapchainImpl& swapchain_impl)
 	{
 		auto  obj            = createNewObject<Texture>();
 		auto& impl           = getImpl(obj);
@@ -121,7 +122,7 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 	device_impl.device.destroy(old_swapchain);
 }
 
-ref<Swapchain> Swapchain::create(ref<RenderContext> render_ctx, os::Window& window, const SwapchainCreateInfo& info)
+obj<Swapchain> Swapchain::create(obj<RenderContext> render_ctx, os::Window& window, const SwapchainCreateInfo& info)
 {
 	VkSurfaceKHR surface;
 	
@@ -174,6 +175,16 @@ Swapchain::~Swapchain()
 	device_impl.device.destroy(impl.swapchain);
 
 	destroyObjectImpl(this);
+}
+
+obj<Device> Swapchain::getDevice()
+{
+	return getImpl(this).device;
+}
+
+obj<RenderContext> Swapchain::getRenderContext()
+{
+	return getImpl(this).renderContext;
 }
 
 ref<Texture> Swapchain::acquireNextImage()

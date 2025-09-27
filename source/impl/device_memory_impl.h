@@ -22,7 +22,7 @@ struct MemoryResourceBind
 
 struct DeviceMemoryImpl
 {
-	ref<Device>                     device;
+	obj<Device>                     device;
 
 	vk::DeviceMemory                memory;
 

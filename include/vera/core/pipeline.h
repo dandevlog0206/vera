@@ -175,9 +175,9 @@ struct ColorBlendInfo
 
 struct GraphicsPipelineCreateInfo
 {
-	ref<Shader>                      vertexShader;
-	ref<Shader>                      geometryShader;
-	ref<Shader>                      fragmentShader;
+	obj<Shader>                      vertexShader;
+	obj<Shader>                      geometryShader;
+	obj<Shader>                      fragmentShader;
 
 	std::optional<VertexInputInfo>   vertexInputInfo;
 	std::optional<PrimitiveInfo>     primitiveInfo;
@@ -194,15 +194,15 @@ struct ComputePipelineCreateInfo
 
 class Pipeline : protected CoreObject
 {
-	VERA_CORE_OBJECT(Pipeline)
+	VERA_CORE_OBJECT_INIT(Pipeline)
 public:
-	static ref<Pipeline> create(ref<Device> device, const GraphicsPipelineCreateInfo& info);
+	static obj<Pipeline> create(obj<Device> device, const GraphicsPipelineCreateInfo& info);
 	~Pipeline();
 
-	ref<PipelineLayout> getPipelineLayout();
-
-	std::vector<ref<Shader>> enumerateShaders();
-	ref<Shader> getShader(ShaderStageFlagBits stage);
+	obj<Device> getDevice();
+	obj<PipelineLayout> getPipelineLayout();
+	std::vector<obj<Shader>> enumerateShaders();
+	obj<Shader> getShader(ShaderStageFlagBits stage);
 };
 
 VERA_NAMESPACE_END

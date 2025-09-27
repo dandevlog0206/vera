@@ -23,6 +23,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spirv-reflect", "thirdparty\build\spirv-reflect\spirv-reflect.vcxproj", "{157A5093-3FF7-43CE-8E35-9A8981851CA7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "texture", "test\texture\texture.vcxproj", "{F58C01E7-AFC0-476E-A699-7C06ADA67102}"
+	ProjectSection(ProjectDependencies) = postProject
+		{330A320D-04CA-4B5C-BF55-5E4E478DCA1D} = {330A320D-04CA-4B5C-BF55-5E4E478DCA1D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

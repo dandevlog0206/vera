@@ -41,15 +41,16 @@ struct DeviceMemoryCreateInfo
 
 class DeviceMemory : protected CoreObject
 {
-	VERA_CORE_OBJECT(DeviceMemory)
+	VERA_CORE_OBJECT_INIT(DeviceMemory)
 public:
-	static ref<DeviceMemory> create(ref<Device> device, const DeviceMemoryCreateInfo& info);
+	static obj<DeviceMemory> create(obj<Device> device, const DeviceMemoryCreateInfo& info);
 	~DeviceMemory();
 
 	void resize(size_t new_size, bool keep_contents = false);
 
-	void bindBuffer(ref<Buffer> buffer, size_t offset);
-	void bindTexture(ref<Texture> texture, size_t offset);
+	// TODO: consider using ref<>
+	void bindBuffer(obj<Buffer> buffer, size_t offset);
+	void bindTexture(obj<Texture> texture, size_t offset);
 
 	void* map();
 	void unmap();

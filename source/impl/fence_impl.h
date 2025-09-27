@@ -8,7 +8,7 @@ class Device;
 
 struct FenceImpl
 {
-	ref<Device> device;
+	obj<Device> device;
 
 	vk::Fence   fence;
 };

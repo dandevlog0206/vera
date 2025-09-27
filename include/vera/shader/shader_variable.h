@@ -96,17 +96,17 @@ public:
 	void setValue(const double4x3& value);
 	void setValue(const double4x4& value);
 
-	void operator=(ref<Sampler> obj);
-	void setSampler(ref<Sampler> sampler);
-	ref<Sampler> getSampler();
+	void operator=(obj<Sampler> obj);
+	void setSampler(obj<Sampler> sampler);
+	obj<Sampler> getSampler();
 
-	void operator=(ref<Texture> obj);
-	void setTexture(ref<Texture> texture);
-	ref<Texture> getTexture();
+	void operator=(obj<Texture> obj);
+	void setTexture(obj<Texture> texture);
+	obj<Texture> getTexture();
 
-	void operator=(ref<Buffer> obj);
-	void setBuffer(ref<Buffer> buffer);
-	ref<Buffer> getBuffer();
+	void operator=(obj<Buffer> obj);
+	void setBuffer(obj<Buffer> buffer);
+	obj<Buffer> getBuffer();
 
 private:
 	ShaderStorageData* m_storage; // TODO: rename

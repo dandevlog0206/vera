@@ -270,6 +270,12 @@
     <ClInclude Include="include\vera\math\math_util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\graphics\transform2d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\radian.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\window.cpp">
@@ -357,6 +363,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\graphics\image_sampler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\transform2d.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

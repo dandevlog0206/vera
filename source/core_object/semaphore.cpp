@@ -5,7 +5,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static bool check_same_device(std::span<ref<Semaphore>> semaphores)
+static bool check_same_device(std::span<obj<Semaphore>> semaphores)
 {
 	auto vk_device = CoreObject::getImpl(semaphores.front()).device;
 
@@ -15,7 +15,7 @@ static bool check_same_device(std::span<ref<Semaphore>> semaphores)
 	return true;
 }
 
-static bool wait_semaphores(vk::Device vk_device, std::span<ref<Semaphore>> semaphores, uint64_t timeout, bool wait_all)
+static bool wait_semaphores(vk::Device vk_device, std::span<obj<Semaphore>> semaphores, uint64_t timeout, bool wait_all)
 {
 	static std::vector<vk::Semaphore> s_semaphores;
 
@@ -38,17 +38,12 @@ static bool wait_semaphores(vk::Device vk_device, std::span<ref<Semaphore>> sema
 	throw Exception("failed to wait semaphore");
 }
 
-vk::Semaphore get_vk_semaphore(const ref<Semaphore>& semaphore)
+vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore)
 {
 	return CoreObject::getImpl(semaphore).semaphore;
 }
 
-vk::Semaphore& get_vk_semaphore(ref<Semaphore>& semaphore)
-{
-	return CoreObject::getImpl(semaphore).semaphore;
-}
-
-bool Semaphore::waitAll(std::span<ref<Semaphore>> semaphores, uint64_t timeout)
+bool Semaphore::waitAll(std::span<obj<Semaphore>> semaphores, uint64_t timeout)
 {
 	if (semaphores.empty())
 		return true;
@@ -60,7 +55,7 @@ bool Semaphore::waitAll(std::span<ref<Semaphore>> semaphores, uint64_t timeout)
 	return wait_semaphores(vk_device, semaphores, true, timeout);
 }
 
-bool Semaphore::waitAny(std::span<ref<Semaphore>> semaphores, uint64_t timeout)
+bool Semaphore::waitAny(std::span<obj<Semaphore>> semaphores, uint64_t timeout)
 {
 	if (semaphores.empty())
 		return true;
@@ -72,7 +67,7 @@ bool Semaphore::waitAny(std::span<ref<Semaphore>> semaphores, uint64_t timeout)
 	return wait_semaphores(vk_device, semaphores, false, timeout);
 }
 
-ref<Semaphore> Semaphore::create(ref<Device> device)
+obj<Semaphore> Semaphore::create(obj<Device> device)
 {
 	auto  obj       = createNewObject<Semaphore>();
 	auto& impl      = getImpl(obj);
@@ -81,7 +76,22 @@ ref<Semaphore> Semaphore::create(ref<Device> device)
 	impl.device    = std::move(device);
 	impl.semaphore = vk_device.createSemaphore({});
 
-	return std::move(obj);
+	return obj;
+}
+
+Semaphore::~Semaphore()
+{
+	auto& impl      = getImpl(this);
+	auto  vk_device = get_vk_device(impl.device);
+
+	vk_device.destroy(impl.semaphore);
+
+	destroyObjectImpl(this);
+}
+
+obj<Device> Semaphore::getDevice()
+{
+	return getImpl(this).device;
 }
 
 void Semaphore::signal(uint64_t value)

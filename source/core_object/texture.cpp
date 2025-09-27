@@ -38,7 +38,7 @@ static vk::SampleCountFlagBits get_sample_count(uint32_t count)
 
 static void allocate_device_memory(
 	DeviceMemoryImpl&   impl,
-	ref<Device>         device,
+	obj<Device>         device,
 	vk::Image           image,
 	MemoryPropertyFlags flags
 ) {
@@ -57,12 +57,12 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
-vk::Image get_vk_image(const ref<Texture>& texture)
+vk::Image& get_vk_image(ref<Texture> texture)
 {
 	return CoreObject::getImpl(texture).image;
 }
 
-ref<Texture> Texture::create(ref<Device> device, const TextureCreateInfo& info)
+obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 {
 	auto  obj         = createNewObject<Texture>();
 	auto  memory_obj  = createNewObject<DeviceMemory>();
@@ -181,7 +181,12 @@ void Texture::upload(const Image& image)
 	impl.device->waitIdle();
 }
 
-ref<DeviceMemory> Texture::getDeviceMemory()
+obj<Device> Texture::getDevice()
+{
+	return getImpl(this).device;
+}
+
+obj<DeviceMemory> Texture::getDeviceMemory()
 {
 	return getImpl(this).deviceMemory;
 }
@@ -210,7 +215,7 @@ ref<TextureView> Texture::getTextureView()
 		view_info.subresourceRange.layerCount     = 1;
 
 		view_impl.device    = impl.device;
-		view_impl.texture   = ref<Texture>(this);
+		view_impl.texture   = vr::obj<Texture>(this);
 		view_impl.imageView = vk_device.createImageView(view_info);
 		view_impl.offsetX   = 0;
 		view_impl.offsetY   = 0;

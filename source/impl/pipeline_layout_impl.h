@@ -8,12 +8,12 @@ VERA_NAMESPACE_BEGIN
 
 struct PipelineLayoutImpl
 {
-	ref<Device>                      device;
+	obj<Device>                      device;
 
 	vk::PipelineLayout               layout;
 
 	size_t                           hashValue;
-	std::vector<ref<ResourceLayout>> resourceLayout;
+	std::vector<obj<ResourceLayout>> resourceLayout;
 	std::vector<PushConstantRange>   pushConstantRanges;
 };
 

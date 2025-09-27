@@ -11,10 +11,13 @@ struct BufferViewCreateInfo
 
 class BufferView : protected CoreObject
 {
-	VERA_CORE_OBJECT(BufferView)
+	VERA_CORE_OBJECT_INIT(BufferView)
 public:
-	ref<BufferView> create(ref<BufferView> device, const BufferViewCreateInfo& info);
+	obj<BufferView> create(obj<BufferView> device, const BufferViewCreateInfo& info);
 	~BufferView();
+
+	obj<Device> getDevice();
+	obj<Buffer> getBuffer();
 };
 
 VERA_NAMESPACE_END

@@ -500,7 +500,7 @@ static size_t hash_shader_code(const uint32_t* spirv_code, size_t size_in_byte)
 	return seed;
 }
 
-ref<Shader> Shader::create(ref<Device> device, std::string_view path)
+obj<Shader> Shader::create(obj<Device> device, std::string_view path)
 {
 	std::vector<uint8_t> binary;
 	std::ifstream        file(path.data(), std::ios_base::binary | std::ios_base::ate);
@@ -516,7 +516,7 @@ ref<Shader> Shader::create(ref<Device> device, std::string_view path)
 	return create(std::move(device), reinterpret_cast<uint32_t*>(binary.data()), binary.size());
 }
 
-ref<Shader> Shader::create(ref<Device> device, const uint32_t* spirv_code, size_t size_in_byte)
+obj<Shader> Shader::create(obj<Device> device, const uint32_t* spirv_code, size_t size_in_byte)
 {
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_shader_code(spirv_code, size_in_byte);
@@ -555,7 +555,7 @@ Shader::~Shader()
 	destroyObjectImpl(this);
 }
 
-ref<Device> Shader::getDevice()
+obj<Device> Shader::getDevice()
 {
 	auto& impl = getImpl(this);
 

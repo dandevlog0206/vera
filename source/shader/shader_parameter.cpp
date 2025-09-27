@@ -13,7 +13,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-ShaderParameter::ShaderParameter(ref<ShaderReflection> reflection) :
+ShaderParameter::ShaderParameter(obj<ShaderReflection> reflection) :
 	m_reflection(reflection),
 	m_storage(ShaderStorage::create(std::move(reflection))) {}
 
@@ -33,12 +33,12 @@ ShaderVariable ShaderParameter::operator[](std::string_view name)
 	throw Exception("couldn't find resource named " + std::string(name));
 }
 
-ref<ShaderReflection> ShaderParameter::getShaderReflection()
+obj<ShaderReflection> ShaderParameter::getShaderReflection()
 {
 	return m_reflection;
 }
 
-void ShaderParameter::bindRenderCommand(ref<PipelineLayout> layout, ref<RenderCommand> cmd) const
+void ShaderParameter::bindRenderCommand(obj<PipelineLayout> layout, obj<RenderCommand> cmd) const
 {
 	auto& storage_impl = CoreObject::getImpl(m_storage);
 	auto& layout_impl  = CoreObject::getImpl(layout);

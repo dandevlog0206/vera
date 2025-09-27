@@ -8,7 +8,7 @@ VERA_NAMESPACE_BEGIN
 
 struct SamplerImpl
 {
-	ref<Device>       device;
+	obj<Device>       device;
 
 	vk::Sampler       sampler;
 

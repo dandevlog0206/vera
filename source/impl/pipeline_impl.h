@@ -9,14 +9,14 @@ VERA_NAMESPACE_BEGIN
 
 struct PipelineImpl
 {
-	using shader_pair = std::pair<ShaderStageFlagBits, ref<Shader>>;
+	using shader_pair = std::pair<ShaderStageFlagBits, obj<Shader>>;
 
-	ref<Device>              device;
+	obj<Device>              device;
 
 	vk::Pipeline             pipeline;
 	vk::PipelineBindPoint    pipelineBindPoint;
 
-	ref<PipelineLayout>      pipelineLayout;
+	obj<PipelineLayout>      pipelineLayout;
 	std::vector<shader_pair> shaders;
 };
 

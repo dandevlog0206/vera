@@ -4,10 +4,10 @@
 
 using namespace std;
 
-random_device                     rd;
-mt19937                           rnd(rd());
-uniform_real_distribution<float>  pos_dist(-1.f, 1.f);
-uniform_real_distribution<float>  color_dist(0.f, 1.f);
+random_device                    rd;
+mt19937                          rnd(rd());
+uniform_real_distribution<float> pos_dist(-1.f, 1.f);
+uniform_real_distribution<float> color_dist(0.f, 1.f);
 
 static vr::float2 get_random_pos()
 {
@@ -182,11 +182,11 @@ public:
 	}
 
 private:
-	vr::ref<vr::Context>              m_context;
-	vr::ref<vr::Device>               m_device;
-	vr::ref<vr::RenderContext>        m_render_ctx;
-	vr::ref<vr::Swapchain>            m_swapchain;
-	vr::ref<vr::Texture>              m_texture;
+	vr::obj<vr::Context>              m_context;
+	vr::obj<vr::Device>               m_device;
+	vr::obj<vr::RenderContext>        m_render_ctx;
+	vr::obj<vr::Swapchain>            m_swapchain;
+	vr::obj<vr::Texture>              m_texture;
 	std::unique_ptr<vr::GraphicsPass> m_pass;
 
 	vr::os::Window                    m_window;

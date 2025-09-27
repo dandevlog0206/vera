@@ -9,8 +9,8 @@ VERA_NAMESPACE_BEGIN
 
 struct GraphicsPassCreateInfo
 {
-	ref<Shader> vertexShader;
-	ref<Shader> fragmentShader;
+	obj<Shader> vertexShader;
+	obj<Shader> fragmentShader;
 
 	bool        useVertexBuffer = false;
 	uint32_t    vertexCount;
@@ -32,21 +32,21 @@ public:
 		VERA_VERTEX_DESCRIPTOR_END
 	};
 
-	GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& info);
+	GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& info);
 	virtual ~GraphicsPass();
 
-	ref<Device> getDevice();
-	ref<Pipeline> getPipeline();
-	ref<Buffer> getVertexBuffer();
+	obj<Device> getDevice();
+	obj<Pipeline> getPipeline();
+	obj<Buffer> getVertexBuffer();
 
 	ShaderParameter& getShaderParameter();
 
-	virtual void execute(ref<RenderContext> cmd, ref<Texture> texture);
+	virtual void execute(obj<RenderContext> cmd, ref<Texture> texture);
 
 private:
-	ref<Device>     m_device;
-	ref<Pipeline>   m_pipeline;
-	ref<Buffer>     m_vertex_buffer;
+	obj<Device>     m_device;
+	obj<Pipeline>   m_pipeline;
+	obj<Buffer>     m_vertex_buffer;
 	ShaderParameter m_parameter;
 	GraphicsState   m_states;
 

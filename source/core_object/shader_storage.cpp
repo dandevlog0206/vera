@@ -107,14 +107,15 @@ static void destroy_storage(ShaderStorageData* ptr)
 	delete ptr;
 }
 
-ref<ShaderStorage> ShaderStorage::create(ref<ShaderReflection> reflection)
+obj<ShaderStorage> ShaderStorage::create(obj<ShaderReflection> reflection)
 {
 	auto  obj       = createNewObject<ShaderStorage>();
 	auto& impl      = getImpl(obj);
 	auto& refl_impl = getImpl(reflection);
 	auto  vk_device = get_vk_device(refl_impl.device);
 
-	impl.device = refl_impl.device;
+	impl.device     = refl_impl.device;
+	impl.reflection = std::move(reflection);
 
 	vk::DescriptorPoolSize pool_sizes[] = {
 		{ vk::DescriptorType::eSampler, 100 },
@@ -183,6 +184,16 @@ ShaderStorage::~ShaderStorage()
 	vk_device.destroy(impl.descriptorPool);
 
 	destroyObjectImpl(this);
+}
+
+obj<Device> ShaderStorage::getDevice()
+{
+	return getImpl(this).device;
+}
+
+obj<ShaderReflection> ShaderStorage::getShaderReflection()
+{
+	return getImpl(this).reflection;
 }
 
 VERA_NAMESPACE_END

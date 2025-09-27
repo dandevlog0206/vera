@@ -51,7 +51,7 @@ static VKAPI_ATTR VkBool32 vk_debug_callback(
 	return VK_FALSE;
 }
 
-vk::Instance get_vk_instance(const ref<Context>& context)
+vk::Instance& get_vk_instance(ref<Context> context)
 {
 	return CoreObject::getImpl(context).instance;
 }
@@ -84,7 +84,7 @@ std::vector<InstanceExtensionInfo> Context::enumerateInstanceExtensions()
 	return result;
 }
 
-ref<Context> Context::create(const ContextCreateInfo& info)
+obj<Context> Context::create(const ContextCreateInfo& info)
 {
 	auto  obj  = createNewObject<Context>();
 	auto& impl = getImpl(obj);

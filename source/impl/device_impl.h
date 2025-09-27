@@ -17,13 +17,13 @@ class ResourceLayout;
 
 struct DeviceImpl
 {
-	using pipeline_map_type        = std::unordered_map<size_t, ref<Pipeline>>;
-	using shader_map_type          = std::unordered_map<size_t, ref<Shader>>;
-	using sampler_map_type         = std::unordered_map<size_t, ref<Sampler>>;
-	using pipeline_layout_map_type = std::unordered_map<size_t, ref<PipelineLayout>>;
-	using resource_layout_map_type = std::unordered_map<size_t, ref<ResourceLayout>>;
+	using pipeline_map_type        = std::unordered_map<size_t, obj<Pipeline>>;
+	using shader_map_type          = std::unordered_map<size_t, obj<Shader>>;
+	using sampler_map_type         = std::unordered_map<size_t, obj<Sampler>>;
+	using pipeline_layout_map_type = std::unordered_map<size_t, obj<PipelineLayout>>;
+	using resource_layout_map_type = std::unordered_map<size_t, obj<ResourceLayout>>;
 
-	ref<Context>                        context;
+	obj<Context>                        context;
 
 	vk::PhysicalDeviceProperties        physicalDeviceProperties;
 	vk::PhysicalDeviceMemoryProperties  deviceMemoryProperties;
@@ -51,7 +51,7 @@ struct DeviceImpl
 	pipeline_layout_map_type            pipelineLayoutMap;
 	resource_layout_map_type            resourceLayoutMap;
 
-	ref<Sampler>                        defaultSampler;
+	obj<Sampler>                        defaultSampler;
 };
 
 static uint32_t find_memory_type_idx(const DeviceImpl& impl, MemoryPropertyFlags flags, std::bitset<32> type_mask)

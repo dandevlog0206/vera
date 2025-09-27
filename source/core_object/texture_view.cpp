@@ -5,15 +5,15 @@
 
 VERA_NAMESPACE_BEGIN
 
-vk::ImageView get_vk_image_view(const ref<TextureView>& texture_view)
+vk::ImageView& get_vk_image_view(ref<TextureView> texture_view)
 {
 	return CoreObject::getImpl(texture_view).imageView;
 }
 
-ref<TextureView> TextureView::create(ref<Texture> texture, const TextureViewCreateInfo& info)
+obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCreateInfo& info)
 {
 	// TODO: implement
-	return ref<TextureView>();
+	return obj<TextureView>();
 }
 
 TextureView::~TextureView()
@@ -26,7 +26,7 @@ TextureView::~TextureView()
 	destroyObjectImpl(this);
 }
 
-ref<Texture> TextureView::getTexture()
+obj<Texture> TextureView::getTexture()
 {
 	return getImpl(this).texture;
 }

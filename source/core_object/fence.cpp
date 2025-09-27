@@ -5,7 +5,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static bool check_same_device(std::span<ref<Fence>> fences)
+static bool check_same_device(std::span<obj<Fence>> fences)
 {
 	auto vk_device = CoreObject::getImpl(fences.front()).device;
 
@@ -15,7 +15,7 @@ static bool check_same_device(std::span<ref<Fence>> fences)
 	return true;
 }
 
-static bool wait_fences(vk::Device vk_device, std::span<ref<Fence>> fences, bool wait_all, uint64_t timeout)
+static bool wait_fences(vk::Device vk_device, std::span<obj<Fence>> fences, bool wait_all, uint64_t timeout)
 {
 	static std::vector<vk::Fence> s_fences;
 
@@ -33,17 +33,12 @@ static bool wait_fences(vk::Device vk_device, std::span<ref<Fence>> fences, bool
 	throw Exception("failed to wait fences");
 }
 
-vk::Fence get_vk_fence(const ref<Fence>& fence)
+vk::Fence& get_vk_fence(ref<Fence> fence)
 {
 	return CoreObject::getImpl(fence).fence;
 }
 
-vk::Fence& get_vk_fence(ref<Fence>& fence)
-{
-	return CoreObject::getImpl(fence).fence;
-}
-
-bool Fence::waitAll(std::span<ref<Fence>> fences, uint64_t timeout)
+bool Fence::waitAll(std::span<obj<Fence>> fences, uint64_t timeout)
 {
 	if (fences.empty())
 		return true;
@@ -55,7 +50,7 @@ bool Fence::waitAll(std::span<ref<Fence>> fences, uint64_t timeout)
 	return wait_fences(vk_device, fences, true, timeout);
 }
 
-bool Fence::waitAny(std::span<ref<Fence>> fences, uint64_t timeout)
+bool Fence::waitAny(std::span<obj<Fence>> fences, uint64_t timeout)
 {
 	if (fences.empty())
 		return true;
@@ -67,7 +62,7 @@ bool Fence::waitAny(std::span<ref<Fence>> fences, uint64_t timeout)
 	return wait_fences(vk_device, fences, false, timeout);
 }
 
-ref<Fence> Fence::create(ref<Device> device, bool signaled)
+obj<Fence> Fence::create(obj<Device> device, bool signaled)
 {
 	auto  obj       = createNewObject<Fence>();
 	auto& impl      = getImpl(obj);
@@ -91,6 +86,11 @@ Fence::~Fence()
 	vk_device.destroy(impl.fence);
 
 	destroyObjectImpl(this);
+}
+
+obj<Device> Fence::getDevice()
+{
+	return getImpl(this).device;
 }
 
 bool Fence::signaled() const

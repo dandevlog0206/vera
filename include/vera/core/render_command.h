@@ -76,10 +76,12 @@ struct RenderingInfo
 
 class RenderCommand : protected CoreObject // TODO: consider rename to command buffer
 {
-	VERA_CORE_OBJECT(RenderCommand)
+	VERA_CORE_OBJECT_INIT(RenderCommand)
 public:
-	static ref<RenderCommand> create(ref<Device> device);
+	static obj<RenderCommand> create(obj<Device> device);
 	~RenderCommand();
+
+	obj<Device> getDevice();
 
 	void begin();
 

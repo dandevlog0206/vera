@@ -10,14 +10,14 @@ VERA_NAMESPACE_BEGIN
 
 struct ShaderImpl
 {
-	ref<Device>                      device;
+	obj<Device>                      device;
 
 	vk::ShaderModule                 shader;
 
 	std::vector<ReflectionDesc*>     reflections;
 	std::unordered_set<std::string>  namePool;
 
-	std::vector<ref<ResourceLayout>> resourceLayouts;
+	std::vector<obj<ResourceLayout>> resourceLayouts;
 	std::vector<PushConstantRange>   pushConstantRanges;
 	std::string                      entryPointName;
 	ShaderStageFlags                 shaderStageFlags;

@@ -9,12 +9,14 @@ class Pipeline;
 
 class ShaderReflection : protected CoreObject
 {
-	VERA_CORE_OBJECT(ShaderReflection)
+	VERA_CORE_OBJECT_INIT(ShaderReflection)
 public:
-	static ref<ShaderReflection> create(std::vector<ref<Shader>> shaders);
+	static obj<ShaderReflection> create(std::vector<obj<Shader>> shaders);
 	~ShaderReflection();
 
-	bool isCompatible(ref<Pipeline>& pipeline) const;
+	obj<Device> getDevice();
+
+	bool isCompatible(obj<Pipeline>& pipeline) const;
 };
 
 VERA_NAMESPACE_END

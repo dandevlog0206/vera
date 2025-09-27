@@ -18,12 +18,13 @@ struct TextureViewCreateInfo
 
 class TextureView : protected CoreObject
 {
-	VERA_CORE_OBJECT(TextureView)
+	VERA_CORE_OBJECT_INIT(TextureView)
 public:
-	static ref<TextureView> create(ref<Texture> texture, const TextureViewCreateInfo& info);
+	static obj<TextureView> create(obj<Texture> texture, const TextureViewCreateInfo& info);
 	~TextureView();
 
-	ref<Texture> getTexture();
+	obj<Device> getDevice();
+	obj<Texture> getTexture();
 
 	uint32_t width() const;
 	uint32_t height() const;

@@ -27,12 +27,12 @@ static size_t hash_pipeline_layout(const PipelineLayoutCreateInfo& info)
 	return seed;
 }
 
-vk::PipelineLayout get_vk_pipeline_layout(const ref<PipelineLayout>& pipeline_layout)
+vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout)
 {
 	return CoreObject::getImpl(pipeline_layout).layout;
 }
 
-ref<PipelineLayout> PipelineLayout::create(ref<Device> device, const PipelineLayoutCreateInfo& info)
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLayoutCreateInfo& info)
 {
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_pipeline_layout(info);
@@ -78,7 +78,12 @@ PipelineLayout::~PipelineLayout()
 	destroyObjectImpl(this);
 }
 
-const std::vector<ref<ResourceLayout>>& PipelineLayout::getResourceLayouts() const
+obj<Device> PipelineLayout::getDevice()
+{
+	return getImpl(this).device;
+}
+
+const std::vector<obj<ResourceLayout>>& PipelineLayout::getResourceLayouts() const
 {
 	return getImpl(this).resourceLayout;
 }

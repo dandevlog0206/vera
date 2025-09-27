@@ -51,12 +51,12 @@ struct ContextCreateInfo
 
 class Context : protected CoreObject
 {
-	VERA_CORE_OBJECT(Context)
+	VERA_CORE_OBJECT_INIT(Context)
 public:
 	static std::vector<InstanceLayerInfo> enumerateInstanceLayers();
 	static std::vector<InstanceExtensionInfo> enumerateInstanceExtensions();
 
-	static ref<Context> create(const ContextCreateInfo& info = {});
+	static obj<Context> create(const ContextCreateInfo& info = {});
 	~Context();
 
 	uint32_t findDeviceByType(DeviceType type) const;
