@@ -76,7 +76,7 @@ Image Image::loadFromFile(std::string_view path)
 			result.m_height = height;
 
 			if (comp == 1) {
-				auto pixel_count = width * height;
+				auto pixel_count = static_cast<uint32_t>(width * height);
 
 				result.m_format    = Format::RGB8Unorm;
 				result.m_allocated = pixel_count * 3;

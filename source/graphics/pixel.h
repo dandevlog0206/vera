@@ -69,8 +69,6 @@ static T& fetch_pixel(void* ptr, uint32_t width, uint32_t x, uint32_t y)
 
 static float4 fetch_components(const void* ptr, uint32_t width, uint32_t x, uint32_t y, Format format)
 {
-	float4 result;
-
 	switch (format) {
 	case Format::R8Unorm: {
 		auto pixel = fetch_pixel<uint8_t>(ptr, width, x, y);

@@ -168,6 +168,7 @@ uint32_t get_format_size(Format format)
 	}
 
 	VERA_ASSERT_MSG(false, "invalid format");
+	return {};
 }
 
 uint32_t get_format_component_count(Format format)
@@ -319,6 +320,7 @@ uint32_t get_format_component_count(Format format)
 	}
 
 	VERA_ASSERT_MSG(false, "invalid format");
+	return {};
 }
 
 bool format_has_alpha(Format format)

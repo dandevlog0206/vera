@@ -44,26 +44,27 @@ template <ImageSamplerAddressMode ModeU, ImageSamplerAddressMode ModeV>
 static float4 sample_nearest(const Image& image, float u, float v, const float4& border_color)
 {
 	const void* ptr    = image.data();
-	float       width  = image.width();
-	float       height = image.height();
+	float       width  = static_cast<float>(image.width());
+	float       height = static_cast<float>(image.height());
 	Format      format = image.format();
 
 	switch (ModeU) {
 	case ImageSamplerAddressMode::Repeat:
 		u  = repeatf(u, width);
-	break;
+		break;
 	case ImageSamplerAddressMode::MirroredRepeat:
 		u = mirrored_repeatf(u, width);
-	break;
+		break;
 	case ImageSamplerAddressMode::ClampToEdge:
 		u = clamp_edge(u, width);
-	break;
+		break;
 	case ImageSamplerAddressMode::ClampToBorder:
 		if (u < -0.5f || width - 0.5f <= u)
 			return border_color;
+		break;
 	case ImageSamplerAddressMode::MirrorClampToEdge:
 		u = mirror_clamp_edge(u, width);
-	break;
+		break;
 	}
 
 	switch (ModeV) {
@@ -79,15 +80,16 @@ static float4 sample_nearest(const Image& image, float u, float v, const float4&
 	case ImageSamplerAddressMode::ClampToBorder:
 		if (v < -0.5f || height - 0.5f <= v)
 			return border_color;
+		break;
 	case ImageSamplerAddressMode::MirrorClampToEdge:
 		v = mirror_clamp_edge(v, height);
 		break;
 	}
 
-	float    round_u = u <= 0.5f ? 0.f : roundf(u);
-	float    round_v = v <= 0.5f ? 0.f : roundf(v);
-	uint32_t x       = width - 1.f <= u ? width - 1 : round_u;
-	uint32_t y       = height - 1.f <= v ? height - 1 : round_v;
+	float    rnd_u = u <= 0.5f ? 0.f : roundf(u);
+	float    rnd_v = v <= 0.5f ? 0.f : roundf(v);
+	uint32_t x     = static_cast<uint32_t>(width - 1.f <= u ? width - 1 : rnd_u);
+	uint32_t y     = static_cast<uint32_t>(height - 1.f <= v ? height - 1 : rnd_v);
 
 	return fetch_components(ptr, width, x, y, format);
 }
@@ -136,21 +138,21 @@ static float4 sample_linear(const Image& image, float u, float v, const float4& 
 		break;
 	}
 
-	float floor_u = floorf(u);
-	float floor_v = floorf(v);
-	float x0      = u < 0.f ? width - 1.f : floor_u;
-	float x1      = width - 1.f < u ? 0 : floor_u + 1.f;
-	float y0      = v < 0.f ? height- 1.f : floor_v;
-	float y1      = height - 1.f < v ? 0 : floor_v + 1.f;
-	float tx0     = fmodf(u + 1.f, 1.f);
-	float ty0     = fmodf(v + 1.f, 1.f);
-	float tx1     = 1.f - tx0;
-	float ty1     = 1.f - ty0;
+	float    tx0   = fmodf(u + 1.f, 1.f);
+	float    ty0   = fmodf(v + 1.f, 1.f);
+	float    tx1   = 1.f - tx0;
+	float    ty1   = 1.f - ty0;
+	uint32_t flr_u = static_cast<uint32_t>(floorf(u));
+	uint32_t flr_v = static_cast<uint32_t>(floorf(v));
+	uint32_t x0    = static_cast<uint32_t>(u < 0.f ? width - 1 : flr_u);
+	uint32_t x1    = static_cast<uint32_t>(width - 1.f < u ? 0 : flr_u + 1.f);
+	uint32_t y0    = static_cast<uint32_t>(v < 0.f ? height- 1 : flr_v);
+	uint32_t y1    = static_cast<uint32_t>(height - 1.f < v ? 0 : flr_v + 1.f);
 
-	float4 color0 = fetch_components(ptr, width, x0, y0, format);
-	float4 color1 = fetch_components(ptr, width, x1, y0, format);
-	float4 color2 = fetch_components(ptr, width, x1, y1, format);
-	float4 color3 = fetch_components(ptr, width, x0, y1, format);
+	float4 color0 = fetch_components(ptr, static_cast<uint32_t>(width), x0, y0, format);
+	float4 color1 = fetch_components(ptr, static_cast<uint32_t>(width), x1, y0, format);
+	float4 color2 = fetch_components(ptr, static_cast<uint32_t>(width), x1, y1, format);
+	float4 color3 = fetch_components(ptr, static_cast<uint32_t>(width), x0, y1, format);
 
 	return
 		tx0 * ty0 * color0 +
@@ -163,6 +165,7 @@ ImageSampler::ImageSampler() :
 	ImageSampler(ImageSamplerCreateInfo{}) { }
 
 ImageSampler::ImageSampler(const ImageSamplerCreateInfo& info) :
+	m_sample_fptr(nullptr),
 	m_border_color(info.borderColor),
 	m_unnormalized(info.unnormalizedCoordinates)
 {

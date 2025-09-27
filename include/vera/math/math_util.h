@@ -13,13 +13,13 @@ VERA_NODISCARD VERA_CONSTEXPR bool in_range(const T& value, const T& min, const 
 template <class T, class Res>
 VERA_NODISCARD VERA_CONSTEXPR Res lerp(const Res& a, const Res& b, const T& t) VERA_NOEXCEPT
 {
-	return a + (b - a) * t;
+	return a + static_cast<Res>((b - a) * t);
 }
 
 template <class T, class Res>
 VERA_NODISCARD VERA_CONSTEXPR T unlerp(const Res& a, const Res& b, const Res& value) VERA_NOEXCEPT
 {
-	return (value - a) / (b - a);
+	return static_cast<T>((value - a) / (b - a));
 }
 
 

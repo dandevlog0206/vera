@@ -10,14 +10,12 @@ VERA_NAMESPACE_BEGIN
 
 GraphicsPass::GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& info) :
 	m_device(device),
-	m_parameter(ShaderReflection::create({ info.vertexShader, info.fragmentShader }))
+	m_parameter(ShaderReflection::create({ info.vertexShader, info.fragmentShader })),
+	m_vertex_count(info.vertexCount)
 {
 	GraphicsPipelineCreateInfo pipeline_info = {
 		.vertexShader                  = info.vertexShader,
 		.fragmentShader                = info.fragmentShader,
-		.vertexInputInfo               = VertexInputInfo{
-			.vertexInputDescriptor = GraphicsPass::Vertex{}
-		},
 		.primitiveInfo                 = PrimitiveInfo{
 			.enableRestart = false,
 			.topology      = PrimitiveTopology::TriangleList
@@ -28,10 +26,16 @@ GraphicsPass::GraphicsPass(ref<Device> device, const GraphicsPassCreateInfo& inf
 		.colorBlendInfo                = ColorBlendInfo{}
 	};
 
-	m_pipeline      = Pipeline::create(device, pipeline_info);
-	m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * sizeof(Vertex));
+	if (info.useVertexBuffer) {
+		m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * sizeof(Vertex));
+		m_states.setVertexBuffer(m_vertex_buffer);
 
-	m_states.setVertexBuffer(m_vertex_buffer);
+		pipeline_info.vertexInputInfo = VertexInputInfo{
+			.vertexInputDescriptor = GraphicsPass::Vertex{}
+		};
+	}
+
+	m_pipeline = Pipeline::create(device, pipeline_info);
 	m_states.setPipeline(m_pipeline);
 }
 
@@ -90,12 +94,12 @@ void GraphicsPass::execute(ref<RenderContext> ctx, ref<Texture> texture)
 			.texture    = texture,
 			.loadOp     = LoadOp::Clear,
 			.storeOp    = StoreOp::Store,
-			.clearValue = Colors::AliceBlue
+			.clearValue = Colors::Black
 		});
 
 	m_states.setRenderingInfo(rendering_info);
 
-	ctx->draw(m_states, m_parameter, 300, 0);
+	ctx->draw(m_states, m_parameter, m_vertex_count, 0);
 }
 
 VERA_NAMESPACE_END

@@ -22,6 +22,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "glfw", "thirdparty\build\gl
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spirv-reflect", "thirdparty\build\spirv-reflect\spirv-reflect.vcxproj", "{157A5093-3FF7-43CE-8E35-9A8981851CA7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "texture", "test\texture\texture.vcxproj", "{F58C01E7-AFC0-476E-A699-7C06ADA67102}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -62,6 +64,14 @@ Global
 		{157A5093-3FF7-43CE-8E35-9A8981851CA7}.Release|x64.Build.0 = Release|x64
 		{157A5093-3FF7-43CE-8E35-9A8981851CA7}.Release|x86.ActiveCfg = Release|Win32
 		{157A5093-3FF7-43CE-8E35-9A8981851CA7}.Release|x86.Build.0 = Release|Win32
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Debug|x64.ActiveCfg = Debug|x64
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Debug|x64.Build.0 = Debug|x64
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Debug|x86.ActiveCfg = Debug|Win32
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Debug|x86.Build.0 = Debug|Win32
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Release|x64.ActiveCfg = Release|x64
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Release|x64.Build.0 = Release|x64
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Release|x86.ActiveCfg = Release|Win32
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -70,6 +80,7 @@ Global
 		{E3B687BF-1612-4237-B34B-B8F02E3B8995} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{4330304E-031A-445C-96CF-0E062369CFD4} = {43756799-A26F-4498-80A9-CF00A4F183B9}
 		{157A5093-3FF7-43CE-8E35-9A8981851CA7} = {43756799-A26F-4498-80A9-CF00A4F183B9}
+		{F58C01E7-AFC0-476E-A699-7C06ADA67102} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {65DE9E30-06D4-4516-AAAA-FD9AFB8E0E27}

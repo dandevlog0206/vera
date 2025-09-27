@@ -53,7 +53,7 @@ class Device : protected CoreObject
 {
 	VERA_CORE_OBJECT(Device)
 public:
-	static ref<Device> create(ref<Context> context, const DeviceCreateInfo& info);
+	static ref<Device> create(ref<Context> context, const DeviceCreateInfo& info = {});
 	~Device();
 
 	const std::vector<DeviceMemoryType>& getMemoryTypes() const;

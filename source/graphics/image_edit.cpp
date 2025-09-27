@@ -45,9 +45,15 @@ struct storage5
 	uint8_t data[5];
 };
 
+// TODO: move to vector_math.h
 static float dot(const float4& lhs, const float4& rhs)
 {
 	return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
+}
+
+static float length(const float4& v)
+{
+	return sqrtf(dot(v, v));
 }
 
 static void memswap(void* ptr0, void* ptr1, size_t size)
@@ -324,10 +330,10 @@ Image ImageEdit::createMask(const Image& image, uint32_t at_x, uint32_t at_y, fl
 		for (uint32_t y = 0; y < height; ++y) {
 			float4 color = fetch_components(ptr, width, x, y, format);
 
-			if (similarity < dot(target_color, color)) {
+			if (similarity < (dot(target_color, color) / length(target_color) / length(color)))
 				color.a = alpha;
-				store_components(result_ptr, width, x, y, format, color);
-			}
+			
+			store_components(result_ptr, width, x, y, format, color);
 		}
 	}
 

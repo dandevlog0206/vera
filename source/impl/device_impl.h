@@ -59,6 +59,9 @@ static uint32_t find_memory_type_idx(const DeviceImpl& impl, MemoryPropertyFlags
 	for (uint32_t i = 0; i < impl.memoryTypes.size(); ++i)
 		if (type_mask[i] && impl.memoryTypes[i].propertyFlags.has(flags))
 			return i;
+	
+	VERA_ASSERT_MSG(false, "failed to find memory type index");
+	return UINT32_MAX;
 }
 
 static vk::MemoryHeapFlags to_vk_memory_heap_flags(MemoryHeapFlags flags)

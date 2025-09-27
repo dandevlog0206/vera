@@ -56,7 +56,7 @@ public:
 	static std::vector<InstanceLayerInfo> enumerateInstanceLayers();
 	static std::vector<InstanceExtensionInfo> enumerateInstanceExtensions();
 
-	static ref<Context> create(const ContextCreateInfo& info);
+	static ref<Context> create(const ContextCreateInfo& info = {});
 	~Context();
 
 	uint32_t findDeviceByType(DeviceType type) const;

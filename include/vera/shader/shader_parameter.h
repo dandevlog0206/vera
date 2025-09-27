@@ -10,7 +10,6 @@ class ShaderReflection;
 class ShaderStorage;
 class PipelineLayout;
 class RenderCommand;
-struct ShaderStorage;
 
 class ShaderParameter
 {

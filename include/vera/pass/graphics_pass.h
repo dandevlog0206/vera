@@ -12,6 +12,7 @@ struct GraphicsPassCreateInfo
 	ref<Shader> vertexShader;
 	ref<Shader> fragmentShader;
 
+	bool        useVertexBuffer = false;
 	uint32_t    vertexCount;
 };
 
@@ -48,6 +49,8 @@ private:
 	ref<Buffer>     m_vertex_buffer;
 	ShaderParameter m_parameter;
 	GraphicsState   m_states;
+
+	uint32_t        m_vertex_count;
 };
 
 VERA_NAMESPACE_END

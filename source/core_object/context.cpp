@@ -31,7 +31,6 @@ static VKAPI_ATTR VkBool32 vk_debug_callback(
 	 if (get_debug_level(messageSeverity) < ctx.debugUtilsMessengerLevel)
 	 	return VK_FALSE;
 
-	std::string msg;
 	switch (messageSeverity) {
 	case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
 		Logger::error(data.pMessage);

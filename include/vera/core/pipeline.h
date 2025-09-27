@@ -167,9 +167,7 @@ struct ColorBlendInfo
 	uint32_t attachmentCount;
 
 
-/*	VULKAN_HPP_NAMESPACE::Bool32                             logicOpEnable_ = {},
-	VULKAN_HPP_NAMESPACE::LogicOp logicOp_ = VULKAN_HPP_NAMESPACE::LogicOp::eClear,
-	uint32_t                      attachmentCount_ = {},
+/*
 	const VULKAN_HPP_NAMESPACE::PipelineColorBlendAttachmentState* pAttachments_ = {},
 	std::array<float, 4> const& blendConstants_ = {}
 */

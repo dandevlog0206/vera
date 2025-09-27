@@ -438,7 +438,6 @@ static void parse_shader(ShaderImpl& impl, const uint32_t* spirv_code, size_t si
 {
 	spv_reflect::ShaderModule parser(size_in_byte, spirv_code);
 
-	uint32_t input_vars_count;
 	uint32_t desc_set_count;
 	uint32_t pc_count;
 

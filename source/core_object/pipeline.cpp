@@ -351,12 +351,12 @@ ref<Pipeline> Pipeline::create(ref<Device> device, const GraphicsPipelineCreateI
 	}
 
 	vk::PipelineColorBlendAttachmentState blend_attachemnt;
-	blend_attachemnt.blendEnable         = false;
-	blend_attachemnt.srcColorBlendFactor = vk::BlendFactor::eOne;
-	blend_attachemnt.dstColorBlendFactor = vk::BlendFactor::eZero;
+	blend_attachemnt.blendEnable         = true;
+	blend_attachemnt.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+	blend_attachemnt.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
 	blend_attachemnt.colorBlendOp        = vk::BlendOp::eAdd;
-	blend_attachemnt.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-	blend_attachemnt.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+	blend_attachemnt.srcAlphaBlendFactor = vk::BlendFactor::eSrcAlpha;
+	blend_attachemnt.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
 	blend_attachemnt.alphaBlendOp        = vk::BlendOp::eAdd;
 	blend_attachemnt.colorWriteMask      = 
 		vk::ColorComponentFlagBits::eR |
