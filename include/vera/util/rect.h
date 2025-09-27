@@ -1,6 +1,7 @@
 #pragma once
 
 #include "extent.h"
+#include "../math/math_util.h"
 #include <type_traits>
 
 VERA_NAMESPACE_BEGIN
@@ -158,13 +159,6 @@ struct rect : public rect_base<T, std::is_integral_v<T>> {
 	VERA_NODISCARD VERA_CONSTEXPR bool operator!=(const rect& rhs) const VERA_NOEXCEPT
 	{
 		return !(*this == rhs);
-	}
-
-private:
-	template <class T>
-	VERA_NODISCARD VERA_CONSTEXPR bool in_range(const T& value, const T& min, const T& max) VERA_NOEXCEPT
-	{
-		return (min <= value) && (value <= max);
 	}
 };
 

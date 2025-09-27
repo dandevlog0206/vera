@@ -224,10 +224,10 @@ void RenderCommand::beginRendering(const RenderingInfo& info)
 	static_vector<vk::RenderingAttachmentInfo, 16> color_attachments;
 	for (const auto& color_info : info.colorAttachments) {
 		vk::ClearColorValue clear_value;
-		clear_value.uint32[0] = static_cast<uint32_t>(color_info.clearValue.r);
-		clear_value.uint32[1] = static_cast<uint32_t>(color_info.clearValue.g);
-		clear_value.uint32[2] = static_cast<uint32_t>(color_info.clearValue.b);
-		clear_value.uint32[3] = static_cast<uint32_t>(color_info.clearValue.a);
+		clear_value.float32[0] = static_cast<float>(color_info.clearValue.r) / 255.f;
+		clear_value.float32[1] = static_cast<float>(color_info.clearValue.g) / 255.f;
+		clear_value.float32[2] = static_cast<float>(color_info.clearValue.b) / 255.f;
+		clear_value.float32[3] = static_cast<float>(color_info.clearValue.a) / 255.f;
 
 		auto& color_attachment = color_attachments.emplace_back();
 		color_attachment.imageView   = get_vk_image_view(color_info.texture);

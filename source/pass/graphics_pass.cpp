@@ -87,9 +87,10 @@ void GraphicsPass::execute(ref<RenderContext> ctx, ref<Texture> texture)
 
 	rendering_info.colorAttachments.push_back(
 		ColorAtttachmentInfo{
-			.texture = texture,
-			.loadOp  = LoadOp::Clear,
-			.storeOp = StoreOp::Store
+			.texture    = texture,
+			.loadOp     = LoadOp::Clear,
+			.storeOp    = StoreOp::Store,
+			.clearValue = Colors::AliceBlue
 		});
 
 	m_states.setRenderingInfo(rendering_info);

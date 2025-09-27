@@ -25,6 +25,7 @@
 
 // graphics
 #include "graphics/color.h"
+#include "graphics/colormap.h"
 #include "graphics/format.h"
 #include "graphics/format_traits.h"
 #include "graphics/image.h"
@@ -49,7 +50,6 @@
 #include "shader/shader_variable.h"
 
 // util
-#include "util/colormap.h"
 #include "util/enum_traits.h"
 #include "util/extent.h"
 #include "util/flag.h"

@@ -1,14 +1,10 @@
-#include "../include/vera/util/colormap.h"
+#include "../include/vera/graphics/colormap.h"
 
+#include "../include/vera/math/math_util.h"
 #include <algorithm>
 #include <cmath>
 
 VERA_NAMESPACE_BEGIN
-
-template <class T, class Res>
-VERA_NODISCARD VERA_CONSTEXPR Res lerp(const Res& a, const Res& b, const T& t) VERA_NOEXCEPT {
-	return a + (b - a) * t;
-}
 
 static Color lerp(const Color& a, const Color& b, float t) {
 	return Color{

@@ -4,7 +4,8 @@
 #include "../../include/vera/core/exception.h"
 #include "../../include/vera/core/assertion.h"
 #include "../../include/vera/graphics/format_traits.h"
-#include "../../include/vera/math/vector_types.h"
+#include "../../include/vera/graphics/image_sampler.h"
+#include "../../include/vera/math/math_util.h"
 #include <algorithm>
 
 #define ASSIGN1BYTES(lhs, rhs)  *reinterpret_cast<uint8_t*>(dst) = *reinterpret_cast<const uint8_t*>(src);
@@ -43,6 +44,11 @@ struct storage5
 
 	uint8_t data[5];
 };
+
+static float dot(const float4& lhs, const float4& rhs)
+{
+	return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
+}
 
 static void memswap(void* ptr0, void* ptr1, size_t size)
 {
@@ -265,13 +271,46 @@ Image ImageEdit::rotateCCW(const Image& image)
 #undef FOR_EACH_PIXEL
 }
 
-Image createMask(const Image& image, uint32_t at_x = 0, uint32_t at_y = 0, double alpha = 0)
+Image ImageEdit::blit(const Image& image, const ImageSampler& sampler, const ImageBlitInfo& info)
+{
+	uint32_t dst_width  = info.dstWidth;
+	uint32_t dst_height = info.dstHeight;
+	Format   format     = image.format();
+	float2   uv0        = info.uv0;
+	float2   uv1        = info.uv1;
+	float2   uv2        = info.uv2;
+	float2   uv3        = info.uv3;
+
+	Image result(dst_width, dst_height, format);
+
+	void* ptr = result.data();
+
+	for (uint32_t x = 0; x < dst_width; ++x) {
+		for (uint32_t y = 0; y < dst_height; ++y) {
+			float  tx = static_cast<float>(x) / dst_width;
+			float  ty = static_cast<float>(y) / dst_height;
+			float2 p0 = lerp(uv0, uv1, tx);
+			float2 p1 = lerp(uv3, uv2, tx);
+			float2 p  = lerp(p0, p1, ty);
+
+			float4 color = sampler.sample(image, p.x, p.y);
+
+			store_components(ptr, dst_width, x, y, format, color);
+		}
+	}
+
+	return result;
+}
+
+Image ImageEdit::createMask(const Image& image, uint32_t at_x, uint32_t at_y, float alpha, float similarity)
 {
 	const auto  format      = image.format();
 	const auto* ptr         = image.data();
 	const auto  width       = image.width();
 	const auto  height      = image.height();
 	const auto  pixel_count = width * height;
+
+	VERA_ASSERT(at_x < width && at_y < height);
 	
 	Image result(width, height, format);
 
@@ -279,357 +318,18 @@ Image createMask(const Image& image, uint32_t at_x = 0, uint32_t at_y = 0, doubl
 
 	if (!format_has_alpha(format) || format == Format::A8Unorm) return image;
 
-	//switch (format) {
-	//case Format::RGBA8Unorm: {
-	//	auto target = fetch_pixel<uchar4>(ptr, width, at_x, at_y);
-	//	for (uint32_t i = 0; i < pixel_count; ++i) {
-	//		if (auto& pixel = fetch_pixel<uchar4>(ptr, i); target == pixel)
-	//			pixel.a = alpha;
-	//		else
-	//			fetch_pixel<uchar4>
-	//	}
-	//} break;
-	//case Format::RGBA8Snorm: {
-	//	auto target = fetch_pixel<char4>(ptr, width, at_x, at_y);
-	//	return { SNORM2F(pixel.r), SNORM2F(pixel.g), SNORM2F(pixel.b), SNORM2F(pixel.a) };
-	//} break;
-	//case Format::RGBA8Uscaled: {
-	//	auto target = fetch_pixel<uchar4>(ptr, width, at_x, at_y);
-	//	return { USCALED2F(pixel.r), USCALED2F(pixel.g), USCALED2F(pixel.b), USCALED2F(pixel.a) };
-	//} break;
-	//case Format::RGBA8Sscaled: {
-	//	auto target = fetch_pixel<char4>(ptr, width, at_x, at_y);
-	//	return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), SSCALED2F(pixel.b), SSCALED2F(pixel.a) };
-	//} break;
-	//case Format::RGBA8Uint: {
-	//	auto target = fetch_pixel<uchar4>(ptr, width, at_x, at_y);
-	//	return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
-	//} break;
-	//case Format::RGBA8Sint: {
-	//	auto target = fetch_pixel<char4>(ptr, width, at_x, at_y);
-	//	return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
-	//} break;
-	////case Format::RGBA8Srgb: {
-	////
-	////}
-	//case Format::BGRA8Unorm: {
-	//	auto target = fetch_pixel<uchar4>(ptr, width, at_x, at_y);
-	//	return { UNORM2F(pixel.b), UNORM2F(pixel.g), UNORM2F(pixel.r), UNORM2F(pixel.a) };
-	//} break;
-	//case Format::BGRA8Snorm: {
-	//	auto target = fetch_pixel<char4>(ptr, width, at_x, at_y);
-	//	return { SNORM2F(pixel.b), SNORM2F(pixel.g), SNORM2F(pixel.r), SNORM2F(pixel.a) };
-	//} break;
-	//case Format::BGRA8Uscaled: {
-	//	auto target = fetch_pixel<uchar4>(ptr, width, at_x, at_y);
-	//	return { USCALED2F(pixel.b), USCALED2F(pixel.g), USCALED2F(pixel.r), USCALED2F(pixel.a) };
-	//} break;
-	//case Format::BGRA8Sscaled: {
-	//	auto target = fetch_pixel<char4>(ptr, width, at_x, at_y);
-	//	return { SSCALED2F(pixel.b), SSCALED2F(pixel.g), SSCALED2F(pixel.r), SSCALED2F(pixel.a) };
-	//} break;
-	//case Format::BGRA8Uint: {
-	//	auto target = fetch_pixel<uchar4>(ptr, width, at_x, at_y);
-	//	return { UINT2F(pixel.b), UINT2F(pixel.g), UINT2F(pixel.r), UINT2F(pixel.a) };
-	//} break;
-	//case Format::BGRA8Sint: {
-	//	auto target = fetch_pixel<char4>(ptr, width, at_x, at_y);
-	//	return { SINT2F(pixel.b), SINT2F(pixel.g), SINT2F(pixel.r), SINT2F(pixel.a) };
-	//} break;
-	////case Format::BGRA8Srgb: {
-	////
-	////}
-	//case Format::RGBA16Unorm: {
-	//	auto target = fetch_pixel<ushort4>(ptr, width, at_x, at_y);
-	//	return { UNORM2F(pixel.r), UNORM2F(pixel.g), UNORM2F(pixel.b), UNORM2F(pixel.a) };
-	//} break;
-	//case Format::RGBA16Snorm: {
-	//	auto target = fetch_pixel<short4>(ptr, width, at_x, at_y);
-	//	return { SNORM2F(pixel.r), SNORM2F(pixel.g), SNORM2F(pixel.b), SNORM2F(pixel.a) };
-	//} break;
-	//case Format::RGBA16Uscaled: {
-	//	auto target = fetch_pixel<ushort4>(ptr, width, at_x, at_y);
-	//	return { USCALED2F(pixel.r), USCALED2F(pixel.g), USCALED2F(pixel.b), USCALED2F(pixel.a) };
-	//} break;
-	//case Format::RGBA16Sscaled: {
-	//	auto target = fetch_pixel<short4>(ptr, width, at_x, at_y);
-	//	return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), SSCALED2F(pixel.b), SSCALED2F(pixel.a) };
-	//} break;
-	//case Format::RGBA16Uint: {
-	//	auto target = fetch_pixel<ushort4>(ptr, width, at_x, at_y);
-	//	return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
-	//} break;
-	//case Format::RGBA16Sint: {
-	//	auto target = fetch_pixel<short4>(ptr, width, at_x, at_y);
-	//	return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
-	//} break;
-	////case Format::RGBA16Float: {
-	////
-	////}
-	//case Format::RGBA32Uint: {
-	//	auto target = fetch_pixel<uint4>(ptr, width, at_x, at_y);
-	//	return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
-	//} break;
-	//case Format::RGBA32Sint: {
-	//	auto target = fetch_pixel<int4>(ptr, width, at_x, at_y);
-	//	return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
-	//} break;
-	//case Format::RGBA32Float: {
-	//	auto target = fetch_pixel<float4>(ptr, width, at_x, at_y);
-	//	return { pixel.r, pixel.g, pixel.b, pixel.a };
-	//} break;
-	//case Format::RGBA64Uint: {
-	//	auto target = fetch_pixel<ulong4>(ptr, width, at_x, at_y);
-	//	return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
-	//} break;
-	//case Format::RGBA64Sint: {
-	//	auto target = fetch_pixel<long4>(ptr, width, at_x, at_y);
-	//	return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
-	//} break;
-	//case Format::RGBA64Float: {
-	//	auto target = fetch_pixel<double4>(ptr, width, at_x, at_y);
-	//	return { DOUBLE2F(pixel.r), DOUBLE2F(pixel.g), DOUBLE2F(pixel.b), DOUBLE2F(pixel.a) };
-	//} break;
-	//case Format::RGBA4UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0xf000 >> 12) / 15.f,
-	//		(pixel & 0x0f00 >> 8) / 15.f,
-	//		(pixel & 0x00f0 >> 4) / 15.f,
-	//		(pixel & 0x000f >> 0) / 15.f
-	//	} break;;
-	//} break;
-	//case Format::BGRA4UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x00f0 >> 4) / 15.f,
-	//		(pixel & 0x0f00 >> 8) / 15.f,
-	//		(pixel & 0xf000 >> 12) / 15.f,
-	//		(pixel & 0x000f >> 0) / 15.f
-	//	} break;;
-	//} break;
-	//case Format::R5G5B5A1UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0xf800 >> 11) / 31.f,
-	//		(pixel & 0x07c0 >> 6) / 31.f,
-	//		(pixel & 0x003e >> 1) / 31.f,
-	//		static_cast<float>(pixel & 1)
-	//	} break;;
-	//} break;
-	//case Format::B5G5R5A1UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x003e >> 1) / 31.f,
-	//		(pixel & 0x07c0 >> 6) / 31.f,
-	//		(pixel & 0xf800 >> 11) / 31.f,
-	//		static_cast<float>(pixel & 1)
-	//	} break;;
-	//} break;
-	//case Format::A1R5G5B5UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x7c00 >> 10) / 31.f,
-	//		(pixel & 0x03e0 >> 5) / 31.f,
-	//		(pixel & 0x001f >> 0) / 31.f,
-	//		static_cast<float>(pixel & 0x8000 >> 15)
-	//	} break;;
-	//} break;
-	//case Format::A4R4G4B4UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x0f00 >> 8) / 15.f,
-	//		(pixel & 0x00f0 >> 4) / 15.f,
-	//		(pixel & 0x000f >> 0) / 15.f,
-	//		(pixel & 0xf000 >> 12) / 15.f
-	//	} break;;
-	//} break;
-	//case Format::A4B4G4R4UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x000f >> 0) / 15.f,
-	//		(pixel & 0x00f0 >> 4) / 15.f,
-	//		(pixel & 0x0f00 >> 8) / 15.f,
-	//		(pixel & 0xf000 >> 12) / 15.f
-	//	} break;;
-	//} break;
-	//case Format::A1B5G5R5UnormPack16: {
-	//	auto target = fetch_pixel<uint16_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x001f >> 0) / 31.f,
-	//		(pixel & 0x7c00 >> 10) / 31.f,
-	//		(pixel & 0x03e0 >> 5) / 31.f,
-	//		static_cast<float>(pixel & 0x8000 >> 15)
-	//	} break;;
-	//} break;
-	//case Format::ABGR8UnormPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		UNORM2F(static_cast<uint8_t>(pixel & 0x000000ff >> 0)),
-	//		UNORM2F(static_cast<uint8_t>(pixel & 0x0000ff00 >> 8)),
-	//		UNORM2F(static_cast<uint8_t>(pixel & 0x00ff0000 >> 16)),
-	//		UNORM2F(static_cast<uint8_t>(pixel & 0xff000000 >> 24))
-	//	} break;;
-	//} break;
-	//case Format::ABGR8SnormPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SNORM2F(static_cast<int8_t>(pixel & 0x000000ff >> 0)),
-	//		SNORM2F(static_cast<int8_t>(pixel & 0x0000ff00 >> 8)),
-	//		SNORM2F(static_cast<int8_t>(pixel & 0x00ff0000 >> 16)),
-	//		SNORM2F(static_cast<int8_t>(pixel & 0xff000000 >> 24))
-	//	} break;;
-	//} break;
-	//case Format::ABGR8UscaledPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		USCALED2F(static_cast<uint8_t>(pixel & 0x000000ff >> 0)),
-	//		USCALED2F(static_cast<uint8_t>(pixel & 0x0000ff00 >> 8)),
-	//		USCALED2F(static_cast<uint8_t>(pixel & 0x00ff0000 >> 16)),
-	//		USCALED2F(static_cast<uint8_t>(pixel & 0xff000000 >> 24))
-	//	} break;;
-	//} break;
-	//case Format::ABGR8SscaledPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SSCALED2F(static_cast<int8_t>(pixel & 0x000000ff >> 0)),
-	//		SSCALED2F(static_cast<int8_t>(pixel & 0x0000ff00 >> 8)),
-	//		SSCALED2F(static_cast<int8_t>(pixel & 0x00ff0000 >> 16)),
-	//		SSCALED2F(static_cast<int8_t>(pixel & 0xff000000 >> 24))
-	//	} break;;
-	//} break;
-	//case Format::ABGR8UintPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		UINT2F(static_cast<uint8_t>(pixel & 0x000000ff >> 0)),
-	//		UINT2F(static_cast<uint8_t>(pixel & 0x0000ff00 >> 8)),
-	//		UINT2F(static_cast<uint8_t>(pixel & 0x00ff0000 >> 16)),
-	//		UINT2F(static_cast<uint8_t>(pixel & 0xff000000 >> 24))
-	//	} break;;
-	//} break;
-	//case Format::ABGR8SintPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SINT2F(static_cast<int8_t>(pixel & 0x000000ff >> 0)),
-	//		SINT2F(static_cast<int8_t>(pixel & 0x0000ff00 >> 8)),
-	//		SINT2F(static_cast<int8_t>(pixel & 0x00ff0000 >> 16)),
-	//		SINT2F(static_cast<int8_t>(pixel & 0xff000000 >> 24))
-	//	} break;;
-	//} break;
-	////case Format::ABGR8SrgbPack32: {
-	////
-	////}
-	//case Format::A2RGB10UnormPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x3ff00000 >> 20) / 1023.f,
-	//		(pixel & 0x000ffc00 >> 10) / 1023.f,
-	//		(pixel & 0x000003ff >> 0) / 1023.f,
-	//		(pixel & 0xc0000000 >> 30) / 3.f,
-	//	} break;;
-	//} break;
-	//case Format::A2RGB10SnormPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SNORM2F(SINT10(pixel & 0x3ff00000 >> 20)),
-	//		SNORM2F(SINT10(pixel & 0x000ffc00 >> 10)),
-	//		SNORM2F(SINT10(pixel & 0x000003ff >> 0)),
-	//		SNORM2F(SINT10(pixel & 0xc0000000 >> 30)),
-	//	} break;;
-	//} break;
-	//case Format::A2RGB10UscaledPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		USCALED2F(pixel & 0x3ff00000 >> 20),
-	//		USCALED2F(pixel & 0x000ffc00 >> 10),
-	//		USCALED2F(pixel & 0x000003ff >> 0),
-	//		USCALED2F(pixel & 0xc0000000 >> 30),
-	//	} break;;
-	//} break;
-	//case Format::A2RGB10SscaledPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SSCALED2F(SINT10(pixel & 0x3ff00000 >> 20)),
-	//		SSCALED2F(SINT10(pixel & 0x000ffc00 >> 10)),
-	//		SSCALED2F(SINT10(pixel & 0x000003ff >> 0)),
-	//		SSCALED2F(SINT10(pixel & 0xc0000000 >> 30)),
-	//	} break;;
-	//} break;
-	//case Format::A2RGB10UintPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		UINT2F(pixel & 0x3ff00000 >> 20),
-	//		UINT2F(pixel & 0x000ffc00 >> 10),
-	//		UINT2F(pixel & 0x000003ff >> 0),
-	//		UINT2F(pixel & 0xc0000000 >> 30),
-	//	} break;;
-	//} break;
-	//case Format::A2RGB10SintPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SINT2F(SINT10(pixel & 0x3ff00000 >> 20)),
-	//		SINT2F(SINT10(pixel & 0x000ffc00 >> 10)),
-	//		SINT2F(SINT10(pixel & 0x000003ff >> 0)),
-	//		SINT2F(SINT10(pixel & 0xc0000000 >> 30)),
-	//	} break;;
-	//} break;
-	//case Format::A2BGR10UnormPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		(pixel & 0x000003ff >> 0) / 1023.f,
-	//		(pixel & 0x000ffc00 >> 10) / 1023.f,
-	//		(pixel & 0x3ff00000 >> 20) / 1023.f,
-	//		(pixel & 0xc0000000 >> 30) / 3.f,
-	//	} break;;
-	//} break;
-	//case Format::A2BGR10SnormPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SNORM2F(SINT10(pixel & 0x000003ff >> 0)),
-	//		SNORM2F(SINT10(pixel & 0x000ffc00 >> 10)),
-	//		SNORM2F(SINT10(pixel & 0x3ff00000 >> 20)),
-	//		SNORM2F(SINT10(pixel & 0xc0000000 >> 30)),
-	//	} break;;
-	//} break;
-	//case Format::A2BGR10UscaledPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		USCALED2F(pixel & 0x000003ff >> 0),
-	//		USCALED2F(pixel & 0x000ffc00 >> 10),
-	//		USCALED2F(pixel & 0x3ff00000 >> 20),
-	//		USCALED2F(pixel & 0xc0000000 >> 30)
-	//	} break;;
-	//} break;
-	//case Format::A2BGR10SscaledPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SSCALED2F(SINT10(pixel & 0x000003ff >> 0)),
-	//		SSCALED2F(SINT10(pixel & 0x000ffc00 >> 10)),
-	//		SSCALED2F(SINT10(pixel & 0x3ff00000 >> 20)),
-	//		SSCALED2F(SINT10(pixel & 0xc0000000 >> 30)),
-	//	} break;;
-	//} break;
-	//case Format::A2BGR10UintPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		UINT2F(pixel & 0x000003ff >> 0),
-	//		UINT2F(pixel & 0x000ffc00 >> 10),
-	//		UINT2F(pixel & 0x3ff00000 >> 20),
-	//		UINT2F(pixel & 0xc0000000 >> 30)
-	//	} break;;
-	//} break;
-	//case Format::A2BGR10SintPack32: {
-	//	auto target = fetch_pixel<uint32_t>(ptr, width, at_x, at_y);
-	//	return {
-	//		SINT2F(SINT10(pixel & 0x000003ff >> 0)),
-	//		SINT2F(SINT10(pixel & 0x000ffc00 >> 10)),
-	//		SINT2F(SINT10(pixel & 0x3ff00000 >> 20)),
-	//		SINT2F(SINT10(pixel & 0xc0000000 >> 30)),
-	//	} break;;
-	//} break;
-	//} break;
+	float4 target_color = fetch_components(ptr, width, at_x, at_y, format);
 
-	throw Exception("unsupported format");
+	for (uint32_t x = 0; x < width; ++x) {
+		for (uint32_t y = 0; y < height; ++y) {
+			float4 color = fetch_components(ptr, width, x, y, format);
+
+			if (similarity < dot(target_color, color)) {
+				color.a = alpha;
+				store_components(result_ptr, width, x, y, format, color);
+			}
+		}
+	}
 
 	return result;
 }

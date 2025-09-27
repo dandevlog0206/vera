@@ -59,8 +59,24 @@ public:
 		});
 
 		auto image  = vr::Image::loadFromFile("resource/vulkan.png");
+		
+		vr::ImageSampler sampler(vr::ImageSamplerCreateInfo{
+			.filter                  = vr::ImageSamplerFilter::Linear,
+			.addressModeU            = vr::ImageSamplerAddressMode::ClampToBorder,
+			.addressModeV            = vr::ImageSamplerAddressMode::ClampToBorder,
+			.borderColor             = { 1.f, 0.f, 1.f, 1.f },
+			.unnormalizedCoordinates = false,
+		});
 
-		image = vr::ImageEdit::rotateCCW(image);
+		image = vr::ImageEdit::createMask(image, 0, 0, 0.f, 0.99f);
+		image = vr::ImageEdit::blit(image, sampler, vr::ImageBlitInfo{
+			.dstWidth  = image.width(),
+			.dstHeight = image.height(),
+			.uv0       = { -2.f, -2.f },
+			.uv1       = { 2.f, -2.f },
+			.uv2       = { 2.f, 2.f },
+			.uv3       = { -2.f, 2.f }
+		});
 
 		m_texture = vr::Texture::create(m_device, vr::TextureCreateInfo{
 			.format = image.format(),

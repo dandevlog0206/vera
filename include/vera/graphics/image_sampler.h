@@ -6,14 +6,13 @@ VERA_NAMESPACE_BEGIN
 
 class Image;
 
-enum class ImageSamplerFilter
+enum class ImageSamplerFilter VERA_ENUM
 {
 	Nearest,
-	Linear,
-	Area
+	Linear
 };
 
-enum class ImageSamplerAddressMode
+enum class ImageSamplerAddressMode VERA_ENUM
 {
 	Repeat,
 	MirroredRepeat,
@@ -41,11 +40,8 @@ public:
 	float4 sample(const Image& image, float u, float v) const;
 
 private:
-	typedef float(*AddressModeFPtr)(float, float);
-	typedef float4(*SampleFPtr)(const Image&, float, float);
+	typedef float4(*SampleFPtr)(const Image&, float, float, const float4&);
 
-	AddressModeFPtr m_adress_u_fptr;
-	AddressModeFPtr m_adress_v_fptr;
 	SampleFPtr      m_sample_fptr;
 	float4          m_border_color;
 	bool            m_unnormalized;

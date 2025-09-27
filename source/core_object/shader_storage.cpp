@@ -139,7 +139,10 @@ ref<ShaderStorage> ShaderStorage::create(ref<ShaderReflection> reflection)
 			if (desc.resourceType == ResourceType::CombinedImageSampler) {
 				auto& storage = *static_cast<CombinedImageSamplerStorage*>(impl.storages.back());
 
-				storage.sampler = Sampler::create(impl.device);
+				storage.sampler = Sampler::create(impl.device, SamplerCreateInfo{
+					.addressModeU = SamplerAddressMode::Repeat,
+					.addressModeV = SamplerAddressMode::Repeat
+				});
 
 				vk::DescriptorSetAllocateInfo alloc_info;
 				alloc_info.descriptorPool     = impl.descriptorPool;
