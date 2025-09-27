@@ -95,8 +95,10 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 
 	// TODO: verify image layout transition
 	for (auto& color : states.getRenderingInfo().colorAttachments) {
+		auto& texture_impl = getImpl(color.texture);
+
 		// Identify swapchain image and save for future use
-		if (auto& texture_impl = getImpl(color.texture); texture_impl.isSwapchainImage)
+		if (texture_impl.imageUsage.has(ImageUsageFlagBits::SwapchainImage))
 			impl.renderFrames[impl.frameIndex].swapchainImage = color.texture;
 
 		cmd->transitionImageLayout(

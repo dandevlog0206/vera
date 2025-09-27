@@ -13,16 +13,15 @@ struct TextureImpl
 	obj<TextureView>     textureView;
 
 	vk::Image            image;
-	vk::ImageUsageFlags  imageUsage;
 	vk::ImageAspectFlags imageAspect;
 	vk::ImageLayout      imageLayout;
 
+	ImageUsageFlags      imageUsage;
 	Format               imageFormat;
 	uint32_t             width;
 	uint32_t             height;
 	uint32_t             depth;
 	size_t               size;
-	bool                 isSwapchainImage;
 };
 
 struct TextureViewImpl
@@ -67,6 +66,34 @@ static vk::ImageLayout to_vk_image_layout(ImageLayout layout)
 
 	VERA_ASSERT_MSG(false, "invalid image layout");
 	return {};
+}
+
+static vk::ImageUsageFlags to_vk_image_usage_flags(ImageUsageFlags flags)
+{
+	vk::ImageUsageFlags result;
+
+	if (flags.has(ImageUsageFlagBits::TransferSrc))
+		result |= vk::ImageUsageFlagBits::eTransferSrc;
+	if (flags.has(ImageUsageFlagBits::TransferDst))
+		result |= vk::ImageUsageFlagBits::eTransferDst;
+	if (flags.has(ImageUsageFlagBits::Sampled))
+		result |= vk::ImageUsageFlagBits::eSampled;
+	if (flags.has(ImageUsageFlagBits::Storage))
+		result |= vk::ImageUsageFlagBits::eStorage;
+	if (flags.has(ImageUsageFlagBits::ColorAttachment))
+		result |= vk::ImageUsageFlagBits::eColorAttachment;
+	if (flags.has(ImageUsageFlagBits::DepthStencilAttachment))
+		result |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+	if (flags.has(ImageUsageFlagBits::TransientAttachment))
+		result |= vk::ImageUsageFlagBits::eTransientAttachment;
+	if (flags.has(ImageUsageFlagBits::InputAttachment))
+		result |= vk::ImageUsageFlagBits::eInputAttachment;
+	if (flags.has(ImageUsageFlagBits::HostTransfer))
+		result |= vk::ImageUsageFlagBits::eHostTransfer;
+	if (flags.has(ImageUsageFlagBits::SwapchainImage))
+		VERA_ASSERT_MSG(false, "invalid image usage flag bit");
+
+	return result;
 }
 
 VERA_NAMESPACE_END

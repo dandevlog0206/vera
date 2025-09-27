@@ -2,6 +2,7 @@
 
 #include "core_object.h"
 #include "../graphics/format.h"
+#include "../util/flag.h"
 #include "../util/extent.h"
 
 VERA_NAMESPACE_BEGIN
@@ -42,6 +43,20 @@ enum class ImageLayout VERA_ENUM
 	RenderingLocalRead,
 	PresentSrc
 };
+
+enum class ImageUsageFlagBits VERA_FLAG_BITS
+{
+	TransferSrc             = 1 << 0,
+	TransferDst             = 1 << 1,
+	Sampled                 = 1 << 2,
+	Storage                 = 1 << 3,
+	ColorAttachment         = 1 << 4,
+	DepthStencilAttachment  = 1 << 5,
+	TransientAttachment     = 1 << 6,
+	InputAttachment         = 1 << 7,
+	HostTransfer            = 1 << 8,
+	SwapchainImage          = 1 << 9
+} VERA_ENUM_FLAGS(ImageUsageFlagBits, ImageUsageFlags)
 
 struct TextureCreateInfo
 {

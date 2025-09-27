@@ -15,10 +15,10 @@
 #include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/os/window.h"
 
-#define SWAPCHAIN_IMAGE_USAGE                  \
-	vk::ImageUsageFlagBits::eColorAttachment | \
-	vk::ImageUsageFlagBits::eTransferSrc |     \
-	vk::ImageUsageFlagBits::eTransferDst
+#define SWAPCHAIN_IMAGE_USAGE             \
+	ImageUsageFlagBits::ColorAttachment | \
+	ImageUsageFlagBits::TransferSrc |     \
+	ImageUsageFlagBits::TransferDst
 
 VERA_NAMESPACE_BEGIN
 
@@ -31,11 +31,9 @@ public:
 		auto& device_impl    = getImpl(swapchain_impl.device);
 
 		impl.device           = swapchain_impl.device;
-		impl.imageUsage       = SWAPCHAIN_IMAGE_USAGE;
 		impl.imageAspect      = vk::ImageAspectFlagBits::eColor;
 		impl.imageLayout      = vk::ImageLayout::eUndefined;
 		impl.imageFormat      = swapchain_impl.imageFormat;
-		impl.isSwapchainImage = true;
 
 		return obj;
 	}
@@ -89,7 +87,7 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 	swapchain_info.imageColorSpace  = vk::ColorSpaceKHR::eSrgbNonlinear;
 	swapchain_info.imageExtent      = vk::Extent2D(impl.width, impl.height);
 	swapchain_info.imageArrayLayers = 1;
-	swapchain_info.imageUsage       = SWAPCHAIN_IMAGE_USAGE;
+	swapchain_info.imageUsage       = to_vk_image_usage_flags(SWAPCHAIN_IMAGE_USAGE);
 	swapchain_info.imageSharingMode = vk::SharingMode::eExclusive;
 	swapchain_info.preTransform     = vk::SurfaceTransformFlagBitsKHR::eIdentity;
 	swapchain_info.compositeAlpha   = vk::CompositeAlphaFlagBitsKHR::eOpaque;
@@ -109,7 +107,7 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 		auto& frame        = impl.frames.emplace_back();
 
 		texture_impl.image       = swapchain_image;
-		texture_impl.imageUsage  = SWAPCHAIN_IMAGE_USAGE;
+		texture_impl.imageUsage  = SWAPCHAIN_IMAGE_USAGE | ImageUsageFlagBits::SwapchainImage;
 		texture_impl.width       = impl.width;
 		texture_impl.height      = impl.height;
 		texture_impl.depth       = 1;

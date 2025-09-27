@@ -72,17 +72,16 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 
 	impl.device           = std::move(device);
 	impl.deviceMemory     = std::move(memory_obj);
-	impl.imageUsage       = 
-		vk::ImageUsageFlagBits::eColorAttachment |
-		vk::ImageUsageFlagBits::eSampled |
-		vk::ImageUsageFlagBits::eTransferDst;
 	impl.imageAspect      = vk::ImageAspectFlagBits::eColor;
 	impl.imageLayout      = vk::ImageLayout::eUndefined;
+	impl.imageUsage       = 
+		ImageUsageFlagBits::ColorAttachment |
+		ImageUsageFlagBits::Sampled |
+		ImageUsageFlagBits::TransferDst;
 	impl.imageFormat      = info.format;
 	impl.width            = info.width;
 	impl.height           = info.height;
 	impl.depth            = info.depth;
-	impl.isSwapchainImage = false;
 
 	vk::ImageCreateInfo image_info;
 	image_info.imageType     = get_image_type(info);
@@ -94,7 +93,7 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 	image_info.arrayLayers   = info.arraySize;
 	image_info.samples       = get_sample_count(info.sampleCount);
 	image_info.tiling        = vk::ImageTiling::eOptimal;
-	image_info.usage         = impl.imageUsage;
+	image_info.usage         = to_vk_image_usage_flags(impl.imageUsage);
 	image_info.sharingMode   = vk::SharingMode::eExclusive;
 
 	impl.image = vk_device.createImage(image_info);
