@@ -1,6 +1,6 @@
-#include "../include/vera/graphics/format_traits.h"
+#include "../../include/vera/graphics/format_traits.h"
 
-#include "../include/vera/core/assertion.h"
+#include "../../include/vera/core/assertion.h"
 
 VERA_NAMESPACE_BEGIN
 

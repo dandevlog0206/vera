@@ -258,6 +258,15 @@
     <ClInclude Include="source\impl\shader_storage_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\graphics\image_edit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\graphics\pixel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\direction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\window.cpp">
@@ -332,13 +341,16 @@
     <ClCompile Include="source\core_object\texture_view.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\image.cpp">
+    <ClCompile Include="source\graphics\image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\format_traits.cpp">
+    <ClCompile Include="source\graphics\format_traits.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\shader_storage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\image_edit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

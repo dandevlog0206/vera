@@ -1,24 +1,35 @@
-#include "../include/vera/graphics/image.h"
+#include "../../include/vera/graphics/image.h"
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////////// custom allocator for stb_image /////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+// allocate memory with align of sizeof(size_t)
 static void* malloc_impl(size_t size)
 {
-	auto* new_memory = new int[(size - 1) / 4 + 1 + sizeof(size_t) / sizeof(int)];
-	*reinterpret_cast<size_t*>(new_memory) = size;
-	return new_memory + sizeof(size_t) / sizeof(int);
+	size_t  total_size = (size - 1) / sizeof(size_t) + 2;
+	size_t* new_memory = new size_t[total_size];
+	
+	// first element of memory block contains size
+	*new_memory = size;
+
+	return new_memory + 1;
 }
 
-static void* realloc_impl(void* ptr, size_t size)
+static void* realloc_impl(void* ptr, size_t new_size)
 {
-	if (auto* new_memory = malloc_impl(size)) {
-		if (ptr) {
-			auto* int_ptr  = reinterpret_cast<int*>(ptr);
-			auto  ptr_size = *reinterpret_cast<size_t*>(int_ptr - sizeof(size_t) / sizeof(int));
+	if (void* new_memory = malloc_impl(new_size)) {
+		if (!ptr) return new_memory;
+		
+		size_t* my_ptr = reinterpret_cast<size_t*>(ptr) - 1;
+		size_t  my_size = my_ptr[0];
 
-			memcpy(new_memory, ptr, ptr_size);
-			delete[] (int_ptr - sizeof(size_t) / sizeof(int));
-		}
+		memcpy(new_memory, ptr, std::min(my_size, new_size));
+		delete[] my_ptr;
+
 		return new_memory;
 	}
+
 	return nullptr;
 }
 
@@ -26,9 +37,12 @@ static void free_impl(void* ptr)
 {
 	if (!ptr) return;
 
-	auto* int_ptr = reinterpret_cast<int*>(ptr);
-	delete[](int_ptr - sizeof(size_t) / sizeof(int));
+	delete[] (reinterpret_cast<size_t*>(ptr) - 1);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define __STDC_LIB_EXT1__
 #define STB_IMAGE_IMPLEMENTATION
@@ -37,8 +51,9 @@ static void free_impl(void* ptr)
 #define STBI_REALLOC(p,newsz)     realloc_impl(p,newsz)
 #define STBI_FREE(p)              free_impl(p)
 
-#include "../include/vera/core/exception.h"
-#include "../include/vera/graphics/format_traits.h"
+#include "../../include/vera/core/exception.h"
+#include "../../include/vera/core/assertion.h"
+#include "../../include/vera/graphics/format_traits.h"
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include <fstream>
@@ -120,8 +135,16 @@ Image Image::loadFromFile(uint32_t width, uint32_t height, Format format, std::s
 
 Image Image::loadFromMemory(uint32_t width, uint32_t height, Format format, void* ptr, size_t size)
 {
-	// TODO: implement
-	return Image();
+	VERA_ASSERT(width * height * get_format_size(format) <= size);
+
+	Image result;
+	result.m_width     = width;
+	result.m_height    = height;
+	result.m_format    = format;
+	result.m_allocated = size;
+	result.m_ptr       = ptr;
+
+	return result;
 }
 
 Image::Image() :
@@ -130,6 +153,13 @@ Image::Image() :
 	m_format(Format::Unknown),
 	m_allocated(0),
 	m_ptr(nullptr) {}
+
+Image::Image(uint32_t width, uint32_t height, Format format) :
+	m_width(width),
+	m_height(height),
+	m_format(format),
+	m_allocated(width* height* get_format_size(format)),
+	m_ptr(malloc_impl(m_allocated)) {}
 
 Image::Image(uint32_t width, uint32_t height, Format format, const void* ptr) :
 	m_width(width),
@@ -153,7 +183,7 @@ Image::Image(Image&& rhs) noexcept :
 	m_height(std::exchange(rhs.m_height, 0)),
 	m_format(std::exchange(rhs.m_format, Format::Unknown)),
 	m_allocated(std::exchange(rhs.m_allocated, 0)),
-	m_ptr(std::exchange(m_ptr, nullptr)) {}
+	m_ptr(std::exchange(rhs.m_ptr, nullptr)) {}
 
 Image::~Image()
 {
@@ -187,7 +217,7 @@ Image& Image::operator=(Image&& rhs) noexcept
 	m_height    = std::exchange(rhs.m_height, 0);
 	m_format    = std::exchange(rhs.m_format, Format::Unknown);
 	m_allocated = std::exchange(rhs.m_allocated, 0);
-	m_ptr       = std::exchange(m_ptr, nullptr);
+	m_ptr       = std::exchange(rhs.m_ptr, nullptr);
 
 	return *this;
 }

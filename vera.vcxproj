@@ -157,12 +157,15 @@
     <ClInclude Include="include\vera\core\shader_storage.h" />
     <ClInclude Include="include\vera\graphics\format_traits.h" />
     <ClInclude Include="include\vera\graphics\image.h" />
+    <ClInclude Include="include\vera\graphics\image_edit.h" />
     <ClInclude Include="include\vera\graphics\image_sampler.h" />
     <ClInclude Include="include\vera\graphics\vertex_input.h" />
     <ClInclude Include="include\vera\math\matrix_types.h" />
     <ClInclude Include="include\vera\shader\shader_variable.h" />
     <ClInclude Include="include\vera\util\colormap.h" />
+    <ClInclude Include="include\vera\util\direction.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
+    <ClInclude Include="source\graphics\pixel.h" />
     <ClInclude Include="source\impl\buffer_impl.h" />
     <ClInclude Include="source\impl\device_memory_impl.h" />
     <ClInclude Include="source\impl\sampler_impl.h" />
@@ -237,8 +240,9 @@
     <ClCompile Include="source\colormap.cpp" />
     <ClCompile Include="source\core_object\device_memory.cpp" />
     <ClInclude Include="source\impl\shader_reflection_impl.h" />
-    <ClCompile Include="source\format_traits.cpp" />
-    <ClCompile Include="source\image.cpp" />
+    <ClCompile Include="source\graphics\format_traits.cpp" />
+    <ClCompile Include="source\graphics\image_edit.cpp" />
+    <ClCompile Include="source\graphics\image.cpp" />
     <ClCompile Include="source\logger.cpp" />
     <ClCompile Include="source\core_object\render_context.cpp" />
     <ClCompile Include="source\core_object\resource_layout.cpp" />

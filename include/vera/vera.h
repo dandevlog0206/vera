@@ -28,6 +28,7 @@
 #include "graphics/format.h"
 #include "graphics/format_traits.h"
 #include "graphics/image.h"
+#include "graphics/image_edit.h"
 #include "graphics/image_sampler.h"
 #include "graphics/vertex_input.h"
 

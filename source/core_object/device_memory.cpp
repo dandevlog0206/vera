@@ -63,14 +63,14 @@ void DeviceMemory::resize(size_t new_size, bool keep_contents)
 	// Memory lacking will be captured by validation layer
 	for (const auto& binding : impl.resourceBind) {
 		switch (binding.resourceType) {
-		case MemoryResourceType::Buffer:
+		case MemoryResourceType::Buffer: {
 			auto& buffer_impl = getImpl(reinterpret_cast<Buffer*>(binding.resourcePtr));
 			vk_device.bindBufferMemory(buffer_impl.buffer, impl.memory, binding.offset);
-		break;
-		case MemoryResourceType::Texture:
+		} break;
+		case MemoryResourceType::Texture: {
 			auto& texture_impl = getImpl(reinterpret_cast<Texture*>(binding.resourcePtr));
 			vk_device.bindImageMemory(texture_impl.image, impl.memory, binding.offset);
-		break;
+		} break;
 		default:
 			throw Exception("invalid memory resource type");
 		}

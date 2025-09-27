@@ -149,7 +149,6 @@ ref<Buffer> Buffer::create(ref<Device> device, const BufferCreateInfo& info)
 	auto& impl          = getImpl(obj);
 	auto& memory_impl   = getImpl(memory_obj);
 	auto& device_impl   = getImpl(device);
-	auto property_flags = to_vk_memory_property_flags(info.propetyFlags);
 
 	vk::BufferCreateInfo buffer_info;
 	buffer_info.size        = info.size;
@@ -162,7 +161,7 @@ ref<Buffer> Buffer::create(ref<Device> device, const BufferCreateInfo& info)
 	impl.size   = info.size;
 	impl.usage  = info.usage;
 
-	allocate_device_memory(memory_impl, std::move(device), impl.buffer, property_flags);
+	allocate_device_memory(memory_impl, std::move(device), impl.buffer, info.propetyFlags);
 
 	auto& binding = memory_impl.resourceBind.emplace_back();
 	binding.resourceType = MemoryResourceType::Buffer;
