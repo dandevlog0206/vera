@@ -59,7 +59,7 @@ public:
 			.vertexShader    = vr::Shader::create(m_device, "shaders/default.vert.glsl.spv"),
 			.fragmentShader  = vr::Shader::create(m_device, "shaders/default.frag.glsl.spv"),
 			.useVertexBuffer = true,
-			.vertexCount     = 6
+			.vertexCount     = 36
 		});
 
 		auto image  = vr::Image::loadFromFile("resource/vulkan.png");
@@ -72,15 +72,15 @@ public:
 			.unnormalizedCoordinates = false,
 		});
 
-		image = vr::ImageEdit::createMask(image, 0, 0, 0.f, 0.99f);
-		image = vr::ImageEdit::blit(image, sampler, vr::ImageBlitInfo{
-			.dstWidth  = image.width(),
-			.dstHeight = image.height(),
-			.uv0       = { -2.f, -2.f },
-			.uv1       = { 2.f, -2.f },
-			.uv2       = { 2.f, 2.f },
-			.uv3       = { -2.f, 2.f }
-		});
+		//image = vr::ImageEdit::createMask(image, 0, 0, 0.f, 0.99f);
+		//image = vr::ImageEdit::blit(image, sampler, vr::ImageBlitInfo{
+		//	.dstWidth  = image.width(),
+		//	.dstHeight = image.height(),
+		//	.uv0       = { -2.f, -2.f },
+		//	.uv1       = { 2.f, -2.f },
+		//	.uv2       = { 2.f, 2.f },
+		//	.uv3       = { -2.f, 2.f }
+		//});
 
 		m_texture = vr::Texture::create(m_device, vr::TextureCreateInfo{
 			.format = image.format(),
@@ -95,9 +95,8 @@ public:
 		auto  vertex_memory = m_pass->getVertexBuffer()->getDeviceMemory();
 		auto* map           = reinterpret_cast<vr::GraphicsPass::Vertex*>(vertex_memory->map());
 		auto  aspect        = image.width() / image.height();
-		auto  offset        = vr::float2(1080 - 500, 720 - 500 * aspect) / 2.f;
 
-		for (uint32_t i = 0; i < 6; i += 6) {
+		for (uint32_t i = 0; i < 36; i += 6) {
 			vr::float2 v0  = { 0, 0};
 			vr::float2 v1  = { 500, 0 };
 			vr::float2 v2  = { 500, 500 * aspect };
@@ -107,6 +106,7 @@ public:
 			vr::float2 uv2 = { 1.0, 1.0 };
 			vr::float2 uv3 = { 0.0, 1.0 };
 
+			auto offset = 500.f * get_random_pos();
 			auto color  = vr::Color(vr::Colors::White).unorm();
 
 			map[i + 0].pos   = v0 + offset;
@@ -152,7 +152,7 @@ public:
 		while (!m_exit) {
 			m_window.handleEvent();
 			drawFrame();
-			this_thread::sleep_for(30ms);
+			this_thread::sleep_for(3ms);
 		}
 
 		m_device->waitIdle();
@@ -167,10 +167,14 @@ public:
 		auto  image = m_swapchain->acquireNextImage();
 		float time  = elapsed_s();
 
+		auto mat = vr::Transform2D().translate(1080 / 2, 720 / 2).rotate(time).translate(-250, -250).getMatrix();
+		//auto mat = vr::Transform2D().translate(sinf(time), sinf(time)).getMatrix();
+		//auto mat = vr::Transform2D().getMatrix();
+
 		auto& params = m_pass->getShaderParameter();
 		params["pc"]["viewport"]  = vr::float2(image->width(), image->height());
 		params["pc"]["time"]      = time; // for block variable
-		params["pc"]["scale"]     = std::abs(sinf(2 * time) + 2) / 2; // for block variable
+		params["pc"]["transform"] = mat;
 		params["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
 		params["pc"]["colors"][1] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.71666f, 1.9f) - 1.f)).unorm();
 		params["pc"]["colors"][2] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 1.38333f, 1.9f) - 1.f)).unorm();
@@ -201,7 +205,7 @@ int main()
 	try {
 		app.run();
 	} catch (const std::exception& e) {
-		vr::Logger::error(e.what());
+		vr::Logger::exception(e.what());
 	}
 
 	return 0;

@@ -9,7 +9,7 @@ VERA_NAMESPACE_BEGIN
 struct SwapchainSync
 {
 	obj<Semaphore> waitSemaphore;
-	obj<Fence>     fence;
+	ref<Fence>     fence;
 };
 
 struct SwapchainFrame

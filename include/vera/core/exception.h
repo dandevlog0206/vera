@@ -23,11 +23,7 @@ public:
 	Exception() {}
 
 	Exception(std::string_view msg) :
-		m_msg(msg) {
-#ifdef _DEBUG
-		__debugbreak();
-#endif
-	}
+		m_msg(msg) {}
 
 	const char* what() const override
 	{

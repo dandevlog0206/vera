@@ -28,6 +28,7 @@ struct ResourceArrayStorage : ShaderStorageData
 {
 	uint32_t                        elementCount;
 	std::vector<ShaderStorageData*> elements;
+	vk::DescriptorSet               descriptorSet;
 };
 
 struct BlockStorage : ShaderStorageData
@@ -37,12 +38,14 @@ struct BlockStorage : ShaderStorageData
 
 struct SamplerStorage : ShaderStorageData
 {
-	obj<Sampler> sampler;
+	obj<Sampler>      sampler;
+	vk::DescriptorSet descriptorSet;
 };
 
 struct TextureStorage : ShaderStorageData
 {
-	obj<Texture> texture;
+	obj<Texture>      texture;
+	vk::DescriptorSet descriptorSet;
 };
 
 struct CombinedImageSamplerStorage : ShaderStorageData
@@ -54,12 +57,14 @@ struct CombinedImageSamplerStorage : ShaderStorageData
 
 struct BufferStorage : ShaderStorageData
 {
-	obj<Buffer> buffer;
+	obj<Buffer>       buffer;
+	vk::DescriptorSet descriptorSet;
 };
 
 struct BufferBlockStorage : BlockStorage
 {
-	obj<Buffer> buffer;
+	obj<Buffer>       buffer;
+	vk::DescriptorSet descriptorSet;
 };
 
 struct PushConstantStorage : BlockStorage

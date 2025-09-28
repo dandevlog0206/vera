@@ -10,7 +10,7 @@ class Transform2D
 {
 public:
 	Transform2D();
-	Transform2D(const float3x4& mat);
+	Transform2D(const float3x3& mat);
 	Transform2D(const Transform2D& rhs) = default;
 
 	Transform2D& operator=(const Transform2D& rhs) = default;
@@ -32,7 +32,7 @@ public:
 
 	Transform2D& clear();
 
-	const float3x4& getMatrix() const;
+	const float3x3& getMatrix() const;
 
 	Transform2D& operator*=(const Transform2D& rhs);
 	Transform2D operator*(const Transform2D& rhs) const;
@@ -42,7 +42,7 @@ public:
 	bool operator!=(const Transform2D& rhs) const;
 
 private:
-	float3x4 m_mat;
+	float3x3 m_mat;
 };
 
 VERA_NAMESPACE_END

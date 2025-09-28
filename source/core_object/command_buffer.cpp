@@ -13,7 +13,6 @@ VERA_NAMESPACE_BEGIN
 
 static vk::ImageView get_vk_image_view(ref<Texture> texture)
 {
-	// TODO: remove
 	return get_vk_image_view(CoreObject::getImpl(texture).textureView);
 }
 

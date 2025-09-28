@@ -24,8 +24,6 @@ enum class PresentMode
 
 struct SwapchainCreateInfo
 {
-	uint32_t    width       = 0;
-	uint32_t    height      = 0;
 	uint32_t    imageCount  = 3;
 	Format      colorFormat = {};
 	PresentMode presentMode = PresentMode::Fifo;

@@ -36,6 +36,18 @@ static vk::SampleCountFlagBits get_sample_count(uint32_t count)
 	throw Exception("invalid sample count");
 }
 
+static uint32_t find_texture_bind_idx(DeviceMemoryImpl& impl, Texture* this_ptr)
+{
+	auto iter = std::find_if(VERA_SPAN(impl.resourceBind),
+		[=](const auto& bind) {
+			return bind.resourcePtr == this_ptr;
+		});
+
+	VERA_ASSERT(iter != impl.resourceBind.end());
+
+	return iter - impl.resourceBind.cbegin();
+}
+
 static void allocate_device_memory(
 	DeviceMemoryImpl&   impl,
 	obj<Device>         device,
@@ -119,16 +131,17 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 
 Texture::~Texture()
 {
-	auto& impl      = getImpl(this);
-	auto  vk_device = get_vk_device(impl.device);
+	auto& impl        = getImpl(this);
+	auto& memory_impl = getImpl(impl.deviceMemory);
+	auto  vk_device   = get_vk_device(impl.device);
 
-	// TODO: change to assert
-	if (impl.textureView.count() != 1)
-		throw Exception("default texture view must not be owned by others");
+	VERA_ASSERT_MSG(impl.textureView.count() == 1, "default texture view must not be owned by others");
 
 	impl.textureView.reset();
 
-	// TODO: unbind device memory
+	auto idx = find_texture_bind_idx(memory_impl, this);
+	std::swap(memory_impl.resourceBind[idx], memory_impl.resourceBind.back());
+	memory_impl.resourceBind.pop_back();
 
 	vk_device.destroy(impl.image);
 

@@ -111,7 +111,7 @@ int main()
 	try {
 		app.run();
 	} catch (const std::exception& e) {
-		vr::Logger::error(e.what());
+		vr::Logger::exception(e.what());
 	}
 
 	return 0;

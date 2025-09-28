@@ -1,6 +1,7 @@
 #include "../include/vera/os/window.h"
 #include "impl/window_impl.h"
-#include "impl/swapchain_impl.h"
+
+#include "../include/vera/core/exception.h"
 
 VERA_NAMESPACE_BEGIN
 VERA_OS_NAMESPACE_BEGIN
@@ -15,14 +16,14 @@ static void glfw_window_pos_callback(GLFWwindow* window, int x_pos, int y_pos)
 	int2 framebuffer_size;
 	glfwGetFramebufferSize(window, &framebuffer_size.x, &framebuffer_size.y);
 
-	if (impl.swapchain) {
-		auto& swapchain_impl = CoreObject::getImpl(impl.swapchain);
+	//if (impl.swapchain) {
+	//	auto& swapchain_impl = CoreObject::getImpl(impl.swapchain);
 
-		swapchain_impl.width = framebuffer_size.x;
-		swapchain_impl.height = framebuffer_size.y;
+	//	swapchain_impl.width = framebuffer_size.x;
+	//	swapchain_impl.height = framebuffer_size.y;
 
-		impl.swapchain->recreate();
-	}
+	//	impl.swapchain->recreate();
+	//}
 
 	WindowMoveArgs args = {
 		.pos   = { x_pos, y_pos },
@@ -45,14 +46,8 @@ static void glfw_window_size_callback(GLFWwindow* window, int width, int height)
 	int2 framebuffer_size;
 	glfwGetFramebufferSize(window, &framebuffer_size.x, &framebuffer_size.y);
 
-	if (impl.swapchain) {
-		auto& swapchain_impl = CoreObject::getImpl(impl.swapchain);
-
-		swapchain_impl.width = framebuffer_size.x;
-		swapchain_impl.height = framebuffer_size.y;
-
+	if (impl.swapchain)
 		impl.swapchain->recreate();
-	}
 
 	WindowResizeArgs args = {
 		.size            = { (uint32_t)width, (uint32_t)height },
@@ -302,7 +297,7 @@ bool Window::hasEvent() const
 
 bool Window::waitEvent(WindowEvent& e)
 {
-	glfwPollEvents();
+	glfwWaitEvents();
 	return pollEvent(e);
 }
 

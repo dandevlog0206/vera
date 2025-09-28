@@ -36,6 +36,7 @@ public:
 		Verbose,
 		Warning,
 		Error,
+		Exception,
 		Assert
 	};
 
@@ -46,6 +47,7 @@ public:
 	static void verbose(std::string_view msg);
 	static void warn(std::string_view msg);
 	static void error(std::string_view msg);
+	static void exception(std::string_view msg);
 	static void assertion(std::string_view msg);
 
 	static void setStream(std::ostream& os);

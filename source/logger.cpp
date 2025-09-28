@@ -8,13 +8,14 @@ VERA_NAMESPACE_BEGIN
 
 static std::ostream* g_stream               = &std::cerr;
 static bool          g_enable_color         = true;
-static uint16_t      g_message_colors[7][2] = {
+static uint16_t      g_message_colors[8][2] = {
 	{ 30 + Logger::BrightWhite, 40 + Logger::Black }, // trace
 	{ 30 + Logger::Green,       40 + Logger::Black }, // debug
 	{ 30 + Logger::Green,       40 + Logger::Black }, // info
 	{ 30 + Logger::Green,       40 + Logger::Black }, // verbose
 	{ 30 + Logger::Yellow,      40 + Logger::Black }, // warning
 	{ 30 + Logger::BrightRed,   40 + Logger::Black }, // error
+	{ 30 + Logger::BrightRed,   40 + Logger::Black }, // exception
 	{ 30 + Logger::Red,         40 + Logger::Black }  // assert
 };
 
@@ -24,12 +25,14 @@ static void print_log_type(Logger::LogType type)
 
 	if (!g_enable_color) {
 		switch (type) {
-		case Logger::Trace:   os << "[Trace]";   break;
-		case Logger::Debug:   os << "[Debug]";   break;
-		case Logger::Info:    os << "[Info]";    break;
-		case Logger::Verbose: os << "[Verbose]";    break;
-		case Logger::Warning: os << "[Warning]"; break;
-		case Logger::Error:   os << "[Error]";   break;
+		case Logger::Trace:     os << "[Trace]";     break;
+		case Logger::Debug:     os << "[Debug]";     break;
+		case Logger::Info:      os << "[Info]";      break;
+		case Logger::Verbose:   os << "[Verbose]";   break;
+		case Logger::Warning:   os << "[Warning]";   break;
+		case Logger::Error:     os << "[Error]";     break;
+		case Logger::Exception: os << "[Exception]"; break;
+		case Logger::Assert:    os << "[Assert]";    break;
 		}
 		return;
 	}
@@ -55,8 +58,11 @@ static void print_log_type(Logger::LogType type)
 	case Logger::Error:
 		ss << "\x1b[" << g_message_colors[5][0] << ";" << g_message_colors[5][1] << "m[Error]\x1b[0m";
 		break;
+	case Logger::Exception:
+		ss << "\x1b[" << g_message_colors[6][0] << ";" << g_message_colors[6][1] << "m[Exception]\x1b[0m";
+		break;
 	case Logger::Assert:
-		ss << "\x1b[" << g_message_colors[6][0] << ";" << g_message_colors[6][1] << "m[Assert]\x1b[0m";
+		ss << "\x1b[" << g_message_colors[7][0] << ";" << g_message_colors[7][1] << "m[Assert]\x1b[0m";
 		break;
 	}
 
@@ -97,6 +103,11 @@ void Logger::warn(std::string_view msg)
 void Logger::error(std::string_view msg)
 {
 	log(Error, msg);
+}
+
+void Logger::exception(std::string_view msg)
+{
+	log(Exception, msg);
 }
 
 void Logger::assertion(std::string_view msg)

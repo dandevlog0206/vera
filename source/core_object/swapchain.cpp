@@ -15,6 +15,9 @@
 #include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/os/window.h"
 
+#define SWAPCHAIN_COLOR_SPACE \
+	vk::ColorSpaceKHR::eSrgbNonlinear
+
 #define SWAPCHAIN_IMAGE_USAGE             \
 	ImageUsageFlagBits::ColorAttachment | \
 	ImageUsageFlagBits::TransferSrc |     \
@@ -46,17 +49,33 @@ static const char* get_glfw_error()
 	return err_str;
 }
 
+static bool check_swapchain_present_mode(vk::PhysicalDevice physical_device, vk::SurfaceKHR surface, PresentMode mode)
+{
+	auto modes = physical_device.getSurfacePresentModesKHR(surface);
+	auto iter  = std::find(VERA_SPAN(modes), to_vk_present_mode(mode));
+
+	return iter != modes.cend();
+}
+
+static bool check_swapchain_format(vk::PhysicalDevice physical_device, vk::SurfaceKHR surface, Format format)
+{
+	auto formats        = physical_device.getSurfaceFormatsKHR(surface);
+	auto surface_format = vk::SurfaceFormatKHR{ to_vk_format(format), SWAPCHAIN_COLOR_SPACE };
+	auto iter           = std::find(VERA_SPAN(formats), surface_format);
+
+	return iter != formats.cend();
+}
+
 static void prepare_swapchain_sync(SwapchainImpl& impl)
 {
-	for (auto& sync : impl.syncs)
-		sync.fence = {};
-
 	while (impl.syncs.size() < impl.imageCount) {
 		auto& sync = impl.syncs.emplace_back();
-
+		
 		sync.waitSemaphore = Semaphore::create(impl.device);
-		sync.fence         = {};
 	}
+
+	for (auto& sync : impl.syncs)
+		sync.fence = {};
 
 	impl.syncs.resize(impl.imageCount);
 }
@@ -75,8 +94,13 @@ static void clear_swapchain_frames(SwapchainImpl& impl)
 static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 {
 	auto old_swapchain = impl.swapchain;
+	auto capabilities  = device_impl.physicalDevice.getSurfaceCapabilitiesKHR(impl.surface);
 
-	device_impl.device.waitIdle();
+	if (capabilities.maxImageCount == 0 || capabilities.maxImageCount < impl.imageCount)
+		throw Exception("too many swapchain image count");
+
+	impl.width  = capabilities.currentExtent.width;
+	impl.height = capabilities.currentExtent.height;
 
 	prepare_swapchain_sync(impl);
 
@@ -84,7 +108,7 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 	swapchain_info.surface          = impl.surface;
 	swapchain_info.minImageCount    = impl.imageCount;
 	swapchain_info.imageFormat      = to_vk_format(impl.imageFormat);
-	swapchain_info.imageColorSpace  = vk::ColorSpaceKHR::eSrgbNonlinear;
+	swapchain_info.imageColorSpace  = SWAPCHAIN_COLOR_SPACE;
 	swapchain_info.imageExtent      = vk::Extent2D(impl.width, impl.height);
 	swapchain_info.imageArrayLayers = 1;
 	swapchain_info.imageUsage       = to_vk_image_usage_flags(SWAPCHAIN_IMAGE_USAGE);
@@ -94,6 +118,9 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 	swapchain_info.presentMode      = to_vk_present_mode(impl.presentMode);
 	swapchain_info.clipped          = false;
 	swapchain_info.oldSwapchain     = old_swapchain;
+
+	// Wait just before to create swapchain
+	device_impl.device.waitIdle();
 
 	impl.swapchain          = device_impl.device.createSwapchainKHR(swapchain_info);
 	impl.acquiredImageIndex = -1;
@@ -131,6 +158,7 @@ obj<Swapchain> Swapchain::create(obj<RenderContext> render_ctx, os::Window& wind
 	auto& window_impl      = *window.m_impl;
 	auto  vk_instance      = get_vk_instance(device_impl.context);
 	auto  framebuffer_size = window.FramebufferSize.get();
+	auto  format           = info.colorFormat == Format::Unknown ? device_impl.colorFormat : info.colorFormat;
 
 	if (window_impl.swapchain)
 		throw Exception("Window already bound to another swapchain");
@@ -142,17 +170,20 @@ obj<Swapchain> Swapchain::create(obj<RenderContext> render_ctx, os::Window& wind
 	if (glfwCreateWindowSurface(vk_instance, window_impl.window, nullptr, &surface) != VK_SUCCESS)
 		throw Exception(get_glfw_error());
 
+	if (!check_swapchain_present_mode(device_impl.physicalDevice, surface, info.presentMode))
+		throw Exception("unsupported present mode");
+	if (!check_swapchain_format(device_impl.physicalDevice, surface, format))
+		throw Exception("unsupported swapchain format");
+
 	window_impl.swapchain = obj;
 
 	impl.window             = &window;
 	impl.device             = ctx_impl.device;
 	impl.renderContext      = std::move(render_ctx);
 	impl.surface            = surface;
-	impl.imageFormat        = info.colorFormat == Format::Unknown ? device_impl.colorFormat : info.colorFormat;
+	impl.imageFormat        = format;
 	impl.presentMode        = info.presentMode;
 	impl.imageCount         = info.imageCount;
-	impl.width              = info.width == 0 ? framebuffer_size.width : info.width;
-	impl.height             = info.height == 0 ? framebuffer_size.height : info.height;
 	impl.acquiredImageIndex = -1;
 	impl.syncIndex          = 0;
 
@@ -213,12 +244,6 @@ ref<Texture> Swapchain::acquireNextImage()
 
 			return texture;
 		} else if (result.result == vk::Result::eSuboptimalKHR || result.result == vk::Result::eNotReady) {
-
-			auto new_extent = impl.window->FramebufferSize.get();
-
-			impl.width  = new_extent.width;
-			impl.height = new_extent.height;
-
 			recreate_swapchain(device_impl, impl);
 		} else {
 			throw Exception("failed to acquire next swapchain image");
@@ -253,7 +278,7 @@ void Swapchain::present()
 	present_info.pSwapchains        = &impl.swapchain;
 	present_info.pImageIndices      = reinterpret_cast<uint32_t*>(&impl.acquiredImageIndex);
 
-	auto result = device_impl.graphicsQueue.presentKHR(present_info);
+	auto result = device_impl.graphicsQueue.presentKHR(&present_info);
 
 	impl.syncIndex = (impl.syncIndex + 1) % impl.imageCount;
 }

@@ -31,6 +31,7 @@
 #include "graphics/image.h"
 #include "graphics/image_edit.h"
 #include "graphics/image_sampler.h"
+#include "graphics/transform2d.h"
 #include "graphics/vertex_input.h"
 
 // math

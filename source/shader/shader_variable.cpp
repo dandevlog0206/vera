@@ -170,7 +170,34 @@ static void store_primitive_impl(ShaderStorageData* storage_ptr, ReflectionDesc*
 
 	VERA_ASSERT(desc.primitiveType == primitive_type_v<Type>);
 
-	*reinterpret_cast<Type*>(&storage.blockStorage[offset]) = value;
+	// GLSL and GLM have different matrix layout
+	if constexpr (primitive_type_v<Type> == ReflectionPrimitiveType::Float_2x3) {
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 0]) = value[0];
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 16]) = value[1];
+	} else if constexpr (primitive_type_v<Type> == ReflectionPrimitiveType::Float_3x3) {
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 0])  = value[0];
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 16]) = value[1];
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 32]) = value[2];
+	} else if constexpr (primitive_type_v<Type> == ReflectionPrimitiveType::Float_4x3) {
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 0])  = value[0];
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 16]) = value[1];
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 32]) = value[2];
+		*reinterpret_cast<float3*>(&storage.blockStorage[offset + 48]) = value[3];
+	} else if constexpr (primitive_type_v<Type> == ReflectionPrimitiveType::Double_2x3) {
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 0]) = value[0];
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 16]) = value[1];
+	} else if constexpr (primitive_type_v<Type> == ReflectionPrimitiveType::Double_3x3) {
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 0]) = value[0];
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 16]) = value[1];
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 32]) = value[2];
+	} else if constexpr (primitive_type_v<Type> == ReflectionPrimitiveType::Double_4x3) {
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 0]) = value[0];
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 16]) = value[1];
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 32]) = value[2];
+		*reinterpret_cast<double3*>(&storage.blockStorage[offset + 48]) = value[3];
+	} else {
+		*reinterpret_cast<Type*>(&storage.blockStorage[offset]) = value;
+	}
 }
 
 ShaderVariable::ShaderVariable(ShaderStorageData* storage, ReflectionDesc* desc, uint32_t offset) :

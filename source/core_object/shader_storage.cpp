@@ -174,8 +174,17 @@ static void allocate_descriptor_set(ShaderStorageImpl& impl, uint32_t frame_idx)
 		case ReflectionType::Resource: {
 			auto& desc = *static_cast<ReflectionResourceDesc*>(desc_ptr);
 
-			// TODO: remove later!!!!!!!!!!!!!!!
-			if (desc.resourceType == ResourceType::CombinedImageSampler) {
+			switch (desc.resourceType) {
+			case ResourceType::Sampler:
+			case ResourceType::CombinedImageSampler:
+			case ResourceType::SampledImage:
+			case ResourceType::StorageImage:
+			case ResourceType::UniformTexelBuffer:
+			case ResourceType::StorageTexelBuffer:
+			case ResourceType::UniformBuffer:
+			case ResourceType::StorageBuffer:
+			case ResourceType::UniformBufferDynamic:
+			case ResourceType::StorageBufferDynamic: {
 				auto& storage = *static_cast<CombinedImageSamplerStorage*>(frame.storages[i]);
 
 				storage.sampler = Sampler::create(impl.device);
@@ -185,20 +194,19 @@ static void allocate_descriptor_set(ShaderStorageImpl& impl, uint32_t frame_idx)
 				alloc_info.descriptorSetCount = 1;
 				alloc_info.pSetLayouts        = &get_descriptor_set_layout(desc_ptr->resourceLayout);
 
-				vk_device.allocateDescriptorSets(&alloc_info, &storage.descriptorSet);
+				auto result = vk_device.allocateDescriptorSets(&alloc_info, &storage.descriptorSet);
+
+				if (result != vk::Result::eSuccess)
+					throw Exception("failed to allocate descriptor set");
+			} break;
 			}
 		} break;
 		case ReflectionType::ResourceBlock: {
 			auto& desc = *static_cast<ReflectionResourceBlockDesc*>(desc_ptr);
 		} break;
-		case ReflectionType::PushConstant: {
-			auto& desc = *static_cast<ReflectionPushConstantDesc*>(desc_ptr);
-		} break;
 		case ReflectionType::ResourceArray: {
 			auto& desc = *static_cast<ReflectionResourceArrayDesc*>(desc_ptr);
 		} break;
-		default:
-			throw Exception("invalid reflection");
 		}
 	}
 }
@@ -272,13 +280,17 @@ void ShaderStorage::bindCommandBuffer(ref<PipelineLayout> layout, ref<CommandBuf
 	for (auto& storage : frame.storages) {
 		switch (storage->storageType) {
 		case ShaderStorageDataType::ResourceArray: {
+			auto& array = *static_cast<ResourceArrayStorage*>(storage);
+
+			vk_cmd.bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics,
+				layout_impl.layout,
+				0,
+				array.descriptorSet,
+				{});
 		} break;
 		case ShaderStorageDataType::Sampler: {
-		} break;
-		case ShaderStorageDataType::Texture: {
-		} break;
-		case ShaderStorageDataType::CombinedImageSampler: {
-			auto& sampler = *static_cast<CombinedImageSamplerStorage*>(storage);
+			auto& sampler = *static_cast<SamplerStorage*>(storage);
 
 			vk_cmd.bindDescriptorSets(
 				vk::PipelineBindPoint::eGraphics,
@@ -287,9 +299,45 @@ void ShaderStorage::bindCommandBuffer(ref<PipelineLayout> layout, ref<CommandBuf
 				sampler.descriptorSet,
 				{});
 		} break;
+		case ShaderStorageDataType::Texture: {
+			auto& texture = *static_cast<TextureStorage*>(storage);
+
+			vk_cmd.bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics,
+				layout_impl.layout,
+				0,
+				texture.descriptorSet,
+				{});
+		} break;
+		case ShaderStorageDataType::CombinedImageSampler: {
+			auto& sampled_image = *static_cast<CombinedImageSamplerStorage*>(storage);
+
+			vk_cmd.bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics,
+				layout_impl.layout,
+				0,
+				sampled_image.descriptorSet,
+				{});
+		} break;
 		case ShaderStorageDataType::Buffer: {
+			auto& buffer = *static_cast<BufferStorage*>(storage);
+
+			vk_cmd.bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics,
+				layout_impl.layout,
+				0,
+				buffer.descriptorSet,
+				{});
 		} break;
 		case ShaderStorageDataType::BufferBlock: {
+			auto& buffer = *static_cast<BufferBlockStorage*>(storage);
+
+			vk_cmd.bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics,
+				layout_impl.layout,
+				0,
+				buffer.descriptorSet,
+				{});
 		} break;
 		case ShaderStorageDataType::PushConstant: {
 			auto& pc = *static_cast<PushConstantStorage*>(storage);

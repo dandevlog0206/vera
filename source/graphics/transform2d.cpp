@@ -4,11 +4,11 @@ VERA_NAMESPACE_BEGIN
 
 Transform2D::Transform2D() :
 	m_mat(
-		1.f, 0.f, 0.f, 0.f,
-		0.f, 1.f, 0.f, 0.f,
-		0.f, 0.f, 1.f, 0.f) {}
+		1.f, 0.f, 0.f,
+		0.f, 1.f, 0.f,
+		0.f, 0.f, 1.f) {}
 
-Transform2D::Transform2D(const float3x4& mat) :
+Transform2D::Transform2D(const float3x3& mat) :
 	m_mat(mat) {}
 
 Transform2D& Transform2D::translate(float x, float y)
@@ -32,14 +32,14 @@ Transform2D& Transform2D::rotate(radian rad)
 	float    sin  = sinf(rad);
 
 	// TODO: check calculation
-	m_mat[0][0] = copy[0][0] * cos + copy[1][0] * -sin;
-	m_mat[1][0] = copy[0][0] * sin + copy[1][0] * cos;
+	m_mat[0][0] = copy[0][0] * cos + copy[1][0] * sin;
+	m_mat[1][0] = copy[0][0] * -sin + copy[1][0] * cos;
 	m_mat[2][0] = copy[2][0];
-	m_mat[0][1] = copy[0][1] * cos + copy[1][1] * -sin;
-	m_mat[1][1] = copy[0][1] * sin + copy[1][1] * cos;
+	m_mat[0][1] = copy[0][1] * cos + copy[1][1] * sin;
+	m_mat[1][1] = copy[0][1] * -sin + copy[1][1] * cos;
 	m_mat[2][1] = copy[2][1];
-	m_mat[0][2] = copy[0][2] * cos + copy[1][2] * -sin;
-	m_mat[1][2] = copy[0][2] * sin + copy[1][2] * cos;
+	m_mat[0][2] = copy[0][2] * cos + copy[1][2] * sin;
+	m_mat[1][2] = copy[0][2] * -sin + copy[1][2] * cos;
 	m_mat[2][2] = copy[2][2];
 
 	return *this;
@@ -141,14 +141,14 @@ Transform2D& Transform2D::shearY(radian rad)
 Transform2D& Transform2D::clear()
 {
 	m_mat = {
-		1.f, 0.f, 0.f, 0.f,
-		0.f, 1.f, 0.f, 0.f,
-		0.f, 0.f, 1.f, 0.f };
+		1.f, 0.f, 0.f,
+		0.f, 1.f, 0.f,
+		0.f, 0.f, 1.f };
 	
 	return *this;
 }
 
-const float3x4& Transform2D::getMatrix() const
+const float3x3& Transform2D::getMatrix() const
 {
 	return m_mat;
 }
@@ -189,8 +189,11 @@ Transform2D Transform2D::operator*(const Transform2D& rhs) const
 
 float2 Transform2D::operator*(const float2& rhs) const
 {
-	auto tmp = m_mat * float4(rhs.x, rhs.y, 1.f, 1.f);
-	return { tmp.x / tmp.z, tmp.y / tmp.z };
+	float x = m_mat[0][0] * rhs.x + m_mat[1][0] * rhs.y + m_mat[2][0];
+	float y = m_mat[0][1] * rhs.x + m_mat[1][1] * rhs.y + m_mat[2][1];
+	float z = m_mat[0][2] * rhs.x + m_mat[1][2] * rhs.y + m_mat[2][2];
+
+	return { x / z, y / z };
 }
 
 bool Transform2D::operator==(const Transform2D& rhs) const
