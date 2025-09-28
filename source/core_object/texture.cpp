@@ -7,7 +7,7 @@
 #include "../../include/vera/core/device_memory.h"
 #include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/core/buffer.h"
-#include "../../include/vera/core/render_command.h"
+#include "../../include/vera/core/command_buffer.h"
 #include "../../include/vera/graphics/image.h"
 
 VERA_NAMESPACE_BEGIN
@@ -140,7 +140,7 @@ void Texture::upload(const Image& image)
 	auto& impl           = getImpl(this);
 	auto  image_size     = image.size();
 	auto  staging_buffer = Buffer::createStaging(impl.device, image_size);
-	auto  command_buffer = RenderCommand::create(impl.device);
+	auto  command_buffer = CommandBuffer::create(impl.device);
 	auto  buffer_memory  = staging_buffer->getDeviceMemory();
 
 	auto* map = buffer_memory->map();
@@ -226,6 +226,11 @@ ref<TextureView> Texture::getTextureView()
 	}
 
 	return impl.textureView;
+}
+
+ImageUsageFlags Texture::getUsageFlags()
+{
+	return getImpl(this).imageUsage;
 }
 
 uint32_t Texture::width() const

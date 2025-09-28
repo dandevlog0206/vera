@@ -1199,7 +1199,7 @@ static void store_components(void* ptr, uint32_t width, uint32_t x, uint32_t y, 
 		pixel.b = F2DOUBLE(value.b);
 		pixel.a = F2DOUBLE(value.a);
 	} return;
-	case Format::RG4UnormPack8: { /////////////////////////////////////////////////
+	case Format::RG4UnormPack8: {
 		fetch_pixel<uint8_t>(ptr, width, x, y) =
 			(static_cast<uint8_t>(value.r * 15.99f) & 0x0f) << 4 |
 			(static_cast<uint8_t>(value.g * 15.99f) & 0x0f) << 0;

@@ -9,7 +9,7 @@
 VERA_NAMESPACE_BEGIN
 
 class Context;
-class RenderCommand;
+class CommandBuffer;
 
 enum class MemoryHeapFlagBits VERA_FLAG_BITS
 {
@@ -60,7 +60,7 @@ public:
 
 	const std::vector<DeviceMemoryType>& getMemoryTypes() const;
 
-	void submitCommand(ref<RenderCommand> command);
+	void submitCommand(ref<CommandBuffer> command);
 
 	void waitIdle() const;
 };

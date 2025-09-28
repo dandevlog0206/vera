@@ -6,10 +6,11 @@
 
 VERA_NAMESPACE_BEGIN
 
+class Device;
 class ShaderReflection;
 class ShaderStorage;
 class PipelineLayout;
-class RenderCommand;
+class CommandBuffer;
 
 class ShaderParameter
 {
@@ -19,11 +20,11 @@ public:
 
 	ShaderVariable operator[](std::string_view name);
 
+	obj<Device> getDevice();
 	obj<ShaderReflection> getShaderReflection();
+	obj<ShaderStorage> getShaderStorage();
 
-	void bindRenderCommand(obj<PipelineLayout> pipeline, obj<RenderCommand> cmd) const;
-
-	bool empty() const;
+	void bindCommandBuffer(ref<PipelineLayout> pipeline, ref<CommandBuffer> cmd) const;
 
 private:
 	obj<ShaderReflection> m_reflection;

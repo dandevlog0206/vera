@@ -4,14 +4,14 @@
 
 VERA_NAMESPACE_BEGIN
 
-class RenderCommand;
+class CommandBuffer;
 class Fence;
 class Semaphore;
 class Texture;
 
 struct RenderFrame
 {
-	obj<RenderCommand> renderCommand;
+	obj<CommandBuffer> renderCommand;
 	obj<Fence>         fence;
 	obj<Semaphore>     renderCompleteSemaphore;
 	obj<Semaphore>     imageWaitSemaphore;

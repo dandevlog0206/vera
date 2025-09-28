@@ -1,6 +1,6 @@
-#include "../../include/vera/core/render_command.h"
+#include "../../include/vera/core/command_buffer.h"
 #include "../impl/buffer_impl.h"
-#include "../impl/render_command_impl.h"
+#include "../impl/command_buffer_impl.h"
 #include "../impl/pipeline_impl.h"
 #include "../impl/texture_impl.h"
 #include "../impl/device_memory_impl.h"
@@ -26,14 +26,14 @@ static void clear_rendering_info(RenderingInfo& info)
 	info.stencilAttachment.reset();
 }
 
-vk::CommandBuffer& get_vk_command_buffer(ref<RenderCommand> render_command)
+vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> render_command)
 {
 	return CoreObject::getImpl(render_command).commandBuffer;
 }
 
-obj<RenderCommand> RenderCommand::create(obj<Device> device)
+obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 {
-	auto  obj       = createNewObject<RenderCommand>();
+	auto  obj       = createNewObject<CommandBuffer>();
 	auto& impl      = getImpl(obj);
 	auto  vk_device = get_vk_device(device);
 
@@ -52,7 +52,7 @@ obj<RenderCommand> RenderCommand::create(obj<Device> device)
 	return obj;
 }
 
-RenderCommand::~RenderCommand()
+CommandBuffer::~CommandBuffer()
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
@@ -63,12 +63,12 @@ RenderCommand::~RenderCommand()
 	destroyObjectImpl(this);
 }
 
-obj<Device> RenderCommand::getDevice()
+obj<Device> CommandBuffer::getDevice()
 {
 	return getImpl(this).device;
 }
 
-void RenderCommand::begin()
+void CommandBuffer::begin()
 {
 	auto& impl = getImpl(this);
 
@@ -78,7 +78,7 @@ void RenderCommand::begin()
 	impl.commandBuffer.begin(begin_info);
 }
 
-void RenderCommand::setViewport(const Viewport& viewport)
+void CommandBuffer::setViewport(const Viewport& viewport)
 {
 	auto& impl = getImpl(this);
 
@@ -94,7 +94,7 @@ void RenderCommand::setViewport(const Viewport& viewport)
 	impl.currentViewport = viewport;
 }
 
-void RenderCommand::setScissor(const Scissor& scissor)
+void CommandBuffer::setScissor(const Scissor& scissor)
 {
 	auto& impl = getImpl(this);
 
@@ -108,7 +108,7 @@ void RenderCommand::setScissor(const Scissor& scissor)
 	impl.currentScissor = scissor;
 }
 
-void RenderCommand::setVertexBuffer(ref<Buffer> buffer)
+void CommandBuffer::setVertexBuffer(ref<Buffer> buffer)
 {
 	auto& impl        = getImpl(this);
 	auto& buffer_impl = getImpl(buffer);
@@ -121,7 +121,7 @@ void RenderCommand::setVertexBuffer(ref<Buffer> buffer)
 	impl.currentVertexBuffer = buffer;
 }
 
-void RenderCommand::setIndexBuffer(ref<Buffer> buffer)
+void CommandBuffer::setIndexBuffer(ref<Buffer> buffer)
 {
 	auto& impl        = getImpl(this);
 	auto& buffer_impl = getImpl(buffer);
@@ -134,7 +134,7 @@ void RenderCommand::setIndexBuffer(ref<Buffer> buffer)
 	impl.currentIndexBuffer = buffer;
 }
 
-void RenderCommand::setPipeline(ref<Pipeline> pipeline)
+void CommandBuffer::setPipeline(ref<Pipeline> pipeline)
 {
 	auto& impl          = getImpl(this);
 	auto& pipeline_impl = getImpl(pipeline);
@@ -145,7 +145,7 @@ void RenderCommand::setPipeline(ref<Pipeline> pipeline)
 	impl.currentPipeline = pipeline;
 }
 
-void RenderCommand::transitionImageLayout(
+void CommandBuffer::transitionImageLayout(
 	ref<Texture> texture,
 	PipelineStageFlags src_stage_mask,
 	PipelineStageFlags dst_stage_mask,
@@ -182,7 +182,7 @@ void RenderCommand::transitionImageLayout(
 		&barrier);
 }
 
-void RenderCommand::copyBufferToTexture(
+void CommandBuffer::copyBufferToTexture(
 	ref<Texture> dst,
 	ref<Buffer>  src,
 	size_t       buffer_offset,
@@ -217,7 +217,7 @@ void RenderCommand::copyBufferToTexture(
 		copy_info);
 }
 
-void RenderCommand::beginRendering(const RenderingInfo& info)
+void CommandBuffer::beginRendering(const RenderingInfo& info)
 {
 	auto& impl = getImpl(this);
 
@@ -290,21 +290,21 @@ void RenderCommand::beginRendering(const RenderingInfo& info)
 	impl.currentRenderingInfo = info;
 }
 
-void RenderCommand::draw(uint32_t vtx_count, uint32_t instance_count, uint32_t vtx_offset, uint32_t instance_offset)
+void CommandBuffer::draw(uint32_t vtx_count, uint32_t instance_count, uint32_t vtx_offset, uint32_t instance_offset)
 {
 	auto& impl = getImpl(this);
 
 	impl.commandBuffer.draw(vtx_count, instance_count, vtx_offset, instance_offset);
 }
 
-void RenderCommand::drawIndexed(uint32_t idx_count, uint32_t instance_count, uint32_t idx_offset, uint32_t vtx_offset, uint32_t instance_offset)
+void CommandBuffer::drawIndexed(uint32_t idx_count, uint32_t instance_count, uint32_t idx_offset, uint32_t vtx_offset, uint32_t instance_offset)
 {
 	auto& impl = getImpl(this);
 
 	impl.commandBuffer.drawIndexed(idx_count, instance_count, idx_offset, vtx_offset, instance_offset);
 }
 
-void RenderCommand::endRendering()
+void CommandBuffer::endRendering()
 {
 	auto& impl = getImpl(this);
 
@@ -314,14 +314,14 @@ void RenderCommand::endRendering()
 	clear_rendering_info(impl.currentRenderingInfo);
 }
 
-void RenderCommand::end()
+void CommandBuffer::end()
 {
 	auto& impl = getImpl(this);
 
 	impl.commandBuffer.end();
 }
 
-void RenderCommand::reset()
+void CommandBuffer::reset()
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);

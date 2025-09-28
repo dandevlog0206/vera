@@ -1,12 +1,11 @@
 #include "../../include/vera/shader/shader_parameter.h"
 #include "../impl/shader_reflection_impl.h"
 #include "../impl/shader_storage_impl.h"
-#include "../impl/pipeline_layout_impl.h"
 
 #include "../../include/vera/core/shader_reflection.h"
 #include "../../include/vera/core/shader_storage.h"
 #include "../../include/vera/core/pipeline_layout.h"
-#include "../../include/vera/core/render_command.h"
+#include "../../include/vera/core/command_buffer.h"
 #include "../../include/vera/core/sampler.h"
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/core/buffer.h"
@@ -26,11 +25,21 @@ ShaderVariable ShaderParameter::operator[](std::string_view name)
 {
 	auto& refl_impl    = CoreObject::getImpl(m_reflection);
 	auto& storage_impl = CoreObject::getImpl(m_storage);
+	auto& frame        = storage_impl.frames[storage_impl.frameIndex];
 
-	if (auto iter = refl_impl.hashMap.find(name); iter != refl_impl.hashMap.end())
-		return ShaderVariable(storage_impl.storages[iter->second], refl_impl.descriptors[iter->second], UINT32_MAX);
+	if (auto iter = refl_impl.hashMap.find(name); iter != refl_impl.hashMap.end()) {
+		auto* storage_ptr = frame.storages[iter->second];
+		auto* desc_ptr    = refl_impl.descriptors[iter->second];
+
+		return ShaderVariable(storage_ptr, desc_ptr, UINT32_MAX);
+	}
 
 	throw Exception("couldn't find resource named " + std::string(name));
+}
+
+obj<Device> ShaderParameter::getDevice()
+{
+	return m_reflection->getDevice();
 }
 
 obj<ShaderReflection> ShaderParameter::getShaderReflection()
@@ -38,51 +47,14 @@ obj<ShaderReflection> ShaderParameter::getShaderReflection()
 	return m_reflection;
 }
 
-void ShaderParameter::bindRenderCommand(obj<PipelineLayout> layout, obj<RenderCommand> cmd) const
+obj<ShaderStorage> ShaderParameter::getShaderStorage()
 {
-	auto& storage_impl = CoreObject::getImpl(m_storage);
-	auto& layout_impl  = CoreObject::getImpl(layout);
-	auto  vk_cmd       = get_vk_command_buffer(cmd);
-
-	for (auto& storage : storage_impl.storages) {
-		switch (storage->storageType) {
-		case ShaderStorageDataType::ResourceArray: {
-		} break;
-		case ShaderStorageDataType::Sampler: {
-		} break;
-		case ShaderStorageDataType::Texture: {
-		} break;
-		case ShaderStorageDataType::CombinedImageSampler: {
-			auto& sampler = *static_cast<CombinedImageSamplerStorage*>(storage);
-
-			vk_cmd.bindDescriptorSets(
-				vk::PipelineBindPoint::eGraphics,
-				layout_impl.layout,
-				0,
-				sampler.descriptorSet,
-				{});
-		} break;
-		case ShaderStorageDataType::Buffer: {
-		} break;
-		case ShaderStorageDataType::BufferBlock: {
-		} break;
-		case ShaderStorageDataType::PushConstant: {
-			auto& pc = *static_cast<PushConstantStorage*>(storage);
-
-			vk_cmd.pushConstants(
-				layout_impl.layout,
-				to_vk_shader_stage_flags(pc.shaderStageFlags),
-				0,
-				static_cast<uint32_t>(pc.blockStorage.size()),
-				pc.blockStorage.data());
-		} break;
-		}
-	}
+	return m_storage;
 }
 
-bool ShaderParameter::empty() const
+void ShaderParameter::bindCommandBuffer(ref<PipelineLayout> layout, ref<CommandBuffer> cmd) const
 {
-	return CoreObject::getImpl(m_storage).storages.empty();
+	m_storage->bindCommandBuffer(layout, cmd);
 }
 
 VERA_NAMESPACE_END

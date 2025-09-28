@@ -1,5 +1,5 @@
-#include "../include/vera/core/graphics_state.h"
-#include "impl/render_command_impl.h"
+#include "../../include/vera/graphics/graphics_state.h"
+#include "../impl/command_buffer_impl.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -193,7 +193,7 @@ void GraphicsState::popPipelineInfo()
 	m_pipelines.pop_back();
 }
 
-void GraphicsState::bindRenderCommand(ref<RenderCommand> cmd) const
+void GraphicsState::bindCommandBuffer(ref<CommandBuffer> cmd) const
 {
 	auto& cmd_impl = CoreObject::getImpl(cmd);
 

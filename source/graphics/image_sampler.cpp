@@ -86,12 +86,14 @@ static float4 sample_nearest(const Image& image, float u, float v, const float4&
 		break;
 	}
 
-	float    rnd_u = u <= 0.5f ? 0.f : roundf(u);
-	float    rnd_v = v <= 0.5f ? 0.f : roundf(v);
-	uint32_t x     = static_cast<uint32_t>(width - 1.f <= u ? width - 1 : rnd_u);
-	uint32_t y     = static_cast<uint32_t>(height - 1.f <= v ? height - 1 : rnd_v);
+	uint32_t rnd_u = u <= 0.5f ? 0 : static_cast<uint32_t>(roundf(u));
+	uint32_t rnd_v = v <= 0.5f ? 0 : static_cast<uint32_t>(roundf(v));
+	uint32_t w     = static_cast<uint32_t>(width);
+	uint32_t h     = static_cast<uint32_t>(height);
+	uint32_t x     = width - 1 <= u ? width - 1 : rnd_u;
+	uint32_t y     = height - 1 <= v ? height - 1 : rnd_v;
 
-	return fetch_components(ptr, width, x, y, format);
+	return fetch_components(ptr, w, x, y, format);
 }
 
 template <ImageSamplerAddressMode ModeU, ImageSamplerAddressMode ModeV>
@@ -105,19 +107,20 @@ static float4 sample_linear(const Image& image, float u, float v, const float4& 
 	switch (ModeU) {
 	case ImageSamplerAddressMode::Repeat:
 		u  = repeatf(u, width);
-	break;
+		break;
 	case ImageSamplerAddressMode::MirroredRepeat:
 		u = mirrored_repeatf(u, width);
-	break;
+		break;
 	case ImageSamplerAddressMode::ClampToEdge:
 		u = clamp_edge(u, width);
-	break;
+		break;
 	case ImageSamplerAddressMode::ClampToBorder:
 		if (u < -0.5f || width - 0.5f <= u)
 			return border_color;
+		break;
 	case ImageSamplerAddressMode::MirrorClampToEdge:
 		u = mirror_clamp_edge(u, width);
-	break;
+		break;
 	}
 
 	switch (ModeV) {
@@ -133,6 +136,7 @@ static float4 sample_linear(const Image& image, float u, float v, const float4& 
 	case ImageSamplerAddressMode::ClampToBorder:
 		if (v < -0.5f || height - 0.5f <= v)
 			return border_color;
+		break;
 	case ImageSamplerAddressMode::MirrorClampToEdge:
 		v = mirror_clamp_edge(v, height);
 		break;

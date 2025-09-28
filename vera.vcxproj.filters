@@ -87,7 +87,7 @@
     <ClInclude Include="include\vera\util\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\render_command.h">
+    <ClInclude Include="include\vera\core\command_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\vera.h">
@@ -111,7 +111,7 @@
     <ClInclude Include="include\vera\core\fence.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\graphics_state.h">
+    <ClInclude Include="include\vera\graphics\graphics_state.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\core_object.h">
@@ -192,7 +192,7 @@
     <ClInclude Include="source\impl\pipeline_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\impl\render_command_impl.h">
+    <ClInclude Include="source\impl\command_buffer_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\impl\fence_impl.h">
@@ -302,10 +302,10 @@
     <ClCompile Include="source\pass\graphics_pass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core_object\render_command.cpp">
+    <ClCompile Include="source\core_object\command_buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\graphics_state.cpp">
+    <ClCompile Include="source\graphics\graphics_state.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\pipeline.cpp">

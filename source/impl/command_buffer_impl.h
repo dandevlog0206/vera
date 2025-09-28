@@ -2,11 +2,11 @@
 
 #include "object_impl.h"
 
-#include "../../include/vera/core/graphics_state.h"
+#include "../../include/vera/graphics/graphics_state.h"
 
 VERA_NAMESPACE_BEGIN
 
-struct RenderCommandImpl
+struct CommandBufferImpl
 {
 	obj<Device>       device;
 

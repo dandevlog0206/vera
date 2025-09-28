@@ -66,14 +66,21 @@ struct PushConstantStorage : BlockStorage
 {
 };
 
+struct ShaderStorageFrameData
+{
+	const_ref<Fence>                fence;
+	std::vector<ShaderStorageData*> storages;
+	vk::DescriptorPool              descriptorPool;
+};
+
 struct ShaderStorageImpl
 {
-	obj<Device>                     device;
-	obj<ShaderReflection>           reflection;
+	obj<Device>                         device;
+	obj<ShaderReflection>               reflection;
 
-	vk::DescriptorPool              descriptorPool;
-
-	std::vector<ShaderStorageData*> storages;
+	std::vector<ShaderStorageFrameData> frames;
+	int32_t                             frameIndex;
+	int32_t                             lastFrameIndex;
 };
 
 VERA_NAMESPACE_END

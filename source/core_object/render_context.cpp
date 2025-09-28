@@ -1,14 +1,14 @@
 #include "../../include/vera/core/render_context.h"
 #include "../impl/device_impl.h"
-#include "../impl/render_command_impl.h"
+#include "../impl/command_buffer_impl.h"
 #include "../impl/render_context_impl.h"
 #include "../impl/texture_impl.h"
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/fence.h"
 #include "../../include/vera/core/pipeline_layout.h"
-#include "../../include/vera/core/graphics_state.h"
 #include "../../include/vera/core/semaphore.h"
+#include "../../include/vera/graphics/graphics_state.h"
 #include "../../include/vera/shader/shader_parameter.h"
 
 VERA_NAMESPACE_BEGIN
@@ -17,7 +17,7 @@ static void append_render_frame(RenderContextImpl& impl)
 {
 	auto& render_frame = impl.renderFrames.emplace_back();
 
-	render_frame.renderCommand           = RenderCommand::create(impl.device);
+	render_frame.renderCommand           = CommandBuffer::create(impl.device);
 	render_frame.fence                   = Fence::create(impl.device);
 	render_frame.renderCompleteSemaphore = Semaphore::create(impl.device);
 	render_frame.imageWaitSemaphore      = {};
@@ -71,7 +71,7 @@ obj<Device> RenderContext::getDevice()
 	return getImpl(this).device;
 }
 
-obj<RenderCommand> RenderContext::getRenderCommand()
+obj<CommandBuffer> RenderContext::getRenderCommand()
 {
 	auto& impl = getImpl(this);
 
@@ -83,7 +83,7 @@ void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32
 	auto& impl = getImpl(this);
 	auto& cmd  = get_render_frame(impl).renderCommand;
 
-	states.bindRenderCommand(cmd);
+	states.bindCommandBuffer(cmd);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }
@@ -111,10 +111,8 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 			vr::ImageLayout::ColorAttachmentOptimal);
 	}
 
-	states.bindRenderCommand(cmd);
-	
-	if (!params.empty())
-		params.bindRenderCommand(states.getPipeline()->getPipelineLayout(), cmd);
+	states.bindCommandBuffer(cmd);
+	params.bindCommandBuffer(states.getPipeline()->getPipelineLayout(), cmd);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }

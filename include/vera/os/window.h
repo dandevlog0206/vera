@@ -40,6 +40,9 @@ public:
 	void registerEventHandler(WindowEventHandler hanlder);
 	void handleEvent();
 
+	void cancelClose();
+	bool needClose() const;
+
 	PROPERTY(std::string, Title);
 	PROPERTY(int2, Position);
 	PROPERTY(extent2d, WindowSize);

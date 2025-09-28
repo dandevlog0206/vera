@@ -71,6 +71,8 @@ static void glfw_window_close_callback(GLFWwindow* window)
 {
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
+	impl.needClose = true;
+
 	WindowEvent e(EventType::Close);
 
 	if (impl.eventHandler)
@@ -276,6 +278,8 @@ Window::Window(uint32_t width, uint32_t height, std::string_view title) :
 	glfwGetWindowPos(m_impl->window, &m_impl->prevPosition.x, &m_impl->prevPosition.y);
 	glfwGetCursorPos(m_impl->window, &m_impl->prevCursorPosition.x, &m_impl->prevCursorPosition.y);
 	glfwShowWindow(m_impl->window);
+	m_impl->userPtr      = nullptr;
+	m_impl->needClose    = false;
 
 	g_window_count++;
 }
@@ -322,6 +326,16 @@ void Window::registerEventHandler(WindowEventHandler hanlder)
 void Window::handleEvent()
 {
 	glfwPollEvents();
+}
+
+void Window::cancelClose()
+{
+	m_impl->needClose = false;
+}
+
+bool Window::needClose() const
+{
+	return m_impl->needClose;
 }
 
 PROPERTY_GET_IMPL(Window, Title)

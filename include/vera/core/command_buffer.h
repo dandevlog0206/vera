@@ -74,12 +74,12 @@ struct RenderingInfo
 	std::optional<StencilAtttachmentInfo> stencilAttachment;
 };
 
-class RenderCommand : protected CoreObject // TODO: consider rename to command buffer
+class CommandBuffer : protected CoreObject // TODO: consider rename to command buffer
 {
-	VERA_CORE_OBJECT_INIT(RenderCommand)
+	VERA_CORE_OBJECT_INIT(CommandBuffer)
 public:
-	static obj<RenderCommand> create(obj<Device> device);
-	~RenderCommand();
+	static obj<CommandBuffer> create(obj<Device> device);
+	~CommandBuffer();
 
 	obj<Device> getDevice();
 

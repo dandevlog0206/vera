@@ -3,7 +3,7 @@
 #include "../impl/device_impl.h"
 
 #include "../../include/vera/core/context.h"
-#include "../../include/vera/core/render_command.h"
+#include "../../include/vera/core/command_buffer.h"
 #include "../../include/vera/core/pipeline.h"
 #include "../../include/vera/core/shader.h"
 #include "../../include/vera/core/sampler.h"
@@ -263,7 +263,7 @@ const std::vector<DeviceMemoryType>& Device::getMemoryTypes() const
 	return getImpl(this).memoryTypes;
 }
 
-void Device::submitCommand(ref<RenderCommand> command)
+void Device::submitCommand(ref<CommandBuffer> command)
 {
 	auto& impl = getImpl(this);
 	

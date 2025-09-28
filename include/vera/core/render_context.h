@@ -5,7 +5,7 @@
 VERA_NAMESPACE_BEGIN
 
 class Device;
-class RenderCommand;
+class CommandBuffer;
 class GraphicsState;
 class ShaderParameter;
 
@@ -17,7 +17,7 @@ public:
 	~RenderContext();
 
 	obj<Device> getDevice();
-	obj<RenderCommand> getRenderCommand();
+	obj<CommandBuffer> getRenderCommand();
 
 	void draw(
 		const GraphicsState& states,

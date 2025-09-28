@@ -23,6 +23,7 @@ struct WindowImpl
 	int2                        prevPosition;
 	double2                     prevCursorPosition;
 	void*                       userPtr;
+	bool                        needClose;
 };
 
 VERA_PRIV_NAMESPACE_END

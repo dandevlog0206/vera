@@ -2,7 +2,7 @@
 
 #include "../core/pipeline.h"
 #include "../core/render_context.h"
-#include "../core/graphics_state.h"
+#include "../graphics/graphics_state.h"
 #include "../shader/shader_parameter.h"
 
 VERA_NAMESPACE_BEGIN

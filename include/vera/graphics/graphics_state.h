@@ -1,13 +1,13 @@
 #pragma once
 
-#include "render_command.h"
+#include "../core/command_buffer.h"
 
 VERA_NAMESPACE_BEGIN
 
 class GraphicsState
 {
 	friend class RenderContext;
-	friend class RenderCommand;
+	friend class CommandBuffer;
 public:
 	GraphicsState();
 	~GraphicsState();
@@ -42,7 +42,7 @@ public:
 	void pushPipeline(ref<Pipeline> pipeline);
 	void popPipelineInfo();
 
-	void bindRenderCommand(ref<RenderCommand> cmd) const;
+	void bindCommandBuffer(ref<CommandBuffer> cmd) const;
 
 	void clear();
 
