@@ -229,8 +229,6 @@ ref<TextureView> Texture::getTextureView()
 		view_impl.device    = impl.device;
 		view_impl.texture   = vr::obj<Texture>(this);
 		view_impl.imageView = vk_device.createImageView(view_info);
-		view_impl.offsetX   = 0;
-		view_impl.offsetY   = 0;
 		view_impl.width     = impl.width;
 		view_impl.height    = impl.height;
 		view_impl.depth     = impl.depth;

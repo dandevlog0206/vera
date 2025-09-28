@@ -1,6 +1,6 @@
 #pragma once
 
-#include "object_impl.h"
+#include "shader_reflection_impl.h"
 
 #include "../../include/vera/core/resource_layout.h"
 
@@ -40,12 +40,14 @@ struct SamplerStorage : ShaderStorageData
 {
 	obj<Sampler>      sampler;
 	vk::DescriptorSet descriptorSet;
+	int32_t           elementIndex;
 };
 
 struct TextureStorage : ShaderStorageData
 {
 	obj<Texture>      texture;
 	vk::DescriptorSet descriptorSet;
+	int32_t           elementIndex;
 };
 
 struct CombinedImageSamplerStorage : ShaderStorageData
@@ -53,18 +55,21 @@ struct CombinedImageSamplerStorage : ShaderStorageData
 	obj<Sampler>      sampler;
 	obj<Texture>      texture;
 	vk::DescriptorSet descriptorSet;
+	int32_t           elementIndex;
 };
 
 struct BufferStorage : ShaderStorageData
 {
 	obj<Buffer>       buffer;
 	vk::DescriptorSet descriptorSet;
+	int32_t           elementIndex;
 };
 
 struct BufferBlockStorage : BlockStorage
 {
 	obj<Buffer>       buffer;
 	vk::DescriptorSet descriptorSet;
+	int32_t           elementIndex;
 };
 
 struct PushConstantStorage : BlockStorage
@@ -87,5 +92,8 @@ struct ShaderStorageImpl
 	int32_t                             frameIndex;
 	int32_t                             lastFrameIndex;
 };
+
+ShaderStorageData* create_resource_block_storage(const ReflectionResourceBlockDesc& desc, int32_t elem_idx);
+ShaderStorageData* create_resource_storage(const ReflectionResourceDesc& desc, int32_t elem_idx);
 
 VERA_NAMESPACE_END

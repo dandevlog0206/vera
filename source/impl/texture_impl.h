@@ -3,6 +3,7 @@
 #include "object_impl.h"
 
 #include "../../include/vera/core/texture.h"
+#include "../../include/vera/core/texture_view.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -28,16 +29,22 @@ struct TextureViewImpl
 {
 	using object_type = class TextureView;
 
-	obj<Device>   device;
-	obj<Texture>  texture;
+	obj<Device>      device;
+	obj<Texture>     texture;
 
-	vk::ImageView imageView;
+	vk::ImageView    imageView;
 
-	uint32_t      offsetX;
-	uint32_t      offsetY;
-	uint32_t      width;
-	uint32_t      height;
-	uint32_t      depth;
+	uint32_t         width;
+	uint32_t         height;
+	uint32_t         depth;
+	TextureViewType  type;
+	Format           format;
+	ComponentMapping mapping;
+	ImageAspectFlags aspectFlags;
+	uint32_t         baseMipLevel;
+	uint32_t         levelCount;
+	uint32_t         baseArrayLayer;
+	uint32_t         layerCount;
 };
 
 static vk::ImageLayout to_vk_image_layout(ImageLayout layout)
@@ -92,6 +99,52 @@ static vk::ImageUsageFlags to_vk_image_usage_flags(ImageUsageFlags flags)
 		result |= vk::ImageUsageFlagBits::eHostTransfer;
 	if (flags.has(ImageUsageFlagBits::SwapchainImage))
 		VERA_ASSERT_MSG(false, "invalid image usage flag bit");
+
+	return result;
+}
+
+static vk::ImageViewType to_vk_image_view_type(TextureViewType type)
+{
+	switch (type) {
+	case TextureViewType::View1D:        return vk::ImageViewType::e1D;
+	case TextureViewType::View2D:        return vk::ImageViewType::e2D;
+	case TextureViewType::View3D:        return vk::ImageViewType::e3D;
+	case TextureViewType::ViewCube:      return vk::ImageViewType::eCube;
+	case TextureViewType::View1DArray:   return vk::ImageViewType::e1DArray;
+	case TextureViewType::View2DArray:   return vk::ImageViewType::e2DArray;
+	case TextureViewType::ViewCubeArray: return vk::ImageViewType::eCubeArray;
+	}
+
+	VERA_ASSERT_MSG(false, "invalid image view type");
+	return {};
+}
+
+static vk::ComponentSwizzle to_vk_component_swizzle(ComponentSwizzle swizzle)
+{
+	switch (swizzle) {
+	case ComponentSwizzle::Identity: return vk::ComponentSwizzle::eIdentity;
+	case ComponentSwizzle::One:      return vk::ComponentSwizzle::eOne;
+	case ComponentSwizzle::Zero:     return vk::ComponentSwizzle::eZero;
+	case ComponentSwizzle::R:        return vk::ComponentSwizzle::eR;
+	case ComponentSwizzle::G:        return vk::ComponentSwizzle::eG;
+	case ComponentSwizzle::B:        return vk::ComponentSwizzle::eB;
+	case ComponentSwizzle::A:        return vk::ComponentSwizzle::eA;
+	}
+
+	VERA_ASSERT_MSG(false, "invalid component swizzle");
+	return {};
+}
+
+static vk::ImageAspectFlags to_vk_image_aspect_flags(ImageAspectFlags flags)
+{
+	vk::ImageAspectFlags result;
+
+	if (flags.has(ImageAspectFlagBits::Color))
+		result |= vk::ImageAspectFlagBits::eColor;
+	if (flags.has(ImageAspectFlagBits::Depth))
+		result |= vk::ImageAspectFlagBits::eDepth;
+	if (flags.has(ImageAspectFlagBits::Stencil))
+		result |= vk::ImageAspectFlagBits::eStencil;
 
 	return result;
 }

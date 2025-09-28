@@ -2,6 +2,7 @@
 #include "../impl/texture_impl.h"
 
 #include "../../include/vera/core/device.h"
+#include "../../include/vera/core/texture.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -12,8 +13,41 @@ vk::ImageView& get_vk_image_view(ref<TextureView> texture_view)
 
 obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCreateInfo& info)
 {
-	// TODO: implement
-	return obj<TextureView>();
+	auto  obj          = createNewObject<TextureView>();
+	auto& impl         = getImpl(obj);
+	auto& texture_impl = getImpl(texture);
+	auto  vk_device    = get_vk_device(texture_impl.device);
+
+	vk::ImageViewCreateInfo view_info;
+	view_info.image                           = texture_impl.image;
+	view_info.viewType                        = to_vk_image_view_type(info.type);
+	view_info.format                          = to_vk_format(info.format);
+	view_info.components.r                    = to_vk_component_swizzle(info.mapping.r);
+	view_info.components.g                    = to_vk_component_swizzle(info.mapping.g);
+	view_info.components.b                    = to_vk_component_swizzle(info.mapping.b);
+	view_info.components.a                    = to_vk_component_swizzle(info.mapping.a);
+	view_info.subresourceRange.aspectMask     = to_vk_image_aspect_flags(info.aspectFlags);
+	view_info.subresourceRange.baseMipLevel   = info.baseMipLevel;
+	view_info.subresourceRange.levelCount     = info.levelCount;
+	view_info.subresourceRange.baseArrayLayer = info.baseArrayLayer;
+	view_info.subresourceRange.layerCount     = info.layerCount;
+
+	impl.device         = texture_impl.device;
+	impl.texture        = std::move(texture);
+	impl.imageView      = vk_device.createImageView(view_info);
+	impl.width          = 0; // TODO: fill TextureView width, height, depth
+	impl.height         = 0;
+	impl.depth          = 0;
+	impl.type           = info.type;
+	impl.format         = info.format;
+	impl.mapping        = info.mapping;
+	impl.aspectFlags    = info.aspectFlags;
+	impl.baseMipLevel   = info.baseMipLevel;
+	impl.levelCount     = info.levelCount;
+	impl.baseArrayLayer = info.baseArrayLayer;
+	impl.layerCount     = info.layerCount;
+
+	return obj;
 }
 
 TextureView::~TextureView()
@@ -26,9 +60,42 @@ TextureView::~TextureView()
 	destroyObjectImpl(this);
 }
 
+obj<Device> TextureView::getDevice()
+{
+	return getImpl(this).device;
+}
+
 obj<Texture> TextureView::getTexture()
 {
 	return getImpl(this).texture;
+}
+
+TextureViewType TextureView::getType() const
+{
+	return getImpl(this).type;
+}
+
+Format TextureView::getFormat() const
+{
+	return getImpl(this).format;
+}
+
+ComponentMapping TextureView::getComponentMapping() const
+{
+	return getImpl(this).mapping;
+}
+
+TextureSubresourceRange TextureView::getTextureSubresourceRange() const
+{
+	auto& impl = getImpl(this);
+
+	return TextureSubresourceRange{
+		.aspectFlags    = impl.aspectFlags,
+		.baseMipLevel   = impl.baseMipLevel,
+		.levelCount     = impl.levelCount,
+		.baseArrayLayer = impl.baseArrayLayer,
+		.layerCount     = impl.layerCount
+	};
 }
 
 uint32_t TextureView::width() const

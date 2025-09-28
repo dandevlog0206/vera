@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core_object.h"
+#include "../shader/shader_variable.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -18,6 +19,8 @@ public:
 
 	obj<Device> getDevice();
 	obj<ShaderReflection> getShaderReflection();
+
+	ShaderVariable accessVariable(std::string_view name);
 
 	uint32_t getFrameCount();
 

@@ -12,7 +12,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static ShaderStorageData* create_resource_storage(const ReflectionResourceDesc& desc)
+ShaderStorageData* create_resource_storage(const ReflectionResourceDesc& desc, int32_t elem_idx)
 {
 	switch (desc.resourceType) {
 	case ResourceType::Sampler: {
@@ -20,6 +20,7 @@ static ShaderStorageData* create_resource_storage(const ReflectionResourceDesc& 
 		result->storageType      = ShaderStorageDataType::Sampler;
 		result->resourceType     = ResourceType::Sampler;
 		result->shaderStageFlags = desc.shaderStageFlags;
+		result->elementIndex     = elem_idx;
 		return result;
 	}
 	case ResourceType::CombinedImageSampler: {
@@ -27,22 +28,47 @@ static ShaderStorageData* create_resource_storage(const ReflectionResourceDesc& 
 		result->storageType      = ShaderStorageDataType::CombinedImageSampler;
 		result->resourceType     = ResourceType::CombinedImageSampler;
 		result->shaderStageFlags = desc.shaderStageFlags;
+		result->elementIndex     = elem_idx;
 		return result;
 	}
 	case ResourceType::SampledImage: {
+		auto* result = new TextureStorage;
+		result->storageType      = ShaderStorageDataType::Texture;
+		result->resourceType     = ResourceType::SampledImage;
+		result->shaderStageFlags = desc.shaderStageFlags;
+		result->elementIndex     = elem_idx;
+		return result;
 	}
 	case ResourceType::StorageImage: {
+		auto* result = new TextureStorage;
+		result->storageType      = ShaderStorageDataType::Texture;
+		result->resourceType     = ResourceType::StorageImage;
+		result->shaderStageFlags = desc.shaderStageFlags;
+		result->elementIndex     = elem_idx;
+		return result;
 	}
 	case ResourceType::UniformTexelBuffer: {
+		auto* result = new BufferStorage;
+		result->storageType      = ShaderStorageDataType::Buffer;
+		result->resourceType     = ResourceType::UniformTexelBuffer;
+		result->shaderStageFlags = desc.shaderStageFlags;
+		result->elementIndex     = elem_idx;
+		return result;
 	}
 	case ResourceType::StorageTexelBuffer: {
+		auto* result = new BufferStorage;
+		result->storageType      = ShaderStorageDataType::Buffer;
+		result->resourceType     = ResourceType::StorageTexelBuffer;
+		result->shaderStageFlags = desc.shaderStageFlags;
+		result->elementIndex     = elem_idx;
+		return result;
 	}
 	}
 
 	throw Exception("failed to create resource storage");
 }
 
-static ShaderStorageData* create_resource_block_storage(const ReflectionResourceBlockDesc& desc)
+ShaderStorageData* create_resource_block_storage(const ReflectionResourceBlockDesc& desc, int32_t elem_idx)
 {
 	switch (desc.resourceType) {
 	case ResourceType::UniformBuffer:
@@ -53,6 +79,7 @@ static ShaderStorageData* create_resource_block_storage(const ReflectionResource
 		result->storageType      = ShaderStorageDataType::BufferBlock;
 		result->resourceType     = desc.resourceType;
 		result->shaderStageFlags = desc.shaderStageFlags;
+		result->elementIndex     = elem_idx;
 		result->blockStorage.resize(desc.sizeInByte);
 		return result;
 	}
@@ -80,16 +107,18 @@ static ShaderStorageData* create_resource_array_storage(const ReflectionResource
 	result->elementCount     = desc.elementCount;
 	result->elements.reserve(desc.elementCount);
 
-	if (desc.element->type == ReflectionType::Resource) {
+	if (result->elementCount == UINT32_MAX) {
+		return result;
+	} else if (desc.element->type == ReflectionType::Resource) {
 		for (uint32_t i = 0; i < desc.elementCount; ++i) {
 			auto& resource_desc = *static_cast<ReflectionResourceDesc*>(desc.element);
-			result->elements.push_back(create_resource_storage(resource_desc));
+			result->elements.push_back(create_resource_storage(resource_desc, i));
 		}
 		return result;
 	} else if (desc.element->type == ReflectionType::ResourceBlock) {
 		for (uint32_t i = 0; i < desc.elementCount; ++i) {
 			auto& block_desc = *static_cast<ReflectionResourceBlockDesc*>(desc.element);
-			result->elements.push_back(create_resource_block_storage(block_desc));
+			result->elements.push_back(create_resource_block_storage(block_desc, i));
 		}
 		return result;
 	}
@@ -141,11 +170,11 @@ static void append_shader_storage_frame(ShaderStorageImpl& impl)
 		switch (desc_ptr->type) {
 		case ReflectionType::Resource: {
 			auto& desc = *static_cast<ReflectionResourceDesc*>(desc_ptr);
-			frame.storages.push_back(create_resource_storage(desc));
+			frame.storages.push_back(create_resource_storage(desc, -1));
 		} break;
 		case ReflectionType::ResourceBlock: {
 			auto& desc = *static_cast<ReflectionResourceBlockDesc*>(desc_ptr);
-			frame.storages.push_back(create_resource_block_storage(desc));
+			frame.storages.push_back(create_resource_block_storage(desc, -1));
 		} break;
 		case ReflectionType::PushConstant: {
 			auto& desc = *static_cast<ReflectionPushConstantDesc*>(desc_ptr);
@@ -260,6 +289,22 @@ obj<Device> ShaderStorage::getDevice()
 obj<ShaderReflection> ShaderStorage::getShaderReflection()
 {
 	return getImpl(this).reflection;
+}
+
+ShaderVariable ShaderStorage::accessVariable(std::string_view name)
+{
+	auto& impl      = getImpl(this);
+	auto& refl_impl = getImpl(impl.reflection);
+	auto& frame     = impl.frames[impl.frameIndex];
+
+	if (auto iter = refl_impl.hashMap.find(name); iter != refl_impl.hashMap.end()) {
+		auto* storage_ptr = frame.storages[iter->second];
+		auto* desc_ptr    = refl_impl.descriptors[iter->second];
+
+		return ShaderVariable(storage_ptr, desc_ptr, UINT32_MAX);
+	}
+
+	throw Exception("couldn't find resource named " + std::string(name));
 }
 
 uint32_t ShaderStorage::getFrameCount()

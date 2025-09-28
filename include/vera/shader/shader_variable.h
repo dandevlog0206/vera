@@ -16,17 +16,17 @@ class Buffer;
 
 class ShaderVariable
 {
-	friend class ShaderParameter;
+	friend class ShaderStorage;
 	ShaderVariable(ShaderStorageData* storage, ReflectionDesc* desc, uint32_t offset);
 public:
 	ShaderVariable operator[](std::string_view name);
 	ShaderVariable operator[](size_t idx);
 
 	template <class T>
-	void operator=(const T& value)
-	{
-		setValue(value);
-	}
+	void operator=(const T& value) { setValue(value); }
+	void operator=(obj<Sampler> obj);
+	void operator=(obj<Texture> obj);
+	void operator=(obj<Buffer> obj);
 
 	// primitive types
 	void setValue(bool value);
@@ -96,20 +96,17 @@ public:
 	void setValue(const double4x3& value);
 	void setValue(const double4x4& value);
 
-	void operator=(obj<Sampler> obj);
 	void setSampler(obj<Sampler> sampler);
 	obj<Sampler> getSampler();
 
-	void operator=(obj<Texture> obj);
 	void setTexture(obj<Texture> texture);
 	obj<Texture> getTexture();
 
-	void operator=(obj<Buffer> obj);
 	void setBuffer(obj<Buffer> buffer);
 	obj<Buffer> getBuffer();
 
 private:
-	ShaderStorageData* m_storage; // TODO: rename
+	ShaderStorageData* m_storage;
 	ReflectionDesc*    m_desc;
 	uint32_t           m_offset;
 };

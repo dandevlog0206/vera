@@ -23,18 +23,7 @@ ShaderParameter::~ShaderParameter()
 
 ShaderVariable ShaderParameter::operator[](std::string_view name)
 {
-	auto& refl_impl    = CoreObject::getImpl(m_reflection);
-	auto& storage_impl = CoreObject::getImpl(m_storage);
-	auto& frame        = storage_impl.frames[storage_impl.frameIndex];
-
-	if (auto iter = refl_impl.hashMap.find(name); iter != refl_impl.hashMap.end()) {
-		auto* storage_ptr = frame.storages[iter->second];
-		auto* desc_ptr    = refl_impl.descriptors[iter->second];
-
-		return ShaderVariable(storage_ptr, desc_ptr, UINT32_MAX);
-	}
-
-	throw Exception("couldn't find resource named " + std::string(name));
+	return m_storage->accessVariable(name);
 }
 
 obj<Device> ShaderParameter::getDevice()
