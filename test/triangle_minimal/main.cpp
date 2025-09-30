@@ -1,0 +1,29 @@
+#include <vera/vera.h>
+
+int main()
+{
+	vr::os::Window window(1080, 720, "Triangle Demo");
+
+	auto device    = vr::Device::create(vr::Context::create());
+	auto ctx       = vr::RenderContext::create(device);
+	auto swapchain = vr::Swapchain::create(ctx, window);
+
+	vr::GraphicsPass pass(device, vr::GraphicsPassCreateInfo{
+		.vertexShader   = vr::Shader::create(device, "shader/triangle_minimal.vert.glsl.spv"),
+		.fragmentShader = vr::Shader::create(device, "shader/triangle.frag.glsl.spv"),
+		.vertexCount    = 3
+	});
+
+	while (!window.needClose()) {
+		window.handleEvent();
+
+		if (swapchain->isOccluded()) continue;
+		
+		pass.execute(ctx, swapchain->acquireNextImage());
+
+		ctx->submit();
+		swapchain->present();
+	}
+
+	return 0;
+}

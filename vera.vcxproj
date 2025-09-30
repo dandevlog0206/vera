@@ -71,11 +71,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>vera_core</TargetName>
+    <TargetName>vera</TargetName>
     <OutDir>$(SolutionDir)lib\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>vera_core</TargetName>
+    <TargetName>vera</TargetName>
     <OutDir>$(SolutionDir)lib\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -123,8 +123,11 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
     </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -147,8 +150,11 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
     </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\vera\core\assertion.h" />
@@ -174,7 +180,7 @@
     <ClInclude Include="include\vera\util\camera.h" />
     <ClInclude Include="include\vera\util\direction.h" />
     <ClInclude Include="include\vera\util\flycam.h" />
-    <ClInclude Include="include\vera\util\radian.h" />
+    <ClInclude Include="include\vera\math\radian.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\graphics\pixel.h" />

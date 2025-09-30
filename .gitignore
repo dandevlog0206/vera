@@ -7,6 +7,9 @@
 resource/pjw.png
 resource/lsm.png
 
+# Compiled SPIR-V source code
+*.spv
+
 # User-specific files
 *.rsuser
 *.suo

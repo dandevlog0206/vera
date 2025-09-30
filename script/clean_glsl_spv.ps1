@@ -16,8 +16,9 @@
 
 # The script automatically determines its own location to find the shaders directory.
 # $scriptPath = $PSScriptRoot
-$scriptPath = Join-Path $PSScriptRoot "..\shader"
+$inputPath = Join-Path $PSScriptRoot "..\shader"
 
+$scriptPath = Resolve-Path -Path $inputPath
 # Set the relative path to the output directory where compiled .spv files are stored.
 # $outputDir = Join-Path $scriptPath "..\spv"
 $outputDir = $scriptPath

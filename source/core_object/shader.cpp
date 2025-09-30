@@ -38,6 +38,7 @@ static ResourceType to_resource_type(SpvReflectDescriptorType type)
 	}
 
 	VERA_ASSERT_MSG(false, "invalid resource type");
+	return {};
 }
 
 static ShaderStageFlagBits to_shader_stage(SpvReflectShaderStageFlagBits stage)
@@ -58,6 +59,7 @@ static ShaderStageFlagBits to_shader_stage(SpvReflectShaderStageFlagBits stage)
 	}
 
 	VERA_ASSERT_MSG(false, "invalid shader stage");
+	return {};
 }
 
 static bool is_unsized_array(const SpvReflectArrayTraits& traits)

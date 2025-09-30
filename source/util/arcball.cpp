@@ -46,8 +46,8 @@ void Arcball::updateEvent(const os::WindowEvent& e, float dt)
 		const float pi_2   = 2.f * pi;
 
 		auto  args   = e.get_if<os::MouseMoveArgs>();
-		float dx     = args.delta.x;
-		float dy     = args.delta.y;
+		float dx     = static_cast<float>(args.delta.x);
+		float dy     = static_cast<float>(args.delta.y);
 		float aspect = args.window->getAspect();
 
 		m_longitude = std::clamp(m_longitude - 0.005f * dy, -pi_2 + 1e-3f, pi_2 - 1e-3f);

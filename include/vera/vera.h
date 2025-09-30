@@ -41,6 +41,7 @@
 #include "math/math_util.h"
 #include "math/matrix_types.h"
 #include "math/quaternion.h"
+#include "math/radian.h"
 #include "math/vector_types.h"
 #include "math/vector_math.h"
 
@@ -65,7 +66,6 @@
 #include "util/flycam.h"
 #include "util/hash.h"
 #include "util/property.h"
-#include "util/radian.h"
 #include "util/rect.h"
 #include "util/small_vector.h"
 #include "util/static_vector.h"

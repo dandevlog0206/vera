@@ -41,8 +41,8 @@ public:
 		});
 
 		m_pass = std::make_unique<vr::GraphicsPass>(m_device, vr::GraphicsPassCreateInfo{
-			.vertexShader   = vr::Shader::create(m_device, "shaders/triangle.vert.glsl.spv"),
-			.fragmentShader = vr::Shader::create(m_device, "shaders/triangle.frag.glsl.spv"),
+			.vertexShader   = vr::Shader::create(m_device, "shader/triangle.vert.glsl.spv"),
+			.fragmentShader = vr::Shader::create(m_device, "shader/triangle.frag.glsl.spv"),
 			.vertexCount    = 3
 		});
 
@@ -106,9 +106,8 @@ private:
 
 int main()
 {
-	MyApp app;
-
 	try {
+		MyApp app;
 		app.run();
 	} catch (const std::exception& e) {
 		vr::Logger::exception(e.what());

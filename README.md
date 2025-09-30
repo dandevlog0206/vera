@@ -55,12 +55,11 @@ int main()
 	auto swapchain = vr::Swapchain::create(ctx, window);
 
 	vr::GraphicsPass pass(device, vr::GraphicsPassCreateInfo{
-		.vertexShader   = vr::Shader::create(device, "shaders/triangle_minimal.vert.glsl.spv"),
-		.fragmentShader = vr::Shader::create(device, "shaders/triangle.frag.glsl.spv"),
+		.vertexShader   = vr::Shader::create(device, "shader/triangle_minimal.vert.glsl.spv"),
+		.fragmentShader = vr::Shader::create(device, "shader/triangle.frag.glsl.spv"),
 		.vertexCount    = 3
 	});
 
-	
 	while (!window.needClose()) {
 		window.handleEvent();
 

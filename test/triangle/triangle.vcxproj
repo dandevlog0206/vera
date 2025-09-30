@@ -111,7 +111,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Configuration)\;$(SolutionDir)thirdparty\glfw\lib\$(Configuration);$(SolutionDir)thirdparty\spirv-reflect\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vera_core.lib;glfw3.lib;spirv-reflect.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vera.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -131,7 +131,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Configuration)\;$(SolutionDir)thirdparty\glfw\lib\$(Configuration);$(SolutionDir)thirdparty\spirv-reflect\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vera_core.lib;glfw3.lib;spirv-reflect.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vera.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

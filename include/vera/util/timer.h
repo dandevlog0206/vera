@@ -21,17 +21,17 @@ public:
 
 	VERA_NODISCARD VERA_INLINE float elapsed() const VERA_NOEXCEPT
 	{
-		return elapsed_ns() / 1e9;
+		return elapsed_ns() / 1e9f;
 	}
 
 	VERA_NODISCARD VERA_INLINE float elapsed_ms() const VERA_NOEXCEPT
 	{
-		return elapsed_ns() / 1e6;
+		return elapsed_ns() / 1e6f;
 	}
 
 	VERA_NODISCARD VERA_INLINE float elapsed_us() const VERA_NOEXCEPT
 	{
-		return elapsed_ns() / 1e3;
+		return elapsed_ns() / 1e3f;
 	}
 
 	VERA_NODISCARD VERA_INLINE float elapsed_ns() const VERA_NOEXCEPT
@@ -45,17 +45,17 @@ public:
 
 	VERA_NODISCARD VERA_INLINE float dt() const VERA_NOEXCEPT
 	{
-		return dt_ns() / 1e9;
+		return dt_ns() / 1e9f;
 	}
 
 	VERA_NODISCARD VERA_INLINE float dt_ms() const VERA_NOEXCEPT
 	{
-		return dt_ns() / 1e6;
+		return dt_ns() / 1e6f;
 	}
 
 	VERA_NODISCARD VERA_INLINE float dt_us() const VERA_NOEXCEPT
 	{
-		return dt_ns() / 1e3;
+		return dt_ns() / 1e3f;
 	}
 
 	VERA_NODISCARD VERA_INLINE float dt_ns() const VERA_NOEXCEPT
@@ -69,7 +69,7 @@ public:
 
 	VERA_NODISCARD VERA_INLINE float frame() const VERA_NOEXCEPT
 	{
-		return 1e9 / dt_ns();
+		return 1e9f / dt_ns();
 	}
 
 private:

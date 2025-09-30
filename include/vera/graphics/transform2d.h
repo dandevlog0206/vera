@@ -2,7 +2,7 @@
 
 #include "../math/matrix_types.h"
 #include "../math/vector_types.h"
-#include "../util/radian.h"
+#include "../math/radian.h"
 
 VERA_NAMESPACE_BEGIN
 

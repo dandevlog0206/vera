@@ -20,14 +20,14 @@
 
 # The script automatically determines its own location to find the shaders.
 # $scriptPath = $PSScriptRoot
-$scriptPath = Join-Path $PSScriptRoot "..\shader"
+$inputPath = Join-Path $PSScriptRoot "..\shader"
 
+$scriptPath = Resolve-Path -Path $inputPath
 # Set the relative path to the output directory for compiled SPIR-V files.
 # $outputDir = Join-Path $scriptPath "..\spv"
 $outputDir = $scriptPath
 
 # --- End Configuration ---
-
 
 # 1. Check if glslangValidator.exe is available in the system's PATH.
 if (-not (Get-Command glslangValidator.exe -ErrorAction SilentlyContinue)) {
@@ -58,7 +58,7 @@ $shaderFiles = Get-ChildItem -Path $scriptPath -File -Recurse -Include *.vert.gl
 foreach ($sourceFile in $shaderFiles) {
     # Determine the relative path of the source file to replicate the folder structure.
     $relativePath = $sourceFile.FullName.Substring($scriptPath.Length + 1)
-    $destFile = Join-Path $outputDir "$relativePath.spv"
+    $destFile = "$relativePath.spv"
     $destSubDir = Split-Path -Path $destFile -Parent
 
     $doCompile = $false

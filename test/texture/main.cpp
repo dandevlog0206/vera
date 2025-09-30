@@ -69,8 +69,8 @@ public:
 		});
 
 		m_pass = std::make_unique<vr::GraphicsPass>(m_device, vr::GraphicsPassCreateInfo{
-			.vertexShader    = vr::Shader::create(m_device, "shaders/default.vert.glsl.spv"),
-			.fragmentShader  = vr::Shader::create(m_device, "shaders/default.frag.glsl.spv"),
+			.vertexShader    = vr::Shader::create(m_device, "shader/default.vert.glsl.spv"),
+			.fragmentShader  = vr::Shader::create(m_device, "shader/default.frag.glsl.spv"),
 			.vertexInput     = VERA_REFLECT_VERTEX(Vertex),
 			.vertexCount     = 36
 		});
@@ -213,9 +213,8 @@ private:
 
 int main()
 {
-	MyApp app;
-
 	try {
+		MyApp app;
 		app.run();
 	} catch (const std::exception& e) {
 		vr::Logger::exception(e.what());

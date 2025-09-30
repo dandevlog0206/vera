@@ -273,7 +273,7 @@
     <ClInclude Include="include\vera\graphics\transform2d.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\util\radian.h">
+    <ClInclude Include="include\vera\math\radian.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\graphics\model_loader.h">
