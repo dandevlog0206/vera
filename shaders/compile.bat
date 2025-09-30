@@ -41,7 +41,7 @@ if not exist "%OUTPUT_DIR%" (
     mkdir "%OUTPUT_DIR%"
 )
 
-echo [INFO] Starting shader compilation check...
+echo [INFO] Starting shader compilation...
 echo [INFO]      Source: %SHADER_DIR%
 echo [INFO] Destination: %OUTPUT_DIR%
 echo.

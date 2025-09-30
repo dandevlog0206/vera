@@ -9,6 +9,19 @@ mt19937                          rnd(rd());
 uniform_real_distribution<float> pos_dist(-1.f, 1.f);
 uniform_real_distribution<float> color_dist(0.f, 1.f);
 
+struct Vertex
+{
+	vr::float2 pos;
+	vr::float4 color;
+	vr::float2 uv;
+
+	VERA_VERTEX_DESCRIPTOR_BEGIN(Vertex)
+		VERA_VERTEX_ATTRIBUTE(0, pos),
+		VERA_VERTEX_ATTRIBUTE(1, color),
+		VERA_VERTEX_ATTRIBUTE(1, uv),
+	VERA_VERTEX_DESCRIPTOR_END
+};
+
 static vr::float2 get_random_pos()
 {
 	return { pos_dist(rnd), pos_dist(rnd) };
@@ -58,7 +71,7 @@ public:
 		m_pass = std::make_unique<vr::GraphicsPass>(m_device, vr::GraphicsPassCreateInfo{
 			.vertexShader    = vr::Shader::create(m_device, "shaders/default.vert.glsl.spv"),
 			.fragmentShader  = vr::Shader::create(m_device, "shaders/default.frag.glsl.spv"),
-			.useVertexBuffer = true,
+			.vertexInput     = VERA_REFLECT_VERTEX(Vertex),
 			.vertexCount     = 36
 		});
 
@@ -93,7 +106,7 @@ public:
 		m_pass->getShaderParameter()["sTexture"] = m_texture;
 
 		auto  vertex_memory = m_pass->getVertexBuffer()->getDeviceMemory();
-		auto* map           = reinterpret_cast<vr::GraphicsPass::Vertex*>(vertex_memory->map());
+		auto* map           = reinterpret_cast<Vertex*>(vertex_memory->map());
 		auto  aspect        = image.width() / image.height();
 
 		for (uint32_t i = 0; i < 36; i += 6) {
@@ -137,11 +150,11 @@ public:
 		MyApp& app = *reinterpret_cast<MyApp*>(window.UserPtr.get());
 
 		switch (e.type()) {
-		case vr::os::EventType::Close:
+		case vr::os::WindowEventType::Close:
 			app.m_exit = true;
 			break;
-		case vr::os::EventType::Resize:
-		case vr::os::EventType::Move:
+		case vr::os::WindowEventType::Resize:
+		case vr::os::WindowEventType::Move:
 			app.drawFrame();
 			break;
 		}

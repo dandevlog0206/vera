@@ -13,7 +13,7 @@ VERA_NAMESPACE_BEGIN
 
 static vk::ImageView get_vk_image_view(ref<Texture> texture)
 {
-	return get_vk_image_view(CoreObject::getImpl(texture).textureView);
+	return get_vk_image_view(texture->getTextureView());
 }
 
 static void clear_rendering_info(RenderingInfo& info)
@@ -83,9 +83,9 @@ void CommandBuffer::setViewport(const Viewport& viewport)
 
 	vk::Viewport vk_viewport;
 	vk_viewport.x        = viewport.posX;
-	vk_viewport.y        = viewport.posY;
+	vk_viewport.y        = viewport.height + viewport.posY;
 	vk_viewport.width    = viewport.width;
-	vk_viewport.height   = viewport.height;
+	vk_viewport.height   = -viewport.height;
 	vk_viewport.minDepth = viewport.minDepth;
 	vk_viewport.maxDepth = viewport.maxDepth;
 
@@ -145,15 +145,16 @@ void CommandBuffer::setPipeline(ref<Pipeline> pipeline)
 }
 
 void CommandBuffer::transitionImageLayout(
-	ref<Texture> texture,
+	ref<Texture>       texture,
 	PipelineStageFlags src_stage_mask,
 	PipelineStageFlags dst_stage_mask,
-	AccessFlags src_access_mask,
-	AccessFlags dst_access_mask,
-	ImageLayout old_layout,
-	ImageLayout new_layout)
+	AccessFlags        src_access_mask,
+	AccessFlags        dst_access_mask,
+	ImageLayout        old_layout,
+	ImageLayout        new_layout)
 {
-	auto& impl = getImpl(this);
+	auto& impl         = getImpl(this);
+	auto& texture_impl = getImpl(texture);
 
 	vk::ImageMemoryBarrier barrier;
 	barrier.srcAccessMask                   = to_vk_access_flags(src_access_mask);
@@ -163,7 +164,7 @@ void CommandBuffer::transitionImageLayout(
 	barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image                           = get_vk_image(texture);
-	barrier.subresourceRange.aspectMask     = vk::ImageAspectFlagBits::eColor;
+	barrier.subresourceRange.aspectMask     = texture_impl.imageAspect;
 	barrier.subresourceRange.baseMipLevel   = 0;
 	barrier.subresourceRange.levelCount     = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;

@@ -4,12 +4,11 @@
 #include <glm/detail/type_vec2.hpp>
 #include <glm/detail/type_vec3.hpp>
 #include <glm/detail/type_vec4.hpp>
-#include <glm/detail/type_half.hpp>
 
 VERA_NAMESPACE_BEGIN
 
-template <size_t dim, class T>
-using vector_base = glm::vec<dim, T, glm::packed_highp>;
+template <size_t Dim, class T>
+using vector_base = glm::vec<Dim, T, glm::packed_highp>;
 
 typedef glm::vec<2, float, glm::packed_highp> float2;
 typedef glm::vec<3, float, glm::packed_highp> float3;

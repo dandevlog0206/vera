@@ -26,6 +26,10 @@ struct BufferViewImpl
 	obj<Buffer>    buffer;
 
 	vk::BufferView bufferView;
+
+	Format         format;
+	size_t         offset;
+	size_t         size;
 };
 
 static vk::IndexType to_vk_index_type(IndexType type)

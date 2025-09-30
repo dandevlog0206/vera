@@ -40,6 +40,8 @@ public:
 	void registerEventHandler(WindowEventHandler hanlder);
 	void handleEvent();
 
+	float getAspect() const;
+
 	void cancelClose();
 	bool needClose() const;
 

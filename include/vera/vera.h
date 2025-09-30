@@ -31,11 +31,18 @@
 #include "graphics/image.h"
 #include "graphics/image_edit.h"
 #include "graphics/image_sampler.h"
+#include "graphics/model_loader.h"
 #include "graphics/transform2d.h"
+#include "graphics/transform3d.h"
 #include "graphics/vertex_input.h"
 
 // math
+#include "math/constant.h"
+#include "math/math_util.h"
+#include "math/matrix_types.h"
+#include "math/quaternion.h"
 #include "math/vector_types.h"
+#include "math/vector_math.h"
 
 // os
 #include "os/keyboard.h"
@@ -51,13 +58,17 @@
 #include "shader/shader_variable.h"
 
 // util
+#include "util/arcball.h"
 #include "util/enum_traits.h"
 #include "util/extent.h"
 #include "util/flag.h"
+#include "util/flycam.h"
 #include "util/hash.h"
 #include "util/property.h"
+#include "util/radian.h"
 #include "util/rect.h"
 #include "util/small_vector.h"
 #include "util/static_vector.h"
+#include "util/timer.h"
 #include "util/uuid.h"
 #include "util/version.h"

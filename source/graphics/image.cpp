@@ -76,41 +76,46 @@ Image Image::loadFromFile(std::string_view path)
 			result.m_height = height;
 
 			if (comp == 1) {
-				auto pixel_count = static_cast<uint32_t>(width * height);
-
-				result.m_format    = Format::RGB8Unorm;
-				result.m_allocated = pixel_count * 3;
-				result.m_ptr       = malloc_impl(result.m_allocated);
-
-				for (uint32_t i = 0; i < pixel_count; ++i) {
-					auto* pixel = reinterpret_cast<uint8_t*>(result.m_ptr) + 3 * i;
-					auto  color = reinterpret_cast<uint8_t*>(ptr)[i];
-
-					pixel[0] = color;
-					pixel[1] = color;
-					pixel[2] = color;
-				}
-
-			} else if (comp == 2) {
-				auto pixel_count = width * height;
+				size_t pixel_count = static_cast<size_t>(width * height);
 
 				result.m_format    = Format::RGBA8Unorm;
 				result.m_allocated = pixel_count * 4;
 				result.m_ptr       = malloc_impl(result.m_allocated);
 
-				for (uint32_t i = 0; i < pixel_count; ++i) {
-					auto* pixel = reinterpret_cast<uint8_t*>(result.m_ptr) + 4 * i;
-					auto  color = reinterpret_cast<uint8_t*>(ptr)[2 * i + 0];
-					auto  alpha = reinterpret_cast<uint8_t*>(ptr)[2 * i + 1];
+				auto* pixel = reinterpret_cast<uint8_t*>(result.m_ptr);
+				auto* color = reinterpret_cast<uint8_t*>(ptr);
 
-					pixel[0] = color;
-					pixel[1] = color;
-					pixel[2] = color;
-					pixel[3] = alpha;
+				for (size_t i = 0; i < pixel_count; ++i) {
+					pixel[4 * i + 0] = color[i];
+					pixel[4 * i + 1] = color[i];
+					pixel[4 * i + 2] = color[i];
+					pixel[4 * i + 3] = 255;
 				}
+
+				stbi_image_free(ptr);
+			} else if (comp == 2) {
+				size_t pixel_count = static_cast<size_t>(width * height);
+
+				result.m_format    = Format::RGBA8Unorm;
+				result.m_allocated = pixel_count * 4;
+				result.m_ptr       = malloc_impl(result.m_allocated);
+
+				auto* pixel = reinterpret_cast<uint8_t*>(result.m_ptr);
+
+				for (size_t i = 0; i < pixel_count; ++i) {
+					auto color = reinterpret_cast<uint8_t*>(ptr)[2 * i + 0];
+					auto alpha = reinterpret_cast<uint8_t*>(ptr)[2 * i + 1];
+					
+					pixel[4 * i + 0] = color;
+					pixel[4 * i + 1] = color;
+					pixel[4 * i + 2] = color;
+					pixel[4 * i + 3] = alpha;
+				}
+
+				stbi_image_free(ptr);
 			} else if (comp == 3) {
 				result.m_ptr       = ptr;
-				result.m_format    = Format::RGB8Unorm;
+				result.m_format    = Format::RGBA8Unorm;
 				result.m_allocated = width * height * get_format_size(result.m_format);
 			} else /* comp == 4 */ {
 				result.m_ptr       = ptr;
@@ -153,6 +158,9 @@ Image::Image() :
 	m_format(Format::Unknown),
 	m_allocated(0),
 	m_ptr(nullptr) {}
+
+Image::Image(std::string_view path) :
+	Image(loadFromFile(path)) {}
 
 Image::Image(uint32_t width, uint32_t height, Format format) :
 	m_width(width),

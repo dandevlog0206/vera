@@ -4,16 +4,21 @@
 #include "../math/matrix_types.h"
 #include "../math/vector_types.h"
 
-#define VERA_VERTEX_DESCRIPTOR_BEGIN(vertex_name) \
-private:                                    \
-	friend class VertexInputDescriptor;     \
-	using this_type = vertex_name;          \
-	static constexpr std::initializer_list<::vr::VertexInputAttribute> __get_attributes() { return { 
+#define VERA_VERTEX_DESCRIPTOR_BEGIN(vertex_name)                         \
+private:                                                                  \
+	friend class ::vr::VertexInputDescriptor;                             \
+	using this_type = vertex_name;                                        \
+	static std::span<const ::vr::VertexInputAttribute> __get_attributes() \
+	{                                                                     \
+		static const ::vr::VertexInputAttribute attrs[] = {
 
-#define VERA_VERTEX_DESCRIPTOR_END }; }
+#define VERA_VERTEX_DESCRIPTOR_END }; return std::span(attrs, VERA_LENGTHOF(attrs)); }
 
 #define VERA_VERTEX_ATTRIBUTE(id, name) \
 	{ id, offsetof(this_type, name), ::vr::priv::vertex_format_v<decltype(name)> }
+
+#define VERA_REFLECT_VERTEX(v, ...) \
+	::vr::VertexInputInfo{ .vertexInputDescriptor = v{} }
 
 VERA_NAMESPACE_BEGIN
 
@@ -95,8 +100,8 @@ public:
 	template <class VertexType>
 	VertexInputDescriptor(const VertexType& type) :
 		m_size(sizeof(VertexType)),
-		m_attribute_count(VertexType::__get_attributes().size()),
-		m_attributes(VertexType::__get_attributes().begin()) {
+		m_attribute_count(static_cast<uint32_t>(VertexType::__get_attributes().size())),
+		m_attributes(VertexType::__get_attributes().data()) {
 	}
 
 	const VertexInputAttribute& operator[](size_t idx) const

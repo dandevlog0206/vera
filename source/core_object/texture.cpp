@@ -21,6 +21,26 @@ static vk::ImageType get_image_type(const TextureCreateInfo& info)
 	return vk::ImageType::e3D;
 }
 
+static ImageUsageFlags get_image_usage_flags(Format format)
+{
+	switch (format) {
+	case Format::D16Unorm:
+	case Format::X8D24Unorm:
+	case Format::D32Float:
+	case Format::S8Uint:
+	case Format::D16UnormS8Uint:
+	case Format::D24UnormS8Uint:
+	case Format::D32FloatS8Uint:
+		return
+			ImageUsageFlagBits::DepthStencilAttachment;
+	default:
+		return
+			ImageUsageFlagBits::ColorAttachment |
+			ImageUsageFlagBits::Sampled |
+			ImageUsageFlagBits::TransferDst;
+	}
+}
+
 static vk::SampleCountFlagBits get_sample_count(uint32_t count)
 {
 	switch (count) {
@@ -74,6 +94,24 @@ vk::Image& get_vk_image(ref<Texture> texture)
 	return CoreObject::getImpl(texture).image;
 }
 
+obj<Texture> Texture::createDepth(obj<Device> device, uint32_t width, uint32_t height, DepthFormat format)
+{
+	TextureCreateInfo info = {
+		.type   = TextureType::Texture2D,
+		.format = static_cast<Format>(format),
+		.width  = width,
+		.height = height,
+	};
+
+	auto  obj  = create(device, info);
+	auto& impl = getImpl(obj);
+
+	impl.imageAspect = vk::ImageAspectFlagBits::eDepth;
+	impl.imageUsage  = ImageUsageFlagBits::DepthStencilAttachment;
+
+	return obj;
+}
+
 obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 {
 	auto  obj         = createNewObject<Texture>();
@@ -86,10 +124,7 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 	impl.deviceMemory     = std::move(memory_obj);
 	impl.imageAspect      = vk::ImageAspectFlagBits::eColor;
 	impl.imageLayout      = vk::ImageLayout::eUndefined;
-	impl.imageUsage       = 
-		ImageUsageFlagBits::ColorAttachment |
-		ImageUsageFlagBits::Sampled |
-		ImageUsageFlagBits::TransferDst;
+	impl.imageUsage       = get_image_usage_flags(info.format);
 	impl.imageFormat      = info.format;
 	impl.width            = info.width;
 	impl.height           = info.height;

@@ -43,10 +43,10 @@ static float mirror_clamp_edge(float x, float size)
 template <ImageSamplerAddressMode ModeU, ImageSamplerAddressMode ModeV>
 static float4 sample_nearest(const Image& image, float u, float v, const float4& border_color)
 {
-	const void* ptr    = image.data();
-	float       width  = static_cast<float>(image.width());
-	float       height = static_cast<float>(image.height());
-	Format      format = image.format();
+	const void*  ptr    = image.data();
+	const float  width  = static_cast<float>(image.width());
+	const float  height = static_cast<float>(image.height());
+	const Format format = image.format();
 
 	switch (ModeU) {
 	case ImageSamplerAddressMode::Repeat:
@@ -99,10 +99,10 @@ static float4 sample_nearest(const Image& image, float u, float v, const float4&
 template <ImageSamplerAddressMode ModeU, ImageSamplerAddressMode ModeV>
 static float4 sample_linear(const Image& image, float u, float v, const float4& border_color)
 {
-	const void* ptr    = image.data();
-	float       width  = image.width();
-	float       height = image.height();
-	Format      format = image.format();
+	const void*  ptr    = image.data();
+	const float  width  = static_cast<float>(image.width());
+	const float  height = static_cast<float>(image.height());
+	const Format format = image.format();
 
 	switch (ModeU) {
 	case ImageSamplerAddressMode::Repeat:

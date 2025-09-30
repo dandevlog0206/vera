@@ -1,9 +1,20 @@
 #pragma once
 
 #include "../core/coredefs.h"
-#include <glm/matrix.hpp>
+#include <glm/detail/type_mat2x2.hpp>
+#include <glm/detail/type_mat2x3.hpp>
+#include <glm/detail/type_mat2x4.hpp>
+#include <glm/detail/type_mat3x2.hpp>
+#include <glm/detail/type_mat3x3.hpp>
+#include <glm/detail/type_mat3x4.hpp>
+#include <glm/detail/type_mat4x2.hpp>
+#include <glm/detail/type_mat4x3.hpp>
+#include <glm/detail/type_mat4x4.hpp>
 
 VERA_NAMESPACE_BEGIN
+
+template <size_t col, size_t row, class T>
+using matrix_base = glm::mat<col, row, T, glm::packed_highp>;
 
 typedef glm::mat<2, 2, float, glm::packed_highp> float2x2;
 typedef glm::mat<2, 3, float, glm::packed_highp> float2x3;

@@ -75,6 +75,7 @@ class Texture : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Texture)
 public:
+	static obj<Texture> createDepth(obj<Device> device, uint32_t width, uint32_t height, DepthFormat format);
 	static obj<Texture> create(obj<Device> device, const TextureCreateInfo& info);
 	~Texture();
 

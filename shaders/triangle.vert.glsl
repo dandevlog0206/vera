@@ -9,9 +9,9 @@ layout(push_constant) uniform PCBlock
 layout(location=0) out vec4 outColor;
 
 vec2 vertices[] = {
-	vec2(0, -0.5),
-	vec2(-0.5, 0.5),
-	vec2(0.5, 0.5)
+	vec2(0, 0.5),
+	vec2(-0.5, -0.5),
+	vec2(0.5, -0.5)
 };
 
 void main()

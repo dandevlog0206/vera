@@ -11,6 +11,7 @@ VERA_NAMESPACE_BEGIN
 GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& info) :
 	m_device(device),
 	m_parameter(ShaderReflection::create({ info.vertexShader, info.fragmentShader })),
+	m_depth_format(info.depthFormat),
 	m_vertex_count(info.vertexCount)
 {
 	GraphicsPipelineCreateInfo pipeline_info = {
@@ -22,16 +23,23 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 		},
 		.rasterizationInfo             = RasterizationInfo{},
 		.tesselationPatchControlPoints = 0,
-		.depthStencilInfo              = DepthStencilInfo{},
 		.colorBlendInfo                = ColorBlendInfo{}
 	};
 
-	if (info.useVertexBuffer) {
-		m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * sizeof(Vertex));
-		m_states.setVertexBuffer(m_vertex_buffer);
+	if (!info.vertexInput.vertexInputDescriptor.empty()) {
+		uint32_t vertex_size = info.vertexInput.vertexInputDescriptor.vertexSize();
 
-		pipeline_info.vertexInputInfo = VertexInputInfo{
-			.vertexInputDescriptor = GraphicsPass::Vertex{}
+		pipeline_info.vertexInputInfo = info.vertexInput;
+
+		m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * vertex_size);
+		m_states.setVertexBuffer(m_vertex_buffer);
+	}
+
+	if (info.depthFormat != DepthFormat::Unknown) {
+		pipeline_info.depthStencilInfo = DepthStencilInfo{
+			.depthFormat      = info.depthFormat,
+			.depthWriteEnable = true,
+			.depthCompareOp   = CompareOp::Less
 		};
 	}
 
@@ -69,6 +77,21 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<Texture> texture)
 	uint32_t width  = texture->width();
 	uint32_t height = texture->height();
 
+	if (m_depth_format != DepthFormat::Unknown && !(m_depth && m_depth->width() == width && m_depth->height() == height)) {
+		auto cmd = ctx->getRenderCommand();
+		
+		m_depth = Texture::createDepth(m_device, width, height, m_depth_format);
+	
+		cmd->transitionImageLayout(
+			m_depth,
+			vr::PipelineStageFlagBits::TopOfPipe,
+			vr::PipelineStageFlagBits::EarlyFragmentTests,
+			vr::AccessFlagBits::None,
+			vr::AccessFlagBits::DepthStencilAttachmentWrite | vr::AccessFlagBits::DepthStencilAttachmentWrite,
+			vr::ImageLayout::Undefined,
+			vr::ImageLayout::DepthAttachmentOptimal);
+	}
+
 	m_states.setViewport(Viewport{
 		.width  = static_cast<float>(width),
 		.height = static_cast<float>(height)
@@ -96,6 +119,16 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<Texture> texture)
 			.storeOp    = StoreOp::Store,
 			.clearValue = Colors::Black
 		});
+
+	if (m_depth) {
+		rendering_info.depthAttachment =
+			DepthAtttachmentInfo{
+				.texture    = m_depth,
+				.loadOp     = LoadOp::Clear,
+				.storeOp    = StoreOp::DontCare,
+				.clearValue = 1.f
+			};
+	}
 
 	m_states.setRenderingInfo(rendering_info);
 

@@ -54,11 +54,11 @@ public:
 		MyApp& app = *reinterpret_cast<MyApp*>(window.UserPtr.get());
 
 		switch (e.type()) {
-		case vr::os::EventType::Close:
+		case vr::os::WindowEventType::Close:
 			app.m_exit = true;
 			break;
-		case vr::os::EventType::Resize:
-		case vr::os::EventType::Move:
+		case vr::os::WindowEventType::Resize:
+		case vr::os::WindowEventType::Move:
 			app.drawFrame();
 			break;
 		}

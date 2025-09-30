@@ -304,7 +304,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 	vk::Viewport temp_viewport;
 	temp_viewport.width  = 1080.f;
-	temp_viewport.height = 720.f;
+	temp_viewport.height = -720.f;
 	
 	vk::Rect2D temp_scissor;
 	temp_scissor.extent = vk::Extent2D{ 1080, 720 };
@@ -339,11 +339,11 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 	vk::PipelineDepthStencilStateCreateInfo ds_info;
 	if (info.depthStencilInfo) {
-		ds_info.depthTestEnable       = info.depthStencilInfo->depthTestEnable;
+		ds_info.depthTestEnable       = info.depthStencilInfo->depthFormat != DepthFormat::Unknown;
 		ds_info.depthWriteEnable      = info.depthStencilInfo->depthWriteEnable;
 		ds_info.depthCompareOp        = to_vk_compare_op(info.depthStencilInfo->depthCompareOp);
 		ds_info.depthBoundsTestEnable = info.depthStencilInfo->depthBoundsTestEnable;
-		ds_info.stencilTestEnable     = info.depthStencilInfo->stencilTestEnable;
+		ds_info.stencilTestEnable     = info.depthStencilInfo->stencilFormat != StencilFormat::Unknown;
 		ds_info.front                 = to_vk_stencil_op_state(info.depthStencilInfo->front);
 		ds_info.back                  = to_vk_stencil_op_state(info.depthStencilInfo->back);
 		ds_info.minDepthBounds        = info.depthStencilInfo->minDepthBounds;
@@ -385,10 +385,14 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	vk::PipelineRenderingCreateInfoKHR rendering_info;
 	rendering_info.colorAttachmentCount    = 1;
 	rendering_info.pColorAttachmentFormats = &color_format;
-	if (info.depthStencilInfo && info.depthStencilInfo->depthTestEnable)
-		rendering_info.depthAttachmentFormat = to_vk_format(device_impl.depthFormat);
-	if (info.depthStencilInfo && info.depthStencilInfo->stencilTestEnable)
-		rendering_info.stencilAttachmentFormat = to_vk_format(device_impl.depthFormat);
+	if (info.depthStencilInfo && info.depthStencilInfo->depthFormat != DepthFormat::Unknown) {
+		auto format = to_vk_format(static_cast<Format>(info.depthStencilInfo->depthFormat));
+		rendering_info.depthAttachmentFormat = format;
+	}
+	if (info.depthStencilInfo && info.depthStencilInfo->stencilFormat != StencilFormat::Unknown) {
+		auto format = to_vk_format(static_cast<Format>(info.depthStencilInfo->stencilFormat));
+		rendering_info.stencilAttachmentFormat = format;
+	}
 
 	vk::GraphicsPipelineCreateInfo pipeline_info;
 	pipeline_info.stageCount          = static_cast<uint32_t>(shader_infos.size());

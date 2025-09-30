@@ -6,6 +6,7 @@
 #include "../../include/vera/graphics/format_traits.h"
 #include "../../include/vera/graphics/image_sampler.h"
 #include "../../include/vera/math/math_util.h"
+#include "../../include/vera/math/vector_math.h"
 #include <algorithm>
 
 #define ASSIGN1BYTES(lhs, rhs)  *reinterpret_cast<uint8_t*>(dst) = *reinterpret_cast<const uint8_t*>(src);
@@ -44,17 +45,6 @@ struct storage5
 
 	uint8_t data[5];
 };
-
-// TODO: move to vector_math.h
-static float dot(const float4& lhs, const float4& rhs)
-{
-	return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
-}
-
-static float length(const float4& v)
-{
-	return sqrtf(dot(v, v));
-}
 
 static void memswap(void* ptr0, void* ptr1, size_t size)
 {

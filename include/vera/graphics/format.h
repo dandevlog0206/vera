@@ -226,18 +226,19 @@ enum class ColorFormat
 
 enum class DepthFormat
 {
-	D16Unorm   = Format::D16Unorm,
-	X8D24Unorm = Format::X8D24Unorm,
-	D32Float   = Format::D32Float
+	Unknown        = Format::Unknown,
+	D16Unorm       = Format::D16Unorm,
+	X8D24Unorm     = Format::X8D24Unorm,
+	D32Float       = Format::D32Float,
+	D16UnormS8Uint = Format::D16UnormS8Uint,
+	D24UnormS8Uint = Format::D24UnormS8Uint,
+	D32FloatS8Uint = Format::D32FloatS8Uint
 };
 
 enum class StencilFormat
 {
-	S8Uint = Format::S8Uint
-};
-
-enum class DepthStencilFormat
-{
+	Unknown        = Format::Unknown,
+	S8Uint         = Format::S8Uint,
 	D16UnormS8Uint = Format::D16UnormS8Uint,
 	D24UnormS8Uint = Format::D24UnormS8Uint,
 	D32FloatS8Uint = Format::D32FloatS8Uint

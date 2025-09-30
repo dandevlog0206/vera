@@ -1,7 +1,7 @@
-#include "../include/vera/os/window.h"
-#include "impl/window_impl.h"
+#include "../../include/vera/os/window.h"
+#include "../impl/window_impl.h"
 
-#include "../include/vera/core/exception.h"
+#include "../../include/vera/core/exception.h"
 
 VERA_NAMESPACE_BEGIN
 VERA_OS_NAMESPACE_BEGIN
@@ -26,12 +26,13 @@ static void glfw_window_pos_callback(GLFWwindow* window, int x_pos, int y_pos)
 	//}
 
 	WindowMoveArgs args = {
-		.pos   = { x_pos, y_pos },
-		.delta = { x_pos - impl.prevPosition.x, y_pos - impl.prevPosition.y }
+		.window = impl.self,
+		.pos    = { x_pos, y_pos },
+		.delta  = { x_pos - impl.prevPosition.x, y_pos - impl.prevPosition.y }
 	};
 
 	impl.prevPosition = { x_pos, y_pos };
-	WindowEvent e(EventType::Move, args);
+	WindowEvent e(WindowEventType::Move, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -50,11 +51,12 @@ static void glfw_window_size_callback(GLFWwindow* window, int width, int height)
 		impl.swapchain->recreate();
 
 	WindowResizeArgs args = {
+		.window          = impl.self,
 		.size            = { (uint32_t)width, (uint32_t)height },
 		.framebufferSize = { (uint32_t)framebuffer_size.x, (uint32_t)framebuffer_size.y }
 	};
 
-	WindowEvent e(EventType::Resize, args);
+	WindowEvent e(WindowEventType::Resize, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -68,7 +70,11 @@ static void glfw_window_close_callback(GLFWwindow* window)
 
 	impl.needClose = true;
 
-	WindowEvent e(EventType::Close);
+	EmptyArgs args = {
+		.window = impl.self
+	};
+
+	WindowEvent e(WindowEventType::Close, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -85,7 +91,11 @@ static void glfw_window_focus_callback(GLFWwindow* window, int focused)
 {
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
-	WindowEvent e(focused ? EventType::Focus : EventType::LostFocus);
+	EmptyArgs args = {
+		.window = impl.self
+	};
+
+	WindowEvent e(focused ? WindowEventType::Focus : WindowEventType::LostFocus, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -97,7 +107,11 @@ static void glfw_window_iconify_callback(GLFWwindow* window, int iconified)
 {
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
-	WindowEvent e(iconified ? EventType::Minimize : EventType::Restore);
+	EmptyArgs args = {
+		.window = impl.self
+	};
+
+	WindowEvent e(iconified ? WindowEventType::Minimize : WindowEventType::Restore, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -109,7 +123,11 @@ static void glfw_window_maximize_callback(GLFWwindow* window, int maximized)
 {
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
-	WindowEvent e(maximized ? EventType::Maximize : EventType::Restore);
+	EmptyArgs args = {
+		.window = impl.self
+	};
+
+	WindowEvent e(maximized ? WindowEventType::Maximize : WindowEventType::Restore, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -131,12 +149,15 @@ static void glfw_mouse_button_callback(GLFWwindow* window, int button, int actio
 {
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
-	MouseButtonArgs args;
-	EventType       event_type;
+	WindowEventType event_type;
 	double2         cursor_pos;
 
+	MouseButtonArgs args = {
+		.window = impl.self
+	};
+
 	glfwGetCursorPos(window, &cursor_pos.x, &cursor_pos.y);
-	event_type = action == GLFW_PRESS ? EventType::MouseButtonDown : EventType::MouseButtonUp;
+	event_type = action == GLFW_PRESS ? WindowEventType::MouseButtonDown : WindowEventType::MouseButtonUp;
 
 	switch (button) {
 	case GLFW_MOUSE_BUTTON_LEFT:   args.button = Mouse::LButton; break;
@@ -159,12 +180,13 @@ static void glfw_cursor_pos_callback(GLFWwindow* window, double x_pos, double y_
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
 	MouseMoveArgs args = {
-		.pos   = { (int32_t)x_pos, (int32_t)y_pos },
-		.delta = { (int32_t)(impl.prevCursorPosition.x - x_pos), (int32_t)(impl.prevCursorPosition.y - y_pos) }
+		.window = impl.self,
+		.pos    = { (int32_t)x_pos, (int32_t)y_pos },
+		.delta  = { (int32_t)(impl.prevCursorPosition.x - x_pos), (int32_t)(impl.prevCursorPosition.y - y_pos) }
 	};
 
 	impl.prevCursorPosition = { x_pos, y_pos };
-	WindowEvent e(EventType::MouseMove, args);
+	WindowEvent e(WindowEventType::MouseMove, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -176,7 +198,11 @@ static void glfw_cursor_enter_callback(GLFWwindow* window, int entered)
 {
 	auto& impl = *(priv::WindowImpl*)glfwGetWindowUserPointer(window);
 
-	WindowEvent e(entered ? EventType::MouseEnter : EventType::MouseLeave);
+	EmptyArgs args = {
+		.window = impl.self
+	};
+
+	WindowEvent e(entered ? WindowEventType::MouseEnter : WindowEventType::MouseLeave, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -192,12 +218,13 @@ static void glfw_scroll_callback(GLFWwindow* window, double x_off, double y_off)
 	glfwGetCursorPos(window, &cursor_pos.x, &cursor_pos.y);
 
 	MouseWheelArgs args = {
+		.window  = impl.self,
 		.delta_x = (float)x_off,
 		.delta_y = (float)y_off,
 		.pos     = { (int32_t)cursor_pos.x, (int32_t)cursor_pos.y }
 	};
 
-	WindowEvent e(EventType::MouseWheel, args);
+	WindowEvent e(WindowEventType::MouseWheel, args);
 
 	if (impl.eventHandler)
 		impl.eventHandler(*impl.self, e);
@@ -321,6 +348,14 @@ void Window::registerEventHandler(WindowEventHandler hanlder)
 void Window::handleEvent()
 {
 	glfwPollEvents();
+}
+
+float Window::getAspect() const
+{
+	int2 size;
+	glfwGetFramebufferSize(m_impl->window, &size.x, &size.y);
+
+	return static_cast<float>(size.x) / size.y;
 }
 
 void Window::cancelClose()

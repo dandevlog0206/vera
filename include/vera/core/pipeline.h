@@ -149,15 +149,15 @@ struct RasterizationInfo
 
 struct DepthStencilInfo
 {
-	bool           depthTestEnable       = false;
+	DepthFormat    depthFormat           = DepthFormat::Unknown;
 	bool           depthWriteEnable      = false;
 	CompareOp      depthCompareOp        = CompareOp::Never;
 	bool           depthBoundsTestEnable = false;
-	bool           stencilTestEnable     = false;
+	StencilFormat  stencilFormat         = StencilFormat::Unknown;
 	StencilOpState front                 = {};
 	StencilOpState back                  = {};
 	float          minDepthBounds        = 0.f;
-	float          maxDepthBounds        = 0.f;
+	float          maxDepthBounds        = 1.f;
 };
 
 struct ColorBlendInfo
