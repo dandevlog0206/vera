@@ -150,291 +150,291 @@ static float4 fetch_components(const void* ptr, uint32_t width, uint32_t x, uint
 	}
 	case Format::RG8Unorm: {
 		auto pixel = fetch_pixel<uchar2>(ptr, width, x, y);
-		return { UNORM2F(pixel.r), UNORM2F(pixel.g), 0.f, NOALPHA};
+		return { UNORM2F(pixel.x), UNORM2F(pixel.y), 0.f, NOALPHA};
 	}
 	case Format::RG8Snorm: {
 		auto pixel = fetch_pixel<char2>(ptr, width, x, y);
-		return { SNORM2F(pixel.r), SNORM2F(pixel.g), 0.f, NOALPHA };
+		return { SNORM2F(pixel.x), SNORM2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG8Uscaled: {
 		auto pixel = fetch_pixel<uchar2>(ptr, width, x, y);
-		return { USCALED2F(pixel.r), USCALED2F(pixel.g), 0.f, NOALPHA };
+		return { USCALED2F(pixel.x), USCALED2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG8Sscaled: {
 		auto pixel = fetch_pixel<char2>(ptr, width, x, y);
-		return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), 0.f, NOALPHA };
+		return { SSCALED2F(pixel.x), SSCALED2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG8Uint: {
 		auto pixel = fetch_pixel<uchar2>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), 0.f, NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG8Sint: {
 		auto pixel = fetch_pixel<char2>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), 0.f, NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	//case Format::RG8Srgb: {
 	//
 	//}
 	case Format::RG16Unorm: {
 		auto pixel = fetch_pixel<ushort2>(ptr, width, x, y);
-		return { UNORM2F(pixel.r), UNORM2F(pixel.g), 0.f, NOALPHA };
+		return { UNORM2F(pixel.x), UNORM2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG16Snorm: {
 		auto pixel = fetch_pixel<short2>(ptr, width, x, y);
-		return { SNORM2F(pixel.r), SNORM2F(pixel.g), 0.f, NOALPHA };
+		return { SNORM2F(pixel.x), SNORM2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG16Uscaled: {
 		auto pixel = fetch_pixel<ushort2>(ptr, width, x, y);
-		return { USCALED2F(pixel.r), USCALED2F(pixel.g), 0.f, NOALPHA };
+		return { USCALED2F(pixel.x), USCALED2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG16Sscaled: {
 		auto pixel = fetch_pixel<short2>(ptr, width, x, y);
-		return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), 0.f, NOALPHA };
+		return { SSCALED2F(pixel.x), SSCALED2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG16Uint: {
 		auto pixel = fetch_pixel<ushort2>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), 0.f, NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG16Sint: {
 		auto pixel = fetch_pixel<short2>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), 0.f, NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	//case Format::RG16Float: {
 	//
 	//}
 	case Format::RG32Uint: {
 		auto pixel = fetch_pixel<uint2>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), 0.f, NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG32Sint: {
 		auto pixel = fetch_pixel<int2>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), 0.f, NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG32Float: {
 		auto pixel = fetch_pixel<float2>(ptr, width, x, y);
-		return { pixel.r, pixel.g, 0.f, NOALPHA };
+		return { pixel.x, pixel.y, 0.f, NOALPHA };
 	}
 	case Format::RG64Uint: {
 		auto pixel = fetch_pixel<ulong2>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), 0.f, NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG64Sint: {
 		auto pixel = fetch_pixel<long2>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), 0.f, NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RG64Float: {
 		auto pixel = fetch_pixel<double2>(ptr, width, x, y);
-		return { DOUBLE2F(pixel.r), DOUBLE2F(pixel.g), 0.f, NOALPHA };
+		return { DOUBLE2F(pixel.x), DOUBLE2F(pixel.y), 0.f, NOALPHA };
 	}
 	case Format::RGB8Unorm: {
 		auto pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		return { UNORM2F(pixel.r), UNORM2F(pixel.g), UNORM2F(pixel.b), NOALPHA};
+		return { UNORM2F(pixel.x), UNORM2F(pixel.y), UNORM2F(pixel.z), NOALPHA};
 	}
 	case Format::RGB8Snorm: {
 		auto pixel = fetch_pixel<char3>(ptr, width, x, y);
-		return { SNORM2F(pixel.r), SNORM2F(pixel.g), SNORM2F(pixel.b), NOALPHA };
+		return { SNORM2F(pixel.x), SNORM2F(pixel.y), SNORM2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB8Uscaled: {
 		auto pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		return { USCALED2F(pixel.r), USCALED2F(pixel.g), USCALED2F(pixel.b), NOALPHA };
+		return { USCALED2F(pixel.x), USCALED2F(pixel.y), USCALED2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB8Sscaled: {
 		auto pixel = fetch_pixel<char3>(ptr, width, x, y);
-		return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), SSCALED2F(pixel.b), NOALPHA };
+		return { SSCALED2F(pixel.x), SSCALED2F(pixel.y), SSCALED2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB8Uint: {
 		auto pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB8Sint: {
 		auto pixel = fetch_pixel<char3>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), NOALPHA };
 	}
 	//case Format::RGB8Srgb: {
 	//
 	//}
 	case Format::BGR8Unorm: {
 		auto pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		return { UNORM2F(pixel.b), UNORM2F(pixel.g), UNORM2F(pixel.r), NOALPHA };
+		return { UNORM2F(pixel.z), UNORM2F(pixel.y), UNORM2F(pixel.x), NOALPHA };
 	}
 	case Format::BGR8Snorm: {
 		auto pixel = fetch_pixel<char3>(ptr, width, x, y);
-		return { SNORM2F(pixel.b), SNORM2F(pixel.g), SNORM2F(pixel.r), NOALPHA };
+		return { SNORM2F(pixel.z), SNORM2F(pixel.y), SNORM2F(pixel.x), NOALPHA };
 	}
 	case Format::BGR8Uscaled: {
 		auto pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		return { USCALED2F(pixel.b), USCALED2F(pixel.g), USCALED2F(pixel.r), NOALPHA };
+		return { USCALED2F(pixel.z), USCALED2F(pixel.y), USCALED2F(pixel.x), NOALPHA };
 	}
 	case Format::BGR8Sscaled: {
 		auto pixel = fetch_pixel<char3>(ptr, width, x, y);
-		return { SSCALED2F(pixel.b), SSCALED2F(pixel.g), SSCALED2F(pixel.r), NOALPHA };
+		return { SSCALED2F(pixel.z), SSCALED2F(pixel.y), SSCALED2F(pixel.x), NOALPHA };
 	}
 	case Format::BGR8Uint: {
 		auto pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		return { UINT2F(pixel.b), UINT2F(pixel.g), UINT2F(pixel.r), NOALPHA };
+		return { UINT2F(pixel.z), UINT2F(pixel.y), UINT2F(pixel.x), NOALPHA };
 	}
 	case Format::BGR8Sint: {
 		auto pixel = fetch_pixel<char3>(ptr, width, x, y);
-		return { SINT2F(pixel.b), SINT2F(pixel.g), SINT2F(pixel.r), NOALPHA };
+		return { SINT2F(pixel.z), SINT2F(pixel.y), SINT2F(pixel.x), NOALPHA };
 	}
 	//case Format::BGR8Srgb: {
 	//
 	//}
 	case Format::RGB16Unorm: {
 		auto pixel = fetch_pixel<ushort3>(ptr, width, x, y);
-		return { UNORM2F(pixel.r), UNORM2F(pixel.g), UNORM2F(pixel.b), NOALPHA };
+		return { UNORM2F(pixel.x), UNORM2F(pixel.y), UNORM2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB16Snorm: {
 		auto pixel = fetch_pixel<short3>(ptr, width, x, y);
-		return { SNORM2F(pixel.r), SNORM2F(pixel.g), SNORM2F(pixel.b), NOALPHA };
+		return { SNORM2F(pixel.x), SNORM2F(pixel.y), SNORM2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB16Uscaled: {
 		auto pixel = fetch_pixel<ushort3>(ptr, width, x, y);
-		return { USCALED2F(pixel.r), USCALED2F(pixel.g), USCALED2F(pixel.b), NOALPHA };
+		return { USCALED2F(pixel.x), USCALED2F(pixel.y), USCALED2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB16Sscaled: {
 		auto pixel = fetch_pixel<short3>(ptr, width, x, y);
-		return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), SSCALED2F(pixel.b), NOALPHA };
+		return { SSCALED2F(pixel.x), SSCALED2F(pixel.y), SSCALED2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB16Uint: {
 		auto pixel = fetch_pixel<ushort3>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB16Sint: {
 		auto pixel = fetch_pixel<short3>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), NOALPHA };
 	}
 	//case Format::RGB16Float: {
 	//
 	//}
 	case Format::RGB32Uint: {
 		auto pixel = fetch_pixel<uint3>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB32Sint: {
 		auto pixel = fetch_pixel<int3>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB32Float: {
 		auto pixel = fetch_pixel<float3>(ptr, width, x, y);
-		return { pixel.r, pixel.g, pixel.b, NOALPHA };
+		return { pixel.x, pixel.y, pixel.z, NOALPHA };
 	}
 	case Format::RGB64Uint: {
 		auto pixel = fetch_pixel<ulong3>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), NOALPHA };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB64Sint: {
 		auto pixel = fetch_pixel<long3>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), NOALPHA };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), NOALPHA };
 	}
 	case Format::RGB64Float: {
 		auto pixel = fetch_pixel<double3>(ptr, width, x, y);
-		return { DOUBLE2F(pixel.r), DOUBLE2F(pixel.g), DOUBLE2F(pixel.b), NOALPHA };
+		return { DOUBLE2F(pixel.x), DOUBLE2F(pixel.y), DOUBLE2F(pixel.z), NOALPHA };
 	}
 	case Format::RGBA8Unorm: {
 		auto pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		return { UNORM2F(pixel.r), UNORM2F(pixel.g), UNORM2F(pixel.b), UNORM2F(pixel.a)};
+		return { UNORM2F(pixel.x), UNORM2F(pixel.y), UNORM2F(pixel.z), UNORM2F(pixel.w)};
 	}
 	case Format::RGBA8Snorm: {
 		auto pixel = fetch_pixel<char4>(ptr, width, x, y);
-		return { SNORM2F(pixel.r), SNORM2F(pixel.g), SNORM2F(pixel.b), SNORM2F(pixel.a) };
+		return { SNORM2F(pixel.x), SNORM2F(pixel.y), SNORM2F(pixel.z), SNORM2F(pixel.w) };
 	}
 	case Format::RGBA8Uscaled: {
 		auto pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		return { USCALED2F(pixel.r), USCALED2F(pixel.g), USCALED2F(pixel.b), USCALED2F(pixel.a) };
+		return { USCALED2F(pixel.x), USCALED2F(pixel.y), USCALED2F(pixel.z), USCALED2F(pixel.w) };
 	}
 	case Format::RGBA8Sscaled: {
 		auto pixel = fetch_pixel<char4>(ptr, width, x, y);
-		return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), SSCALED2F(pixel.b), SSCALED2F(pixel.a) };
+		return { SSCALED2F(pixel.x), SSCALED2F(pixel.y), SSCALED2F(pixel.z), SSCALED2F(pixel.w) };
 	}
 	case Format::RGBA8Uint: {
 		auto pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), UINT2F(pixel.w) };
 	}
 	case Format::RGBA8Sint: {
 		auto pixel = fetch_pixel<char4>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), SINT2F(pixel.w) };
 	}
 	//case Format::RGBA8Srgb: {
 	//
 	//}
 	case Format::BGRA8Unorm: {
 		auto pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		return { UNORM2F(pixel.b), UNORM2F(pixel.g), UNORM2F(pixel.r), UNORM2F(pixel.a) };
+		return { UNORM2F(pixel.z), UNORM2F(pixel.y), UNORM2F(pixel.x), UNORM2F(pixel.w) };
 	}
 	case Format::BGRA8Snorm: {
 		auto pixel = fetch_pixel<char4>(ptr, width, x, y);
-		return { SNORM2F(pixel.b), SNORM2F(pixel.g), SNORM2F(pixel.r), SNORM2F(pixel.a) };
+		return { SNORM2F(pixel.z), SNORM2F(pixel.y), SNORM2F(pixel.x), SNORM2F(pixel.w) };
 	}
 	case Format::BGRA8Uscaled: {
 		auto pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		return { USCALED2F(pixel.b), USCALED2F(pixel.g), USCALED2F(pixel.r), USCALED2F(pixel.a) };
+		return { USCALED2F(pixel.z), USCALED2F(pixel.y), USCALED2F(pixel.x), USCALED2F(pixel.w) };
 	}
 	case Format::BGRA8Sscaled: {
 		auto pixel = fetch_pixel<char4>(ptr, width, x, y);
-		return { SSCALED2F(pixel.b), SSCALED2F(pixel.g), SSCALED2F(pixel.r), SSCALED2F(pixel.a) };
+		return { SSCALED2F(pixel.z), SSCALED2F(pixel.y), SSCALED2F(pixel.x), SSCALED2F(pixel.w) };
 	}
 	case Format::BGRA8Uint: {
 		auto pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		return { UINT2F(pixel.b), UINT2F(pixel.g), UINT2F(pixel.r), UINT2F(pixel.a) };
+		return { UINT2F(pixel.z), UINT2F(pixel.y), UINT2F(pixel.x), UINT2F(pixel.w) };
 	}
 	case Format::BGRA8Sint: {
 		auto pixel = fetch_pixel<char4>(ptr, width, x, y);
-		return { SINT2F(pixel.b), SINT2F(pixel.g), SINT2F(pixel.r), SINT2F(pixel.a) };
+		return { SINT2F(pixel.z), SINT2F(pixel.y), SINT2F(pixel.x), SINT2F(pixel.w) };
 	}
 	//case Format::BGRA8Srgb: {
 	//
 	//}
 	case Format::RGBA16Unorm: {
 		auto pixel = fetch_pixel<ushort4>(ptr, width, x, y);
-		return { UNORM2F(pixel.r), UNORM2F(pixel.g), UNORM2F(pixel.b), UNORM2F(pixel.a) };
+		return { UNORM2F(pixel.x), UNORM2F(pixel.y), UNORM2F(pixel.z), UNORM2F(pixel.w) };
 	}
 	case Format::RGBA16Snorm: {
 		auto pixel = fetch_pixel<short4>(ptr, width, x, y);
-		return { SNORM2F(pixel.r), SNORM2F(pixel.g), SNORM2F(pixel.b), SNORM2F(pixel.a) };
+		return { SNORM2F(pixel.x), SNORM2F(pixel.y), SNORM2F(pixel.z), SNORM2F(pixel.w) };
 	}
 	case Format::RGBA16Uscaled: {
 		auto pixel = fetch_pixel<ushort4>(ptr, width, x, y);
-		return { USCALED2F(pixel.r), USCALED2F(pixel.g), USCALED2F(pixel.b), USCALED2F(pixel.a) };
+		return { USCALED2F(pixel.x), USCALED2F(pixel.y), USCALED2F(pixel.z), USCALED2F(pixel.w) };
 	}
 	case Format::RGBA16Sscaled: {
 		auto pixel = fetch_pixel<short4>(ptr, width, x, y);
-		return { SSCALED2F(pixel.r), SSCALED2F(pixel.g), SSCALED2F(pixel.b), SSCALED2F(pixel.a) };
+		return { SSCALED2F(pixel.x), SSCALED2F(pixel.y), SSCALED2F(pixel.z), SSCALED2F(pixel.w) };
 	}
 	case Format::RGBA16Uint: {
 		auto pixel = fetch_pixel<ushort4>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), UINT2F(pixel.w) };
 	}
 	case Format::RGBA16Sint: {
 		auto pixel = fetch_pixel<short4>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), SINT2F(pixel.w) };
 	}
 	//case Format::RGBA16Float: {
 	//
 	//}
 	case Format::RGBA32Uint: {
 		auto pixel = fetch_pixel<uint4>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), UINT2F(pixel.w) };
 	}
 	case Format::RGBA32Sint: {
 		auto pixel = fetch_pixel<int4>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), SINT2F(pixel.w) };
 	}
 	case Format::RGBA32Float: {
 		auto pixel = fetch_pixel<float4>(ptr, width, x, y);
-		return { pixel.r, pixel.g, pixel.b, pixel.a };
+		return { pixel.x, pixel.y, pixel.z, pixel.w };
 	}
 	case Format::RGBA64Uint: {
 		auto pixel = fetch_pixel<ulong4>(ptr, width, x, y);
-		return { UINT2F(pixel.r), UINT2F(pixel.g), UINT2F(pixel.b), UINT2F(pixel.a) };
+		return { UINT2F(pixel.x), UINT2F(pixel.y), UINT2F(pixel.z), UINT2F(pixel.w) };
 	}
 	case Format::RGBA64Sint: {
 		auto pixel = fetch_pixel<long4>(ptr, width, x, y);
-		return { SINT2F(pixel.r), SINT2F(pixel.g), SINT2F(pixel.b), SINT2F(pixel.a) };
+		return { SINT2F(pixel.x), SINT2F(pixel.y), SINT2F(pixel.z), SINT2F(pixel.w) };
 	}
 	case Format::RGBA64Float: {
 		auto pixel = fetch_pixel<double4>(ptr, width, x, y);
-		return { DOUBLE2F(pixel.r), DOUBLE2F(pixel.g), DOUBLE2F(pixel.b), DOUBLE2F(pixel.a) };
+		return { DOUBLE2F(pixel.x), DOUBLE2F(pixel.y), DOUBLE2F(pixel.z), DOUBLE2F(pixel.w) };
 	}
 	case Format::RG4UnormPack8: {
 		auto pixel = fetch_pixel<uint8_t>(ptr, width, x, y);
@@ -714,695 +714,695 @@ static void store_components(void* ptr, uint32_t width, uint32_t x, uint32_t y, 
 {
 	switch (format) {
 	case Format::R8Unorm: {
-		fetch_pixel<uint8_t>(ptr, width, x, y) = F2UNORM(uint8_t, value.r);
+		fetch_pixel<uint8_t>(ptr, width, x, y) = F2UNORM(uint8_t, value.x);
 	} return;
 	case Format::R8Snorm: {
-		fetch_pixel<int8_t>(ptr, width, x, y) = F2SNORM(int8_t, value.r);
+		fetch_pixel<int8_t>(ptr, width, x, y) = F2SNORM(int8_t, value.x);
 	} return;
 	case Format::R8Uscaled: {
-		fetch_pixel<uint8_t>(ptr, width, x, y) = F2USCALED(uint8_t, value.r);
+		fetch_pixel<uint8_t>(ptr, width, x, y) = F2USCALED(uint8_t, value.x);
 	} return;
 	case Format::R8Sscaled: {
-		fetch_pixel<int8_t>(ptr, width, x, y) = F2SSCALED(int8_t, value.r);
+		fetch_pixel<int8_t>(ptr, width, x, y) = F2SSCALED(int8_t, value.x);
 	} return;
 	case Format::R8Uint: {
-		fetch_pixel<uint8_t>(ptr, width, x, y) = F2UINT(uint8_t, value.r);
+		fetch_pixel<uint8_t>(ptr, width, x, y) = F2UINT(uint8_t, value.x);
 	} return;
 	case Format::R8Sint: {
-		fetch_pixel<int8_t>(ptr, width, x, y) = F2SINT(int8_t, value.r);
+		fetch_pixel<int8_t>(ptr, width, x, y) = F2SINT(int8_t, value.x);
 	} return;
 	//case Format::R8Srgb: {
 	// 
 	//} return;
 	case Format::R16Unorm: {
-		fetch_pixel<uint16_t>(ptr, width, x, y) = F2UNORM(uint16_t, value.r);
+		fetch_pixel<uint16_t>(ptr, width, x, y) = F2UNORM(uint16_t, value.x);
 	} return;
 	case Format::R16Snorm: {
-		fetch_pixel<int16_t>(ptr, width, x, y) = F2SNORM(int16_t, value.r);
+		fetch_pixel<int16_t>(ptr, width, x, y) = F2SNORM(int16_t, value.x);
 	} return;
 	case Format::R16Uscaled: {
-		fetch_pixel<uint16_t>(ptr, width, x, y) = F2USCALED(uint16_t, value.r);
+		fetch_pixel<uint16_t>(ptr, width, x, y) = F2USCALED(uint16_t, value.x);
 	} return;
 	case Format::R16Sscaled: {
-		fetch_pixel<int16_t>(ptr, width, x, y) = F2SSCALED(uint16_t, value.r);
+		fetch_pixel<int16_t>(ptr, width, x, y) = F2SSCALED(uint16_t, value.x);
 	} return;
 	case Format::R16Uint: {
-		fetch_pixel<uint16_t>(ptr, width, x, y) = F2UINT(uint16_t, value.r);
+		fetch_pixel<uint16_t>(ptr, width, x, y) = F2UINT(uint16_t, value.x);
 	} return;
 	case Format::R16Sint: {
-		fetch_pixel<int16_t>(ptr, width, x, y) = F2SINT(int16_t, value.r);
+		fetch_pixel<int16_t>(ptr, width, x, y) = F2SINT(int16_t, value.x);
 	} return;
 	//case Format::R16Float: {
 	//
 	//} return;
 	case Format::R32Uint: {
-		fetch_pixel<uint32_t>(ptr, width, x, y) = F2UINT(uint32_t, value.r);
+		fetch_pixel<uint32_t>(ptr, width, x, y) = F2UINT(uint32_t, value.x);
 	} return;
 	case Format::R32Sint: {
-		fetch_pixel<int32_t>(ptr, width, x, y) = F2SINT(int32_t, value.r);
+		fetch_pixel<int32_t>(ptr, width, x, y) = F2SINT(int32_t, value.x);
 	} return;
 	case Format::R32Float: {
-		fetch_pixel<float>(ptr, width, x, y) = value.r;
+		fetch_pixel<float>(ptr, width, x, y) = value.x;
 	} return;
 	case Format::R64Uint: {
-		fetch_pixel<uint64_t>(ptr, width, x, y) = F2UINT(uint64_t, value.r);;
+		fetch_pixel<uint64_t>(ptr, width, x, y) = F2UINT(uint64_t, value.x);;
 	} return;
 	case Format::R64Sint: {
-		fetch_pixel<int64_t>(ptr, width, x, y) = F2UINT(int64_t, value.r);
+		fetch_pixel<int64_t>(ptr, width, x, y) = F2UINT(int64_t, value.x);
 	} return;
 	case Format::R64Float: {
-		fetch_pixel<double>(ptr, width, x, y) = F2DOUBLE(value.r);
+		fetch_pixel<double>(ptr, width, x, y) = F2DOUBLE(value.x);
 	} return;
 	case Format::RG8Unorm: {
 		auto& pixel = fetch_pixel<uchar2>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint8_t, value.r);
-		pixel.g = F2UNORM(uint8_t, value.g);
+		pixel.x = F2UNORM(uint8_t, value.x);
+		pixel.y = F2UNORM(uint8_t, value.y);
 	} return;
 	case Format::RG8Snorm: {
 		auto& pixel = fetch_pixel<char2>(ptr, width, x, y);
-		pixel.r = F2UNORM(int8_t, value.r);
-		pixel.g = F2UNORM(int8_t, value.g);
+		pixel.x = F2UNORM(int8_t, value.x);
+		pixel.y = F2UNORM(int8_t, value.y);
 	} return;
 	case Format::RG8Uscaled: {
 		auto& pixel = fetch_pixel<uchar2>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint8_t, value.r);
-		pixel.g = F2USCALED(uint8_t, value.g);
+		pixel.x = F2USCALED(uint8_t, value.x);
+		pixel.y = F2USCALED(uint8_t, value.y);
 	} return;
 	case Format::RG8Sscaled: {
 		auto& pixel = fetch_pixel<char2>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int8_t, value.r);
-		pixel.g = F2SSCALED(int8_t, value.g);
+		pixel.x = F2SSCALED(int8_t, value.x);
+		pixel.y = F2SSCALED(int8_t, value.y);
 	} return;
 	case Format::RG8Uint: {
 		auto& pixel = fetch_pixel<uchar2>(ptr, width, x, y);
-		pixel.r = F2UINT(uint8_t, value.r);
-		pixel.g = F2UINT(uint8_t, value.g);
+		pixel.x = F2UINT(uint8_t, value.x);
+		pixel.y = F2UINT(uint8_t, value.y);
 	} return;
 	case Format::RG8Sint: {
 		auto& pixel = fetch_pixel<char2>(ptr, width, x, y);
-		pixel.r = F2SINT(int8_t, value.r);
-		pixel.g = F2SINT(int8_t, value.g);
+		pixel.x = F2SINT(int8_t, value.x);
+		pixel.y = F2SINT(int8_t, value.y);
 	} return;
 	//case Format::RG8Srgb: {
 	//
 	//} return;
 	case Format::RG16Unorm: {
 		auto& pixel = fetch_pixel<ushort2>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint16_t, value.r);
-		pixel.g = F2UNORM(uint16_t, value.g);
+		pixel.x = F2UNORM(uint16_t, value.x);
+		pixel.y = F2UNORM(uint16_t, value.y);
 	} return;
 	case Format::RG16Snorm: {
 		auto& pixel = fetch_pixel<short2>(ptr, width, x, y);
-		pixel.r = F2SNORM(int16_t, value.r);
-		pixel.g = F2SNORM(int16_t, value.g);
+		pixel.x = F2SNORM(int16_t, value.x);
+		pixel.y = F2SNORM(int16_t, value.y);
 	} return;
 	case Format::RG16Uscaled: {
 		auto& pixel = fetch_pixel<ushort2>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint16_t, value.r);
-		pixel.g = F2USCALED(uint16_t, value.g);
+		pixel.x = F2USCALED(uint16_t, value.x);
+		pixel.y = F2USCALED(uint16_t, value.y);
 	} return;
 	case Format::RG16Sscaled: {
 		auto& pixel = fetch_pixel<short2>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int16_t, value.r);
-		pixel.g = F2SSCALED(int16_t, value.g);
+		pixel.x = F2SSCALED(int16_t, value.x);
+		pixel.y = F2SSCALED(int16_t, value.y);
 	} return;
 	case Format::RG16Uint: {
 		auto& pixel = fetch_pixel<ushort2>(ptr, width, x, y);
-		pixel.r = F2UINT(uint16_t, value.r);
-		pixel.g = F2UINT(uint16_t, value.g);
+		pixel.x = F2UINT(uint16_t, value.x);
+		pixel.y = F2UINT(uint16_t, value.y);
 	} return;
 	case Format::RG16Sint: {
 		auto& pixel = fetch_pixel<short2>(ptr, width, x, y);
-		pixel.r = F2SINT(int16_t, value.r);
-		pixel.g = F2SINT(int16_t, value.g);
+		pixel.x = F2SINT(int16_t, value.x);
+		pixel.y = F2SINT(int16_t, value.y);
 	} return;
 	//case Format::RG16Float: {
 	//
 	//} return;
 	case Format::RG32Uint: {
 		auto& pixel = fetch_pixel<uint2>(ptr, width, x, y);
-		pixel.r = F2UINT(uint32_t, value.r);
-		pixel.g = F2UINT(uint32_t, value.g);
+		pixel.x = F2UINT(uint32_t, value.x);
+		pixel.y = F2UINT(uint32_t, value.y);
 	} return;
 	case Format::RG32Sint: {
 		auto& pixel = fetch_pixel<int2>(ptr, width, x, y);
-		pixel.r = F2SINT(int32_t, value.r);
-		pixel.g = F2SINT(int32_t, value.g);
+		pixel.x = F2SINT(int32_t, value.x);
+		pixel.y = F2SINT(int32_t, value.y);
 	} return;
 	case Format::RG32Float: {
 		auto& pixel = fetch_pixel<float2>(ptr, width, x, y);
-		pixel.r = value.r;
-		pixel.g = value.g;
+		pixel.x = value.x;
+		pixel.y = value.y;
 	} return;
 	case Format::RG64Uint: {
 		auto& pixel = fetch_pixel<ulong2>(ptr, width, x, y);
-		pixel.r = F2UINT(uint64_t, value.r);
-		pixel.g = F2UINT(uint64_t, value.g);
+		pixel.x = F2UINT(uint64_t, value.x);
+		pixel.y = F2UINT(uint64_t, value.y);
 	} return;
 	case Format::RG64Sint: {
 		auto& pixel = fetch_pixel<long2>(ptr, width, x, y);
-		pixel.r = F2SINT(int64_t, value.r);
-		pixel.g = F2SINT(int64_t, value.g);
+		pixel.x = F2SINT(int64_t, value.x);
+		pixel.y = F2SINT(int64_t, value.y);
 	} return;
 	case Format::RG64Float: {
 		auto& pixel = fetch_pixel<double2>(ptr, width, x, y);
-		pixel.r = F2DOUBLE(value.r);
-		pixel.g = F2DOUBLE(value.g);
+		pixel.x = F2DOUBLE(value.x);
+		pixel.y = F2DOUBLE(value.y);
 	} return;
 	case Format::RGB8Unorm: {
 		auto& pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint8_t, value.r);
-		pixel.g = F2UNORM(uint8_t, value.g);
-		pixel.b = F2UNORM(uint8_t, value.b);
+		pixel.x = F2UNORM(uint8_t, value.x);
+		pixel.y = F2UNORM(uint8_t, value.y);
+		pixel.z = F2UNORM(uint8_t, value.z);
 	} return;
 	case Format::RGB8Snorm: {
 		auto& pixel = fetch_pixel<char3>(ptr, width, x, y);
-		pixel.r = F2SNORM(int8_t, value.r);
-		pixel.g = F2SNORM(int8_t, value.g);
-		pixel.b = F2SNORM(int8_t, value.b);
+		pixel.x = F2SNORM(int8_t, value.x);
+		pixel.y = F2SNORM(int8_t, value.y);
+		pixel.z = F2SNORM(int8_t, value.z);
 	} return;
 	case Format::RGB8Uscaled: {
 		auto& pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint8_t, value.r);
-		pixel.g = F2USCALED(uint8_t, value.g);
-		pixel.b = F2USCALED(uint8_t, value.b);
+		pixel.x = F2USCALED(uint8_t, value.x);
+		pixel.y = F2USCALED(uint8_t, value.y);
+		pixel.z = F2USCALED(uint8_t, value.z);
 	} return;
 	case Format::RGB8Sscaled: {
 		auto& pixel = fetch_pixel<char3>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int8_t, value.r);
-		pixel.g = F2SSCALED(int8_t, value.g);
-		pixel.b = F2SSCALED(int8_t, value.b);
+		pixel.x = F2SSCALED(int8_t, value.x);
+		pixel.y = F2SSCALED(int8_t, value.y);
+		pixel.z = F2SSCALED(int8_t, value.z);
 	} return;
 	case Format::RGB8Uint: {
 		auto& pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		pixel.r = F2UINT(uint8_t, value.r);
-		pixel.g = F2UINT(uint8_t, value.g);
-		pixel.b = F2UINT(uint8_t, value.b);
+		pixel.x = F2UINT(uint8_t, value.x);
+		pixel.y = F2UINT(uint8_t, value.y);
+		pixel.z = F2UINT(uint8_t, value.z);
 	} return;
 	case Format::RGB8Sint: {
 		auto& pixel = fetch_pixel<char3>(ptr, width, x, y);
-		pixel.r = F2SINT(int8_t, value.r);
-		pixel.g = F2SINT(int8_t, value.g);
-		pixel.b = F2SINT(int8_t, value.b);
+		pixel.x = F2SINT(int8_t, value.x);
+		pixel.y = F2SINT(int8_t, value.y);
+		pixel.z = F2SINT(int8_t, value.z);
 	} return;
 	//case Format::RGB8Srgb: {
 	//
 	//} return;
 	case Format::BGR8Unorm: {
 		auto& pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint8_t, value.b);
-		pixel.g = F2UNORM(uint8_t, value.g);
-		pixel.b = F2UNORM(uint8_t, value.r);
+		pixel.x = F2UNORM(uint8_t, value.z);
+		pixel.y = F2UNORM(uint8_t, value.y);
+		pixel.z = F2UNORM(uint8_t, value.x);
 	} return;
 	case Format::BGR8Snorm: {
 		auto& pixel = fetch_pixel<char3>(ptr, width, x, y);
-		pixel.r = F2SNORM(int8_t, value.b);
-		pixel.g = F2SNORM(int8_t, value.g);
-		pixel.b = F2SNORM(int8_t, value.r);
+		pixel.x = F2SNORM(int8_t, value.z);
+		pixel.y = F2SNORM(int8_t, value.y);
+		pixel.z = F2SNORM(int8_t, value.x);
 	} return;
 	case Format::BGR8Uscaled: {
 		auto& pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint8_t, value.b);
-		pixel.g = F2USCALED(uint8_t, value.g);
-		pixel.b = F2USCALED(uint8_t, value.r);
+		pixel.x = F2USCALED(uint8_t, value.z);
+		pixel.y = F2USCALED(uint8_t, value.y);
+		pixel.z = F2USCALED(uint8_t, value.x);
 	} return;
 	case Format::BGR8Sscaled: {
 		auto& pixel = fetch_pixel<char3>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int8_t, value.b);
-		pixel.g = F2SSCALED(int8_t, value.g);
-		pixel.b = F2SSCALED(int8_t, value.r);
+		pixel.x = F2SSCALED(int8_t, value.z);
+		pixel.y = F2SSCALED(int8_t, value.y);
+		pixel.z = F2SSCALED(int8_t, value.x);
 	} return;
 	case Format::BGR8Uint: {
 		auto& pixel = fetch_pixel<uchar3>(ptr, width, x, y);
-		pixel.r = F2UINT(uint8_t, value.b);
-		pixel.g = F2UINT(uint8_t, value.g);
-		pixel.b = F2UINT(uint8_t, value.r);
+		pixel.x = F2UINT(uint8_t, value.z);
+		pixel.y = F2UINT(uint8_t, value.y);
+		pixel.z = F2UINT(uint8_t, value.x);
 	} return;
 	case Format::BGR8Sint: {
 		auto& pixel = fetch_pixel<char3>(ptr, width, x, y);
-		pixel.r = F2SINT(int8_t, value.b);
-		pixel.g = F2SINT(int8_t, value.g);
-		pixel.b = F2SINT(int8_t, value.r);
+		pixel.x = F2SINT(int8_t, value.z);
+		pixel.y = F2SINT(int8_t, value.y);
+		pixel.z = F2SINT(int8_t, value.x);
 	} return;
 	//case Format::BGR8Srgb: {
 	//
 	//} return;
 	case Format::RGB16Unorm: {
 		auto& pixel = fetch_pixel<ushort3>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint16_t, value.r);
-		pixel.g = F2UNORM(uint16_t, value.g);
-		pixel.b = F2UNORM(uint16_t, value.b);
+		pixel.x = F2UNORM(uint16_t, value.x);
+		pixel.y = F2UNORM(uint16_t, value.y);
+		pixel.z = F2UNORM(uint16_t, value.z);
 	} return;
 	case Format::RGB16Snorm: {
 		auto& pixel = fetch_pixel<short3>(ptr, width, x, y);
-		pixel.r = F2SNORM(int16_t, value.r);
-		pixel.g = F2SNORM(int16_t, value.g);
-		pixel.b = F2SNORM(int16_t, value.b);
+		pixel.x = F2SNORM(int16_t, value.x);
+		pixel.y = F2SNORM(int16_t, value.y);
+		pixel.z = F2SNORM(int16_t, value.z);
 	} return;
 	case Format::RGB16Uscaled: {
 		auto& pixel = fetch_pixel<ushort3>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint16_t, value.r);
-		pixel.g = F2USCALED(uint16_t, value.g);
-		pixel.b = F2USCALED(uint16_t, value.b);
+		pixel.x = F2USCALED(uint16_t, value.x);
+		pixel.y = F2USCALED(uint16_t, value.y);
+		pixel.z = F2USCALED(uint16_t, value.z);
 	} return;
 	case Format::RGB16Sscaled: {
 		auto& pixel = fetch_pixel<short3>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int16_t, value.r);
-		pixel.g = F2SSCALED(int16_t, value.g);
-		pixel.b = F2SSCALED(int16_t, value.b);
+		pixel.x = F2SSCALED(int16_t, value.x);
+		pixel.y = F2SSCALED(int16_t, value.y);
+		pixel.z = F2SSCALED(int16_t, value.z);
 	} return;
 	case Format::RGB16Uint: {
 		auto& pixel = fetch_pixel<ushort3>(ptr, width, x, y);
-		pixel.r = F2UINT(uint16_t, value.r);
-		pixel.g = F2UINT(uint16_t, value.g);
-		pixel.b = F2UINT(uint16_t, value.b);
+		pixel.x = F2UINT(uint16_t, value.x);
+		pixel.y = F2UINT(uint16_t, value.y);
+		pixel.z = F2UINT(uint16_t, value.z);
 	} return;
 	case Format::RGB16Sint: {
 		auto& pixel = fetch_pixel<short3>(ptr, width, x, y);
-		pixel.r = F2SINT(int16_t, value.r);
-		pixel.g = F2SINT(int16_t, value.g);
-		pixel.b = F2SINT(int16_t, value.b);
+		pixel.x = F2SINT(int16_t, value.x);
+		pixel.y = F2SINT(int16_t, value.y);
+		pixel.z = F2SINT(int16_t, value.z);
 	} return;
 	//case Format::RGB16Float: {
 	//
 	//} return;
 	case Format::RGB32Uint: {
 		auto& pixel = fetch_pixel<uint3>(ptr, width, x, y);
-		pixel.r = F2UINT(uint32_t, value.r);
-		pixel.g = F2UINT(uint32_t, value.g);
-		pixel.b = F2UINT(uint32_t, value.b);
+		pixel.x = F2UINT(uint32_t, value.x);
+		pixel.y = F2UINT(uint32_t, value.y);
+		pixel.z = F2UINT(uint32_t, value.z);
 	} return;
 	case Format::RGB32Sint: {
 		auto& pixel = fetch_pixel<int3>(ptr, width, x, y);
-		pixel.r = F2UINT(int32_t, value.r);
-		pixel.g = F2UINT(int32_t, value.g);
-		pixel.b = F2UINT(int32_t, value.b);
+		pixel.x = F2UINT(int32_t, value.x);
+		pixel.y = F2UINT(int32_t, value.y);
+		pixel.z = F2UINT(int32_t, value.z);
 	} return;
 	case Format::RGB32Float: {
 		auto& pixel = fetch_pixel<float3>(ptr, width, x, y);
-		pixel.r = value.r;
-		pixel.g = value.g;
-		pixel.b = value.b;
+		pixel.x = value.x;
+		pixel.y = value.y;
+		pixel.z = value.z;
 	} return;
 	case Format::RGB64Uint: {
 		auto& pixel = fetch_pixel<ulong3>(ptr, width, x, y);
-		pixel.r = F2UINT(uint64_t, value.r);
-		pixel.g = F2UINT(uint64_t, value.g);
-		pixel.b = F2UINT(uint64_t, value.b);
+		pixel.x = F2UINT(uint64_t, value.x);
+		pixel.y = F2UINT(uint64_t, value.y);
+		pixel.z = F2UINT(uint64_t, value.z);
 	} return;
 	case Format::RGB64Sint: {
 		auto& pixel = fetch_pixel<long3>(ptr, width, x, y);
-		pixel.r = F2SINT(int64_t, value.r);
-		pixel.g = F2SINT(int64_t, value.g);
-		pixel.b = F2SINT(int64_t, value.b);
+		pixel.x = F2SINT(int64_t, value.x);
+		pixel.y = F2SINT(int64_t, value.y);
+		pixel.z = F2SINT(int64_t, value.z);
 	} return;
 	case Format::RGB64Float: {
 		auto& pixel = fetch_pixel<double3>(ptr, width, x, y);
-		pixel.r = F2DOUBLE(value.r);
-		pixel.g = F2DOUBLE(value.g);
-		pixel.b = F2DOUBLE(value.b);
+		pixel.x = F2DOUBLE(value.x);
+		pixel.y = F2DOUBLE(value.y);
+		pixel.z = F2DOUBLE(value.z);
 	} return;
 	case Format::RGBA8Unorm: {
 		auto& pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint8_t, value.r);
-		pixel.g = F2UNORM(uint8_t, value.g);
-		pixel.b = F2UNORM(uint8_t, value.b);
-		pixel.a = F2UNORM(uint8_t, value.a);
+		pixel.x = F2UNORM(uint8_t, value.x);
+		pixel.y = F2UNORM(uint8_t, value.y);
+		pixel.z = F2UNORM(uint8_t, value.z);
+		pixel.w = F2UNORM(uint8_t, value.w);
 	} return;
 	case Format::RGBA8Snorm: {
 		auto& pixel = fetch_pixel<char4>(ptr, width, x, y);
-		pixel.r = F2SNORM(int8_t, value.r);
-		pixel.g = F2SNORM(int8_t, value.g);
-		pixel.b = F2SNORM(int8_t, value.b);
-		pixel.a = F2SNORM(int8_t, value.a);
+		pixel.x = F2SNORM(int8_t, value.x);
+		pixel.y = F2SNORM(int8_t, value.y);
+		pixel.z = F2SNORM(int8_t, value.z);
+		pixel.w = F2SNORM(int8_t, value.w);
 	} return;
 	case Format::RGBA8Uscaled: {
 		auto& pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint8_t, value.r);
-		pixel.g = F2USCALED(uint8_t, value.g);
-		pixel.b = F2USCALED(uint8_t, value.b);
-		pixel.a = F2USCALED(uint8_t, value.a);
+		pixel.x = F2USCALED(uint8_t, value.x);
+		pixel.y = F2USCALED(uint8_t, value.y);
+		pixel.z = F2USCALED(uint8_t, value.z);
+		pixel.w = F2USCALED(uint8_t, value.w);
 	} return;
 	case Format::RGBA8Sscaled: {
 		auto& pixel = fetch_pixel<char4>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int8_t, value.r);
-		pixel.g = F2SSCALED(int8_t, value.g);
-		pixel.b = F2SSCALED(int8_t, value.b);
-		pixel.a = F2SSCALED(int8_t, value.a);
+		pixel.x = F2SSCALED(int8_t, value.x);
+		pixel.y = F2SSCALED(int8_t, value.y);
+		pixel.z = F2SSCALED(int8_t, value.z);
+		pixel.w = F2SSCALED(int8_t, value.w);
 	} return;
 	case Format::RGBA8Uint: {
 		auto& pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		pixel.r = F2UINT(uint8_t, value.r);
-		pixel.g = F2UINT(uint8_t, value.g);
-		pixel.b = F2UINT(uint8_t, value.b);
-		pixel.a = F2UINT(uint8_t, value.a);
+		pixel.x = F2UINT(uint8_t, value.x);
+		pixel.y = F2UINT(uint8_t, value.y);
+		pixel.z = F2UINT(uint8_t, value.z);
+		pixel.w = F2UINT(uint8_t, value.w);
 	} return;
 	case Format::RGBA8Sint: {
 		auto& pixel = fetch_pixel<char4>(ptr, width, x, y);
-		pixel.r = F2SINT(int8_t, value.r);
-		pixel.g = F2SINT(int8_t, value.g);
-		pixel.b = F2SINT(int8_t, value.b);
-		pixel.a = F2SINT(int8_t, value.a);
+		pixel.x = F2SINT(int8_t, value.x);
+		pixel.y = F2SINT(int8_t, value.y);
+		pixel.z = F2SINT(int8_t, value.z);
+		pixel.w = F2SINT(int8_t, value.w);
 	} return;
 	//case Format::RGBA8Srgb: {
 	//
 	//} return;
 	case Format::BGRA8Unorm: {
 		auto& pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint8_t, value.b);
-		pixel.g = F2UNORM(uint8_t, value.g);
-		pixel.b = F2UNORM(uint8_t, value.r);
-		pixel.a = F2UNORM(uint8_t, value.a);
+		pixel.x = F2UNORM(uint8_t, value.z);
+		pixel.y = F2UNORM(uint8_t, value.y);
+		pixel.z = F2UNORM(uint8_t, value.x);
+		pixel.w = F2UNORM(uint8_t, value.w);
 	} return;
 	case Format::BGRA8Snorm: {
 		auto& pixel = fetch_pixel<char4>(ptr, width, x, y);
-		pixel.r = F2SNORM(int8_t, value.b);
-		pixel.g = F2SNORM(int8_t, value.g);
-		pixel.b = F2SNORM(int8_t, value.r);
-		pixel.a = F2SNORM(int8_t, value.a);
+		pixel.x = F2SNORM(int8_t, value.z);
+		pixel.y = F2SNORM(int8_t, value.y);
+		pixel.z = F2SNORM(int8_t, value.x);
+		pixel.w = F2SNORM(int8_t, value.w);
 	} return;
 	case Format::BGRA8Uscaled: {
 		auto& pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint8_t, value.b);
-		pixel.g = F2USCALED(uint8_t, value.g);
-		pixel.b = F2USCALED(uint8_t, value.r);
-		pixel.a = F2USCALED(uint8_t, value.a);
+		pixel.x = F2USCALED(uint8_t, value.z);
+		pixel.y = F2USCALED(uint8_t, value.y);
+		pixel.z = F2USCALED(uint8_t, value.x);
+		pixel.w = F2USCALED(uint8_t, value.w);
 	} return;
 	case Format::BGRA8Sscaled: {
 		auto& pixel = fetch_pixel<char4>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int8_t, value.b);
-		pixel.g = F2SSCALED(int8_t, value.g);
-		pixel.b = F2SSCALED(int8_t, value.r);
-		pixel.a = F2SSCALED(int8_t, value.a);
+		pixel.x = F2SSCALED(int8_t, value.z);
+		pixel.y = F2SSCALED(int8_t, value.y);
+		pixel.z = F2SSCALED(int8_t, value.x);
+		pixel.w = F2SSCALED(int8_t, value.w);
 	} return;
 	case Format::BGRA8Uint: {
 		auto& pixel = fetch_pixel<uchar4>(ptr, width, x, y);
-		pixel.r = F2UINT(uint8_t, value.b);
-		pixel.g = F2UINT(uint8_t, value.g);
-		pixel.b = F2UINT(uint8_t, value.r);
-		pixel.a = F2UINT(uint8_t, value.a);
+		pixel.x = F2UINT(uint8_t, value.z);
+		pixel.y = F2UINT(uint8_t, value.y);
+		pixel.z = F2UINT(uint8_t, value.x);
+		pixel.w = F2UINT(uint8_t, value.w);
 	} return;
 	case Format::BGRA8Sint: {
 		auto& pixel = fetch_pixel<char4>(ptr, width, x, y);
-		pixel.r = F2SINT(int8_t, value.b);
-		pixel.g = F2SINT(int8_t, value.g);
-		pixel.b = F2SINT(int8_t, value.r);
-		pixel.a = F2SINT(int8_t, value.a);
+		pixel.x = F2SINT(int8_t, value.z);
+		pixel.y = F2SINT(int8_t, value.y);
+		pixel.z = F2SINT(int8_t, value.x);
+		pixel.w = F2SINT(int8_t, value.w);
 	} return;
 	//case Format::BGRA8Srgb: {
 	//
 	//} return;
 	case Format::RGBA16Unorm: {
 		auto& pixel = fetch_pixel<ushort4>(ptr, width, x, y);
-		pixel.r = F2UNORM(uint16_t, value.r);
-		pixel.g = F2UNORM(uint16_t, value.g);
-		pixel.b = F2UNORM(uint16_t, value.b);
-		pixel.a = F2UNORM(uint16_t, value.a);
+		pixel.x = F2UNORM(uint16_t, value.x);
+		pixel.y = F2UNORM(uint16_t, value.y);
+		pixel.z = F2UNORM(uint16_t, value.z);
+		pixel.w = F2UNORM(uint16_t, value.w);
 	} return;
 	case Format::RGBA16Snorm: {
 		auto& pixel = fetch_pixel<short4>(ptr, width, x, y);
-		pixel.r = F2SNORM(int16_t, value.r);
-		pixel.g = F2SNORM(int16_t, value.g);
-		pixel.b = F2SNORM(int16_t, value.b);
-		pixel.a = F2SNORM(int16_t, value.a);
+		pixel.x = F2SNORM(int16_t, value.x);
+		pixel.y = F2SNORM(int16_t, value.y);
+		pixel.z = F2SNORM(int16_t, value.z);
+		pixel.w = F2SNORM(int16_t, value.w);
 	} return;
 	case Format::RGBA16Uscaled: {
 		auto& pixel = fetch_pixel<ushort4>(ptr, width, x, y);
-		pixel.r = F2USCALED(uint16_t, value.r);
-		pixel.g = F2USCALED(uint16_t, value.g);
-		pixel.b = F2USCALED(uint16_t, value.b);
-		pixel.a = F2USCALED(uint16_t, value.a);
+		pixel.x = F2USCALED(uint16_t, value.x);
+		pixel.y = F2USCALED(uint16_t, value.y);
+		pixel.z = F2USCALED(uint16_t, value.z);
+		pixel.w = F2USCALED(uint16_t, value.w);
 	} return;
 	case Format::RGBA16Sscaled: {
 		auto& pixel = fetch_pixel<short4>(ptr, width, x, y);
-		pixel.r = F2SSCALED(int16_t, value.r);
-		pixel.g = F2SSCALED(int16_t, value.g);
-		pixel.b = F2SSCALED(int16_t, value.b);
-		pixel.a = F2SSCALED(int16_t, value.a);
+		pixel.x = F2SSCALED(int16_t, value.x);
+		pixel.y = F2SSCALED(int16_t, value.y);
+		pixel.z = F2SSCALED(int16_t, value.z);
+		pixel.w = F2SSCALED(int16_t, value.w);
 	} return;
 	case Format::RGBA16Uint: {
 		auto& pixel = fetch_pixel<ushort4>(ptr, width, x, y);
-		pixel.r = F2UINT(uint16_t, value.r);
-		pixel.g = F2UINT(uint16_t, value.g);
-		pixel.b = F2UINT(uint16_t, value.b);
-		pixel.a = F2UINT(uint16_t, value.a);
+		pixel.x = F2UINT(uint16_t, value.x);
+		pixel.y = F2UINT(uint16_t, value.y);
+		pixel.z = F2UINT(uint16_t, value.z);
+		pixel.w = F2UINT(uint16_t, value.w);
 	} return;
 	case Format::RGBA16Sint: {
 		auto& pixel = fetch_pixel<short4>(ptr, width, x, y);
-		pixel.r = F2SINT(int16_t, value.r);
-		pixel.g = F2SINT(int16_t, value.g);
-		pixel.b = F2SINT(int16_t, value.b);
-		pixel.a = F2SINT(int16_t, value.a);
+		pixel.x = F2SINT(int16_t, value.x);
+		pixel.y = F2SINT(int16_t, value.y);
+		pixel.z = F2SINT(int16_t, value.z);
+		pixel.w = F2SINT(int16_t, value.w);
 	} return;
 	//case Format::RGBA16Float: {
 	//
 	//} return;
 	case Format::RGBA32Uint: {
 		auto& pixel = fetch_pixel<uint4>(ptr, width, x, y);
-		pixel.r = F2UINT(uint32_t, value.r);
-		pixel.g = F2UINT(uint32_t, value.g);
-		pixel.b = F2UINT(uint32_t, value.b);
-		pixel.a = F2UINT(uint32_t, value.a);
+		pixel.x = F2UINT(uint32_t, value.x);
+		pixel.y = F2UINT(uint32_t, value.y);
+		pixel.z = F2UINT(uint32_t, value.z);
+		pixel.w = F2UINT(uint32_t, value.w);
 	} return;
 	case Format::RGBA32Sint: {
 		auto& pixel = fetch_pixel<int4>(ptr, width, x, y);
-		pixel.r = F2SINT(int32_t, value.r);
-		pixel.g = F2SINT(int32_t, value.g);
-		pixel.b = F2SINT(int32_t, value.b);
-		pixel.a = F2SINT(int32_t, value.a);
+		pixel.x = F2SINT(int32_t, value.x);
+		pixel.y = F2SINT(int32_t, value.y);
+		pixel.z = F2SINT(int32_t, value.z);
+		pixel.w = F2SINT(int32_t, value.w);
 	} return;
 	case Format::RGBA32Float: {
 		auto& pixel = fetch_pixel<float4>(ptr, width, x, y);
-		pixel.r = value.r;
-		pixel.g = value.g;
-		pixel.b = value.b;
-		pixel.a = value.a;
+		pixel.x = value.x;
+		pixel.y = value.y;
+		pixel.z = value.z;
+		pixel.w = value.w;
 	} return;
 	case Format::RGBA64Uint: {
 		auto& pixel = fetch_pixel<ulong4>(ptr, width, x, y);
-		pixel.r = F2UINT(uint64_t, value.r);
-		pixel.g = F2UINT(uint64_t, value.g);
-		pixel.b = F2UINT(uint64_t, value.b);
-		pixel.a = F2UINT(uint64_t, value.a);
+		pixel.x = F2UINT(uint64_t, value.x);
+		pixel.y = F2UINT(uint64_t, value.y);
+		pixel.z = F2UINT(uint64_t, value.z);
+		pixel.w = F2UINT(uint64_t, value.w);
 	} return;
 	case Format::RGBA64Sint: {
 		auto& pixel = fetch_pixel<long4>(ptr, width, x, y);
-		pixel.r = F2SINT(int64_t, value.r);
-		pixel.g = F2SINT(int64_t, value.g);
-		pixel.b = F2SINT(int64_t, value.b);
-		pixel.a = F2SINT(int64_t, value.a);
+		pixel.x = F2SINT(int64_t, value.x);
+		pixel.y = F2SINT(int64_t, value.y);
+		pixel.z = F2SINT(int64_t, value.z);
+		pixel.w = F2SINT(int64_t, value.w);
 	} return;
 	case Format::RGBA64Float: {
 		auto& pixel = fetch_pixel<double4>(ptr, width, x, y);
-		pixel.r = F2DOUBLE(value.r);
-		pixel.g = F2DOUBLE(value.g);
-		pixel.b = F2DOUBLE(value.b);
-		pixel.a = F2DOUBLE(value.a);
+		pixel.x = F2DOUBLE(value.x);
+		pixel.y = F2DOUBLE(value.y);
+		pixel.z = F2DOUBLE(value.z);
+		pixel.w = F2DOUBLE(value.w);
 	} return;
 	case Format::RG4UnormPack8: {
 		fetch_pixel<uint8_t>(ptr, width, x, y) =
-			(static_cast<uint8_t>(value.r * 15.99f) & 0x0f) << 4 |
-			(static_cast<uint8_t>(value.g * 15.99f) & 0x0f) << 0;
+			(static_cast<uint8_t>(value.x * 15.99f) & 0x0f) << 4 |
+			(static_cast<uint8_t>(value.y * 15.99f) & 0x0f) << 0;
 	} return;
 	case Format::RGBA4UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 15.99f) & 0x0f) << 12 |
-			(static_cast<uint16_t>(value.g * 15.99f) & 0x0f) << 8 |
-			(static_cast<uint16_t>(value.b * 15.99f) & 0x0f) << 4 |
-			(static_cast<uint16_t>(value.a * 15.99f) & 0x0f) << 0;
+			(static_cast<uint16_t>(value.x * 15.99f) & 0x0f) << 12 |
+			(static_cast<uint16_t>(value.y * 15.99f) & 0x0f) << 8 |
+			(static_cast<uint16_t>(value.z * 15.99f) & 0x0f) << 4 |
+			(static_cast<uint16_t>(value.w * 15.99f) & 0x0f) << 0;
 	} return;
 	case Format::BGRA4UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 15.99f) & 0x0f) << 4 |
-			(static_cast<uint16_t>(value.g * 15.99f) & 0x0f) << 8 |
-			(static_cast<uint16_t>(value.b * 15.99f) & 0x0f) << 12 |
-			(static_cast<uint16_t>(value.a * 15.99f) & 0x0f) << 0;
+			(static_cast<uint16_t>(value.x * 15.99f) & 0x0f) << 4 |
+			(static_cast<uint16_t>(value.y * 15.99f) & 0x0f) << 8 |
+			(static_cast<uint16_t>(value.z * 15.99f) & 0x0f) << 12 |
+			(static_cast<uint16_t>(value.w * 15.99f) & 0x0f) << 0;
 	} return;
 	case Format::R5G6B5UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 31.99f) & 0x1f) << 11 |
-			(static_cast<uint16_t>(value.g * 63.99f) & 0x3f) << 5 |
-			(static_cast<uint16_t>(value.b * 31.99f) & 0x1f) << 0;
+			(static_cast<uint16_t>(value.x * 31.99f) & 0x1f) << 11 |
+			(static_cast<uint16_t>(value.y * 63.99f) & 0x3f) << 5 |
+			(static_cast<uint16_t>(value.z * 31.99f) & 0x1f) << 0;
 	} return;
 	case Format::B5G6R5UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 31.99f) & 0x1f) << 0 |
-			(static_cast<uint16_t>(value.g * 63.99f) & 0x3f) << 5 |
-			(static_cast<uint16_t>(value.b * 31.99f) & 0x1f) << 11;
+			(static_cast<uint16_t>(value.x * 31.99f) & 0x1f) << 0 |
+			(static_cast<uint16_t>(value.y * 63.99f) & 0x3f) << 5 |
+			(static_cast<uint16_t>(value.z * 31.99f) & 0x1f) << 11;
 	} return;
 	case Format::R5G5B5A1UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 31.99f) & 0x1f) << 11 |
-			(static_cast<uint16_t>(value.g * 31.99f) & 0x1f) << 6 |
-			(static_cast<uint16_t>(value.b * 31.99f) & 0x1f) << 1 |
-			(static_cast<uint16_t>(value.a) & 0x01) << 0;
+			(static_cast<uint16_t>(value.x * 31.99f) & 0x1f) << 11 |
+			(static_cast<uint16_t>(value.y * 31.99f) & 0x1f) << 6 |
+			(static_cast<uint16_t>(value.z * 31.99f) & 0x1f) << 1 |
+			(static_cast<uint16_t>(value.w) & 0x01) << 0;
 	} return;
 	case Format::B5G5R5A1UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 31.99f) & 0x1f) << 1 |
-			(static_cast<uint16_t>(value.g * 31.99f) & 0x1f) << 6 |
-			(static_cast<uint16_t>(value.b * 31.99f) & 0x1f) << 11 |
-			(static_cast<uint16_t>(value.a) & 0x01) << 0;
+			(static_cast<uint16_t>(value.x * 31.99f) & 0x1f) << 1 |
+			(static_cast<uint16_t>(value.y * 31.99f) & 0x1f) << 6 |
+			(static_cast<uint16_t>(value.z * 31.99f) & 0x1f) << 11 |
+			(static_cast<uint16_t>(value.w) & 0x01) << 0;
 	} return;
 	case Format::A1R5G5B5UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 31.99f) & 0x1f) << 10 |
-			(static_cast<uint16_t>(value.g * 31.99f) & 0x1f) << 5 |
-			(static_cast<uint16_t>(value.b * 31.99f) & 0x1f) << 0 |
-			(static_cast<uint16_t>(value.a) & 0x01) << 15;
+			(static_cast<uint16_t>(value.x * 31.99f) & 0x1f) << 10 |
+			(static_cast<uint16_t>(value.y * 31.99f) & 0x1f) << 5 |
+			(static_cast<uint16_t>(value.z * 31.99f) & 0x1f) << 0 |
+			(static_cast<uint16_t>(value.w) & 0x01) << 15;
 	} return;
 	case Format::A4R4G4B4UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 15.99f) & 0x0f) << 8 |
-			(static_cast<uint16_t>(value.g * 15.99f) & 0x0f) << 4 |
-			(static_cast<uint16_t>(value.b * 15.99f) & 0x0f) << 0 |
-			(static_cast<uint16_t>(value.a * 15.99f) & 0x0f) << 12;
+			(static_cast<uint16_t>(value.x * 15.99f) & 0x0f) << 8 |
+			(static_cast<uint16_t>(value.y * 15.99f) & 0x0f) << 4 |
+			(static_cast<uint16_t>(value.z * 15.99f) & 0x0f) << 0 |
+			(static_cast<uint16_t>(value.w * 15.99f) & 0x0f) << 12;
 	} return;
 	case Format::A4B4G4R4UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 15.99f) & 0x0f) << 0 |
-			(static_cast<uint16_t>(value.g * 15.99f) & 0x0f) << 4 |
-			(static_cast<uint16_t>(value.b * 15.99f) & 0x0f) << 8 |
-			(static_cast<uint16_t>(value.a * 15.99f) & 0x0f) << 12;
+			(static_cast<uint16_t>(value.x * 15.99f) & 0x0f) << 0 |
+			(static_cast<uint16_t>(value.y * 15.99f) & 0x0f) << 4 |
+			(static_cast<uint16_t>(value.z * 15.99f) & 0x0f) << 8 |
+			(static_cast<uint16_t>(value.w * 15.99f) & 0x0f) << 12;
 	} return;
 	case Format::A1B5G5R5UnormPack16: {
 		fetch_pixel<uint16_t>(ptr, width, x, y) =
-			(static_cast<uint16_t>(value.r * 31.99f) & 0x1f) << 0 |
-			(static_cast<uint16_t>(value.g * 31.99f) & 0x1f) << 5 |
-			(static_cast<uint16_t>(value.b * 31.99f) & 0x1f) << 10 |
-			(static_cast<uint16_t>(value.a) & 0x01)<< 15;
+			(static_cast<uint16_t>(value.x * 31.99f) & 0x1f) << 0 |
+			(static_cast<uint16_t>(value.y * 31.99f) & 0x1f) << 5 |
+			(static_cast<uint16_t>(value.z * 31.99f) & 0x1f) << 10 |
+			(static_cast<uint16_t>(value.w) & 0x01)<< 15;
 	} return;
 	case Format::ABGR8UnormPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r * 255.99f) & 0xff) << 0 |
-			(static_cast<uint32_t>(value.g * 255.99f) & 0xff) << 8 |
-			(static_cast<uint32_t>(value.b * 255.99f) & 0xff) << 16 |
-			(static_cast<uint32_t>(value.a * 255.99f) & 0xff) << 24;
+			(static_cast<uint32_t>(value.x * 255.99f) & 0xff) << 0 |
+			(static_cast<uint32_t>(value.y * 255.99f) & 0xff) << 8 |
+			(static_cast<uint32_t>(value.z * 255.99f) & 0xff) << 16 |
+			(static_cast<uint32_t>(value.w * 255.99f) & 0xff) << 24;
 	} return;
 	case Format::ABGR8SnormPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r * (0 < value.r ? 127.99f : -128.99f)) & 0xff) << 0 |
-			(static_cast<int32_t>(value.g * (0 < value.g ? 127.99f : -128.99f)) & 0xff) << 8 |
-			(static_cast<int32_t>(value.b * (0 < value.b ? 127.99f : -128.99f)) & 0xff) << 16 |
-			(static_cast<int32_t>(value.a * (0 < value.a ? 127.99f : -128.99f)) & 0xff) << 24;
+			(static_cast<int32_t>(value.x * (0 < value.x ? 127.99f : -128.99f)) & 0xff) << 0 |
+			(static_cast<int32_t>(value.y * (0 < value.y ? 127.99f : -128.99f)) & 0xff) << 8 |
+			(static_cast<int32_t>(value.z * (0 < value.z ? 127.99f : -128.99f)) & 0xff) << 16 |
+			(static_cast<int32_t>(value.w * (0 < value.w ? 127.99f : -128.99f)) & 0xff) << 24;
 	} return;
 	case Format::ABGR8UscaledPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r) & 0xff) << 0 |
-			(static_cast<uint32_t>(value.g) & 0xff) << 8 |
-			(static_cast<uint32_t>(value.b) & 0xff) << 16 |
-			(static_cast<uint32_t>(value.a) & 0xff) << 24;
+			(static_cast<uint32_t>(value.x) & 0xff) << 0 |
+			(static_cast<uint32_t>(value.y) & 0xff) << 8 |
+			(static_cast<uint32_t>(value.z) & 0xff) << 16 |
+			(static_cast<uint32_t>(value.w) & 0xff) << 24;
 	} return;
 	case Format::ABGR8SscaledPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r) & 0xff) << 0 |
-			(static_cast<int32_t>(value.g) & 0xff) << 8 |
-			(static_cast<int32_t>(value.b) & 0xff) << 16 |
-			(static_cast<int32_t>(value.a) & 0xff) << 24;
+			(static_cast<int32_t>(value.x) & 0xff) << 0 |
+			(static_cast<int32_t>(value.y) & 0xff) << 8 |
+			(static_cast<int32_t>(value.z) & 0xff) << 16 |
+			(static_cast<int32_t>(value.w) & 0xff) << 24;
 	} return;
 	case Format::ABGR8UintPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r) & 0xff) << 0 |
-			(static_cast<uint32_t>(value.g) & 0xff) << 8 |
-			(static_cast<uint32_t>(value.b) & 0xff) << 16 |
-			(static_cast<uint32_t>(value.a) & 0xff) << 24;
+			(static_cast<uint32_t>(value.x) & 0xff) << 0 |
+			(static_cast<uint32_t>(value.y) & 0xff) << 8 |
+			(static_cast<uint32_t>(value.z) & 0xff) << 16 |
+			(static_cast<uint32_t>(value.w) & 0xff) << 24;
 	} return;
 	case Format::ABGR8SintPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r) & 0xff) << 0 |
-			(static_cast<int32_t>(value.g) & 0xff) << 8 |
-			(static_cast<int32_t>(value.b) & 0xff) << 16 |
-			(static_cast<int32_t>(value.a) & 0xff) << 24;
+			(static_cast<int32_t>(value.x) & 0xff) << 0 |
+			(static_cast<int32_t>(value.y) & 0xff) << 8 |
+			(static_cast<int32_t>(value.z) & 0xff) << 16 |
+			(static_cast<int32_t>(value.w) & 0xff) << 24;
 	} return;
 	//case Format::ABGR8SrgbPack32: {
 	//
 	//}
 	case Format::A2RGB10UnormPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r * 1023.99f) & 0x3ff) << 20 |
-			(static_cast<uint32_t>(value.g * 1023.99f) & 0x3ff) << 10 |
-			(static_cast<uint32_t>(value.b * 1023.99f) & 0x3ff) << 0 |
-			(static_cast<uint32_t>(value.a * 3.99f) & 0x003) << 30;
+			(static_cast<uint32_t>(value.x * 1023.99f) & 0x3ff) << 20 |
+			(static_cast<uint32_t>(value.y * 1023.99f) & 0x3ff) << 10 |
+			(static_cast<uint32_t>(value.z * 1023.99f) & 0x3ff) << 0 |
+			(static_cast<uint32_t>(value.w * 3.99f) & 0x003) << 30;
 	} return;
 	case Format::A2RGB10SnormPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r * (0 < value.r ? 512.99f : -511.99f)) & 0x3ff) << 20 |
-			(static_cast<int32_t>(value.g * (0 < value.g ? 512.99f : -511.99f)) & 0x3ff) << 10 |
-			(static_cast<int32_t>(value.b * (0 < value.b ? 512.99f : -511.99f)) & 0x3ff) << 0 |
-			(static_cast<int32_t>(value.a * (0 < value.a ? -2.99f : -1.99f)) & 0x003) << 30;
+			(static_cast<int32_t>(value.x * (0 < value.x ? 512.99f : -511.99f)) & 0x3ff) << 20 |
+			(static_cast<int32_t>(value.y * (0 < value.y ? 512.99f : -511.99f)) & 0x3ff) << 10 |
+			(static_cast<int32_t>(value.z * (0 < value.z ? 512.99f : -511.99f)) & 0x3ff) << 0 |
+			(static_cast<int32_t>(value.w * (0 < value.w ? -2.99f : -1.99f)) & 0x003) << 30;
 	} return;
 	case Format::A2RGB10UscaledPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r) & 0x3ff) << 20 |
-			(static_cast<uint32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<uint32_t>(value.b) & 0x3ff) << 0 |
-			(static_cast<uint32_t>(value.a) & 0x003) << 30;
+			(static_cast<uint32_t>(value.x) & 0x3ff) << 20 |
+			(static_cast<uint32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<uint32_t>(value.z) & 0x3ff) << 0 |
+			(static_cast<uint32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A2RGB10SscaledPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r) & 0x3ff) << 20 |
-			(static_cast<int32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<int32_t>(value.b) & 0x3ff) << 0 |
-			(static_cast<int32_t>(value.a) & 0x003) << 30;
+			(static_cast<int32_t>(value.x) & 0x3ff) << 20 |
+			(static_cast<int32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<int32_t>(value.z) & 0x3ff) << 0 |
+			(static_cast<int32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A2RGB10UintPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r) & 0x3ff) << 20 |
-			(static_cast<uint32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<uint32_t>(value.b) & 0x3ff) << 0 |
-			(static_cast<uint32_t>(value.a) & 0x003) << 30;
+			(static_cast<uint32_t>(value.x) & 0x3ff) << 20 |
+			(static_cast<uint32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<uint32_t>(value.z) & 0x3ff) << 0 |
+			(static_cast<uint32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A2RGB10SintPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r) & 0x3ff) << 20 |
-			(static_cast<int32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<int32_t>(value.b) & 0x3ff) << 0 |
-			(static_cast<int32_t>(value.a) & 0x003) << 30;
+			(static_cast<int32_t>(value.x) & 0x3ff) << 20 |
+			(static_cast<int32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<int32_t>(value.z) & 0x3ff) << 0 |
+			(static_cast<int32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A2BGR10UnormPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r * 1023.99f) & 0x3ff) << 0 |
-			(static_cast<uint32_t>(value.g * 1023.99f) & 0x3ff) << 10 |
-			(static_cast<uint32_t>(value.b * 1023.99f) & 0x3ff) << 20 |
-			(static_cast<uint32_t>(value.a * 3.99f) & 0x003) << 30;
+			(static_cast<uint32_t>(value.x * 1023.99f) & 0x3ff) << 0 |
+			(static_cast<uint32_t>(value.y * 1023.99f) & 0x3ff) << 10 |
+			(static_cast<uint32_t>(value.z * 1023.99f) & 0x3ff) << 20 |
+			(static_cast<uint32_t>(value.w * 3.99f) & 0x003) << 30;
 	} return;
 	case Format::A2BGR10SnormPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r * (0 < value.r ? 512.99f : -511.99f)) & 0x3ff) << 0 |
-			(static_cast<int32_t>(value.g * (0 < value.g ? 512.99f : -511.99f)) & 0x3ff) << 10 |
-			(static_cast<int32_t>(value.b * (0 < value.b ? 512.99f : -511.99f)) & 0x3ff) << 20 |
-			(static_cast<int32_t>(value.a * (0 < value.a ? -2.99f : -1.99f)) & 0x003) << 30;
+			(static_cast<int32_t>(value.x * (0 < value.x ? 512.99f : -511.99f)) & 0x3ff) << 0 |
+			(static_cast<int32_t>(value.y * (0 < value.y ? 512.99f : -511.99f)) & 0x3ff) << 10 |
+			(static_cast<int32_t>(value.z * (0 < value.z ? 512.99f : -511.99f)) & 0x3ff) << 20 |
+			(static_cast<int32_t>(value.w * (0 < value.w ? -2.99f : -1.99f)) & 0x003) << 30;
 	} return;
 	case Format::A2BGR10UscaledPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r) & 0x3ff) << 0 |
-			(static_cast<uint32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<uint32_t>(value.b) & 0x3ff) << 20 |
-			(static_cast<uint32_t>(value.a) & 0x003) << 30;
+			(static_cast<uint32_t>(value.x) & 0x3ff) << 0 |
+			(static_cast<uint32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<uint32_t>(value.z) & 0x3ff) << 20 |
+			(static_cast<uint32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A2BGR10SscaledPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r) & 0x3ff) << 0 |
-			(static_cast<int32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<int32_t>(value.b) & 0x3ff) << 20 |
-			(static_cast<int32_t>(value.a) & 0x003) << 30;
+			(static_cast<int32_t>(value.x) & 0x3ff) << 0 |
+			(static_cast<int32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<int32_t>(value.z) & 0x3ff) << 20 |
+			(static_cast<int32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A2BGR10UintPack32: {
 		fetch_pixel<uint32_t>(ptr, width, x, y) =
-			(static_cast<uint32_t>(value.r) & 0x3ff) << 0 |
-			(static_cast<uint32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<uint32_t>(value.b) & 0x3ff) << 20 |
-			(static_cast<uint32_t>(value.a) & 0x003) << 30;
+			(static_cast<uint32_t>(value.x) & 0x3ff) << 0 |
+			(static_cast<uint32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<uint32_t>(value.z) & 0x3ff) << 20 |
+			(static_cast<uint32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A2BGR10SintPack32: {
 		fetch_pixel<int32_t>(ptr, width, x, y) =
-			(static_cast<int32_t>(value.r) & 0x3ff) << 0 |
-			(static_cast<int32_t>(value.g) & 0x3ff) << 10 |
-			(static_cast<int32_t>(value.b) & 0x3ff) << 20 |
-			(static_cast<int32_t>(value.a) & 0x003) << 30;
+			(static_cast<int32_t>(value.x) & 0x3ff) << 0 |
+			(static_cast<int32_t>(value.y) & 0x3ff) << 10 |
+			(static_cast<int32_t>(value.z) & 0x3ff) << 20 |
+			(static_cast<int32_t>(value.w) & 0x003) << 30;
 	} return;
 	case Format::A8Unorm: {
-		fetch_pixel<uint8_t>(ptr, width, x, y) = F2UNORM(uint8_t, value.a);
+		fetch_pixel<uint8_t>(ptr, width, x, y) = F2UNORM(uint8_t, value.w);
 	} return;
 	}
 

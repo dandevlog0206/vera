@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_object.h"
+#include "texture.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -18,6 +18,11 @@ public:
 
 	obj<Device> getDevice();
 	obj<CommandBuffer> getRenderCommand();
+
+	void transitionImageLayout(
+		ref<Texture> texture,
+		ImageLayout  old_layout,
+		ImageLayout  new_layout);
 
 	void draw(
 		const GraphicsState& states,

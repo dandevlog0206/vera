@@ -33,7 +33,6 @@ struct RenderFrame
 
 	obj<CommandBuffer> renderCommand;
 	FrameBuffers       framebuffers;
-	FrameSync          frameSync;
 	obj<Semaphore>     renderCompleteSemaphore;
 	obj<Fence>         fence;
 	uint64_t           frameID;
@@ -47,7 +46,6 @@ struct RenderContextImpl
 
 	RenderFrames renderFrames;
 	int32_t      frameIndex;
-	int32_t      lastFrameIndex;
 	uint64_t     currentFrameID;
 };
 

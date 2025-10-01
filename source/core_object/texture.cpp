@@ -211,7 +211,7 @@ void Texture::upload(const Image& image)
 		0,
 		0,
 		0,
-		int3(),
+		uint3(),
 		extent3d(impl.width, impl.height, impl.depth));
 
 	command_buffer->transitionImageLayout(

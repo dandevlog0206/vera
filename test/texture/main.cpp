@@ -107,7 +107,7 @@ public:
 
 		auto  vertex_memory = m_pass->getVertexBuffer()->getDeviceMemory();
 		auto* map           = reinterpret_cast<Vertex*>(vertex_memory->map());
-		auto  aspect        = image.width() / image.height();
+		auto  aspect        = static_cast<float>(image.width()) / image.height();
 
 		for (uint32_t i = 0; i < 36; i += 6) {
 			vr::float2 v0  = { 0, 0};

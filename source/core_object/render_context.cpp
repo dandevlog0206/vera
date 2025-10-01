@@ -16,29 +16,43 @@
 
 VERA_NAMESPACE_BEGIN
 
-static void append_render_frame(RenderContextImpl& impl, uint32_t at)
+static void append_render_frame(RenderContextImpl& impl, uint32_t at, uint64_t id)
 {
 	auto* render_frame = *impl.renderFrames.emplace(impl.renderFrames.cbegin() + at, new RenderFrame);
 
 	render_frame->renderCommand           = CommandBuffer::create(impl.device);
 	render_frame->framebuffers            = {};
-	render_frame->frameSync               = FrameSync(*render_frame, impl.currentFrameID + 1);
 	render_frame->renderCompleteSemaphore = Semaphore::create(impl.device);
 	render_frame->fence                   = Fence::create(impl.device);
-	render_frame->frameID                 = impl.currentFrameID + 1;
+	render_frame->frameID                 = id;
 
-	render_frame->renderCommand->begin();	
+	render_frame->renderCommand->begin();
 }
 
-static void reset_render_frame(RenderContextImpl& impl, RenderFrame& render_frame)
+static void reset_render_frame(RenderContextImpl& impl, RenderFrame& render_frame, uint64_t id)
 {
 	render_frame.renderCommand->reset();
 	render_frame.framebuffers.clear();
-	render_frame.frameSync = FrameSync(render_frame, impl.currentFrameID + 1);
 	render_frame.fence->reset();
-	render_frame.frameID   = impl.currentFrameID + 1;
+	render_frame.frameID = id;
 
 	render_frame.renderCommand->begin();
+}
+
+static void render_context_next_frame(RenderContextImpl& impl)
+{
+	auto  next_idx   = (impl.frameIndex + 1) % static_cast<int32_t>(impl.renderFrames.size());
+	auto& next_frame = *impl.renderFrames[next_idx];
+
+	impl.currentFrameID++;
+
+	if (next_frame.fence->signaled()) {
+		reset_render_frame(impl, next_frame, impl.currentFrameID);
+		impl.frameIndex = next_idx;
+	} else {
+		append_render_frame(impl, impl.frameIndex + 1, impl.currentFrameID);
+		impl.frameIndex = impl.frameIndex + 1;
+	}
 }
 
 static RenderFrame& get_render_frame(RenderContextImpl& impl)
@@ -84,10 +98,9 @@ obj<RenderContext> RenderContext::create(obj<Device> device)
 
 	impl.device         = std::move(device);
 	impl.frameIndex     = 0;
-	impl.lastFrameIndex = -1;
 	impl.currentFrameID = 0;
 
-	append_render_frame(impl, 0);
+	append_render_frame(impl, 0, 0);
 
 	return obj;
 }
@@ -114,10 +127,43 @@ obj<CommandBuffer> RenderContext::getRenderCommand()
 	return impl.renderFrames[impl.frameIndex]->renderCommand;
 }
 
+void RenderContext::transitionImageLayout(ref<Texture> texture, ImageLayout old_layout, ImageLayout new_layout)
+{
+	auto& impl     = getImpl(this);
+	auto& cmd      = get_render_frame(impl).renderCommand;
+	auto& cmd_impl = getImpl(cmd);
+
+	if (!cmd_impl.currentRenderingInfo.colorAttachments.empty())
+		cmd->endRendering();
+
+	if (old_layout == ImageLayout::Undefined && new_layout == ImageLayout::AttachmentOptimal) {
+		cmd->transitionImageLayout(
+			texture,
+			vr::PipelineStageFlagBits::ColorAttachmentOutput,
+			vr::PipelineStageFlagBits::ColorAttachmentOutput,
+			vr::AccessFlagBits{},
+			vr::AccessFlagBits::ColorAttachmentWrite,
+			vr::ImageLayout::Undefined,
+			vr::ImageLayout::ColorAttachmentOptimal);
+	} else if (old_layout == ImageLayout::ColorAttachmentOptimal && new_layout == ImageLayout::PresentSrc) {
+		cmd->transitionImageLayout(
+			texture,
+			vr::PipelineStageFlagBits::ColorAttachmentOutput,
+			vr::PipelineStageFlagBits::BottomOfPipe,
+			vr::AccessFlagBits::ColorAttachmentWrite | vr::AccessFlagBits::ColorAttachmentWrite,
+			vr::AccessFlagBits{},
+			vr::ImageLayout::ColorAttachmentOptimal,
+			vr::ImageLayout::PresentSrc);
+	} else {
+		throw Exception("unsupported image layout transition");
+	}
+}
+
 void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32_t vtx_off)
 {
-	auto& impl = getImpl(this);
-	auto& cmd  = get_render_frame(impl).renderCommand;
+	auto& impl     = getImpl(this);
+	auto& cmd      = get_render_frame(impl).renderCommand;
+
 
 	states.bindCommandBuffer(cmd);
 
@@ -145,7 +191,7 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.frameSync = render_frame.frameSync;
+				framebuffer_impl.frameSync = FrameSync(render_frame, impl.currentFrameID);
 			}
 		}
 
@@ -167,26 +213,19 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 
 void RenderContext::submit()
 {
+	static_vector<vk::Semaphore, 32>          semaphores;
+	static_vector<vk::PipelineStageFlags, 32> stage_masks;
+
 	auto& impl         = getImpl(this);
 	auto& device_impl  = getImpl(impl.device);
 	auto& render_frame = *impl.renderFrames[impl.frameIndex];
 	auto& command_impl = getImpl(render_frame.renderCommand);
-	auto  next_index   = (impl.frameIndex + 1) % static_cast<int32_t>(impl.renderFrames.size());
-	auto& next_frame   = *impl.renderFrames[next_index];
 
-	if (!command_impl.currentRenderingInfo.colorAttachments.empty())
-		render_frame.renderCommand->endRendering();
-
-	for (auto& framebuffer : render_frame.framebuffers) {
-		render_frame.renderCommand->transitionImageLayout(
+	for (auto& framebuffer : render_frame.framebuffers)
+		transitionImageLayout(
 			framebuffer->getTexture(),
-			vr::PipelineStageFlagBits::ColorAttachmentOutput,
-			vr::PipelineStageFlagBits::BottomOfPipe,
-			vr::AccessFlagBits::ColorAttachmentWrite | vr::AccessFlagBits::ColorAttachmentWrite,
-			vr::AccessFlagBits{},
-			vr::ImageLayout::ColorAttachmentOptimal,
-			vr::ImageLayout::PresentSrc);
-	}
+			ImageLayout::ColorAttachmentOptimal,
+			ImageLayout::PresentSrc);
 
 	render_frame.renderCommand->end();
 
@@ -196,12 +235,13 @@ void RenderContext::submit()
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &get_vk_semaphore(render_frame.renderCompleteSemaphore);
 
-	static_vector<vk::Semaphore, 32>          semaphores;
-	static_vector<vk::PipelineStageFlags, 32> stage_masks;
-
 	if (!render_frame.framebuffers.empty()) {
 		for (auto& framebuffer : render_frame.framebuffers) {
-			semaphores.push_back(get_vk_semaphore(getImpl(framebuffer).waitSemaphore));
+			auto& framebuffer_impl = getImpl(framebuffer);
+
+			if (!framebuffer_impl.waitSemaphore) continue;
+
+			semaphores.push_back(get_vk_semaphore(framebuffer_impl.waitSemaphore));
 			stage_masks.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
 		}
 
@@ -212,14 +252,7 @@ void RenderContext::submit()
 
 	device_impl.graphicsQueue.submit(submit_info, get_vk_fence(render_frame.fence));
 
-	if (next_frame.fence->signaled()) {
-		reset_render_frame(impl, next_frame);
-		impl.lastFrameIndex = std::exchange(impl.frameIndex, next_index);
-	} else {
-		append_render_frame(impl, impl.frameIndex + 1);
-		impl.lastFrameIndex = std::exchange(impl.frameIndex, impl.frameIndex + 1);
-	}
-	impl.currentFrameID++;
+	render_context_next_frame(impl);
 }
 
 VERA_NAMESPACE_END

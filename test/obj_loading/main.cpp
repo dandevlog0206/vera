@@ -114,7 +114,7 @@ public:
 	void drawFrame()
 	{
 		if (m_swapchain->isOccluded()) return;
-
+	
 		auto proj = vr::perspective(vr::to_radian(45.f), m_window.getAspect(), 0.1f, 100.f);
 		auto view = m_camera->getMatrix();
 
@@ -141,6 +141,7 @@ private:
 
 int main()
 {
+
 	try {
 		MyApp app;
 		app.run();

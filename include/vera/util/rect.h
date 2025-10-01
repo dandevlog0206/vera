@@ -10,7 +10,7 @@ template <class T, bool Integral>
 struct rect_base {
 	using value_type  = T;
 	using size_type   = T;
-	using vector_type = vector_base<2, value_type>;
+	using vector_type = vector_base<2, value_type, packed_mediump>;
 	using extent_type = extent_base<2, size_type>; 
 
 	VERA_CONSTEXPR rect_base() VERA_NOEXCEPT = default;
@@ -31,7 +31,7 @@ template <class T>
 struct rect_base<T, true> {
 	using value_type  = T;
 	using size_type   = std::make_unsigned_t<T>;
-	using point_type  = vector_base<2, value_type>;
+	using point_type  = vector_base<2, value_type, packed_mediump>;
 	using extent_type = extent_base<2, size_type>; 
 
 	VERA_CONSTEXPR rect_base() VERA_NOEXCEPT = default;

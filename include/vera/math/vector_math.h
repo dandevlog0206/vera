@@ -2,54 +2,55 @@
 
 #include "vector_types.h"
 #include "matrix_types.h"
+#include "radian.h"
 #include <cmath>
 
 VERA_NAMESPACE_BEGIN
 
-template <class T>
-VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<2, T>& v) VERA_NOEXCEPT
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<2, T, Q>& v) VERA_NOEXCEPT
 {
 	return std::sqrtf(v.x * v.x + v.y * v.y);
 }
 
-template <class T>
-VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<3, T>& v) VERA_NOEXCEPT
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<3, T, Q>& v) VERA_NOEXCEPT
 {
 	return std::sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
-template <class T>
-VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<4, T>& v) VERA_NOEXCEPT
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<4, T, Q>& v) VERA_NOEXCEPT
 {
 	return std::sqrtf(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
 }
 
-template <size_t Dim, class T>
-VERA_NODISCARD VERA_CONSTEXPR float distance(const vector_base<Dim, T>& lhs, const vector_base<Dim, T>& rhs) VERA_NOEXCEPT
+template <size_t Dim, class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float distance(const vector_base<Dim, T, Q>& lhs, const vector_base<Dim, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return length(rhs - lhs);
 }
 
-template <class T>
-VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<2, T>& lhs, const vector_base<2, T>& rhs) VERA_NOEXCEPT
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<2, T, Q>& lhs, const vector_base<2, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return lhs.x * rhs.x + lhs.y * rhs.y;
 }
 
-template <class T>
-VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<3, T>& lhs, const vector_base<3, T>& rhs) VERA_NOEXCEPT
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<3, T, Q>& lhs, const vector_base<3, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 }
 
-template <class T>
-VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<4, T>& lhs, const vector_base<4, T>& rhs) VERA_NOEXCEPT
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<4, T, Q>& lhs, const vector_base<4, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
 }
 
-template <class T>
-VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T> cross(const vector_base<3, T>& lhs, const vector_base<3, T>& rhs) VERA_NOEXCEPT
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T, Q> cross(const vector_base<3, T, Q>& lhs, const vector_base<3, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return {
 		lhs.y * rhs.z - rhs.y * lhs.z,
@@ -57,21 +58,20 @@ VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T> cross(const vector_base<3, T>& l
 		lhs.x * rhs.y - rhs.x * lhs.y };
 }
 
-// TODO: glm::normalize???
-//template <size_t Dim, class T>
-//VERA_NODISCARD VERA_CONSTEXPR vector_base<Dim, T> normalize(const vector_base<Dim, T>& v) VERA_NOEXCEPT
-//{
-//	return v / length(v);
-//}
-
-template<typename T>
-VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T> lookAt(const vector_base<3, T>& eye, const vector_base<3, T>& center, const vector_base<3, T>& up)
+template <size_t Dim, class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<Dim, T, Q> normalize(const vector_base<Dim, T, Q>& v) VERA_NOEXCEPT
 {
-	const vector_base<3, T> f(normalize(center - eye));
-	const vector_base<3, T> s(normalize(cross(up, f)));
-	const vector_base<3, T> u(cross(f, s));
+	return v / length(v);
+}
 
-	matrix_base<4, 4, T> result(1.f);
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T, Q> lookAt(const vector_base<3, T, Q>& eye, const vector_base<3, T, Q>& center, const vector_base<3, T, Q>& up)
+{
+	const vector_base<3, T, Q> f(normalize(center - eye));
+	const vector_base<3, T, Q> s(normalize(cross(up, f)));
+	const vector_base<3, T, Q> u(cross(f, s));
+
+	matrix_base<4, 4, T, Q> result(1.f);
 	result[0][0] = s.x;
 	result[1][0] = s.y;
 	result[2][0] = s.z;
@@ -88,10 +88,10 @@ VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T> lookAt(const vector_base<3, T
 	return result;
 }
 
-template<typename T>
-VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T> ortho(T left, T right, T bottom, T top)
+template <class T>
+VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T, packed_highp> ortho(T left, T right, T bottom, T top)
 {
-	matrix_base<4, 4, T> result(static_cast<T>(1.));
+	matrix_base<4, 4, T, packed_highp> result(static_cast<T>(1.));
 
 	result[0][0] = static_cast<T>(2.) / (right - left);
 	result[1][1] = static_cast<T>(2.) / (top - bottom);
@@ -102,14 +102,12 @@ VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T> ortho(T left, T right, T bott
 	return result;
 }
 
-template<typename T>
-VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T> perspective(T fovy, T aspect, T z_near, T z_far)
+template <class T>
+VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T, packed_highp> perspective(radian fovy, T aspect, T z_near, T z_far)
 {
-	assert(abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0.));
-
 	T const tan_half_fovy = tan(fovy / static_cast<T>(2.));
 
-	matrix_base<4, 4, T> result(static_cast<T>(0.));
+	matrix_base<4, 4, T, packed_highp> result(static_cast<T>(0.));
 	result[0][0] = static_cast<T>(1.) / (aspect * tan_half_fovy);
 	result[1][1] = static_cast<T>(1.) / (tan_half_fovy);
 	result[2][2] = z_far / (z_far - z_near);
@@ -120,24 +118,24 @@ VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T> perspective(T fovy, T aspect,
 }
 
 // detail/func_geometric.inl
-//using glm::faceforward;
-//using glm::reflect;
-//using glm::refract;
+//using faceforward;
+//using reflect;
+//using refract;
 
 //// gtc/epsilon.hpp
-//using glm::epsilonEqual;
-//using glm::epsilonNotEqual;
+//using epsilonEqual;
+//using epsilonNotEqual;
 //
 //// gtc/noise.hpp
-//using glm::perlin;
-//using glm::simplex;
+//using perlin;
+//using simplex;
 //
 //// gtc/random.hpp
-//using glm::linearRand;
-//using glm::gaussRand;
-//using glm::circularRand;
-//using glm::sphericalRand;
-//using glm::diskRand;
-//using glm::ballRand;
+//using linearRand;
+//using gaussRand;
+//using circularRand;
+//using sphericalRand;
+//using diskRand;
+//using ballRand;
 
 VERA_NAMESPACE_END

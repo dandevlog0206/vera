@@ -321,7 +321,7 @@ Image ImageEdit::createMask(const Image& image, uint32_t at_x, uint32_t at_y, fl
 			float4 color = fetch_components(ptr, width, x, y, format);
 
 			if (similarity < (dot(target_color, color) / length(target_color) / length(color)))
-				color.a = alpha;
+				color.w = alpha;
 			
 			store_components(result_ptr, width, x, y, format, color);
 		}

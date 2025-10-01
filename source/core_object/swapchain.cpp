@@ -270,13 +270,14 @@ ref<FrameBuffer> Swapchain::acquireNextImage()
 			get_vk_semaphore(sync.waitSemaphore));
 
 		if (result.result == vk::Result::eSuccess) {
-			auto  framebuffer      = impl.framebuffers[result.value];
+			impl.acquiredImageIndex = sync.imageIndex = result.value;
+
+			auto  framebuffer      = impl.framebuffers[impl.acquiredImageIndex];
 			auto& framebuffer_impl = getImpl(framebuffer);
 			auto& texture_impl     = getImpl(framebuffer_impl.colorAttachment);
 
-			impl.acquiredImageIndex        = result.value;
-			sync.imageIndex                = result.value;
 			framebuffer_impl.waitSemaphore = sync.waitSemaphore;
+			framebuffer_impl.frameSync     = {};
 			texture_impl.imageLayout       = vk::ImageLayout::eUndefined;
 
 			return framebuffer;
@@ -300,19 +301,24 @@ void Swapchain::recreate()
 
 void Swapchain::present()
 {
-	auto& impl         = getImpl(this);
-	auto& device_impl  = getImpl(impl.device);
-	auto& texture_impl = getImpl(impl.framebuffers[impl.acquiredImageIndex]);
-	auto  semaphore    = texture_impl.frameSync.getRenderCompleteSemaphore();
+	auto& impl            = getImpl(this);
+	auto& device_impl     = getImpl(impl.device);
+	auto& texture_impl    = getImpl(impl.framebuffers[impl.acquiredImageIndex]);
+	auto  frame_sync      = texture_impl.frameSync;
 
-	if (!semaphore) {
+	if (frame_sync.empty())
+		throw Exception("swapchain image is not used in any draw commands");
+
+	auto render_complete_semaphore = frame_sync.getRenderCompleteSemaphore();
+
+	if (!render_complete_semaphore) {
 		device_impl.device.waitIdle();
-		throw Exception("cannot find frame for current image");
+		throw Exception("cannot find frame for current swapchain image");
 	}
 
 	vk::PresentInfoKHR present_info;
 	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores    = &get_vk_semaphore(semaphore);
+	present_info.pWaitSemaphores    = &get_vk_semaphore(render_complete_semaphore);
 	present_info.swapchainCount     = 1;
 	present_info.pSwapchains        = &impl.swapchain;
 	present_info.pImageIndices      = reinterpret_cast<uint32_t*>(&impl.acquiredImageIndex);

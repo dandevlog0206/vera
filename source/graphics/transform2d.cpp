@@ -1,5 +1,7 @@
 #include "../../include/vera/graphics/transform2d.h"
 
+#include <cmath>
+
 VERA_NAMESPACE_BEGIN
 
 Transform2D::Transform2D() :

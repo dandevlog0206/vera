@@ -1,39 +1,35 @@
 #pragma once
 
-#include "../core/coredefs.h"
-#include <glm/detail/type_mat2x2.hpp>
-#include <glm/detail/type_mat2x3.hpp>
-#include <glm/detail/type_mat2x4.hpp>
-#include <glm/detail/type_mat3x2.hpp>
-#include <glm/detail/type_mat3x3.hpp>
-#include <glm/detail/type_mat3x4.hpp>
-#include <glm/detail/type_mat4x2.hpp>
-#include <glm/detail/type_mat4x3.hpp>
-#include <glm/detail/type_mat4x4.hpp>
+#include "detail/matrix2x2.h"
+#include "detail/matrix2x3.h"
+#include "detail/matrix2x4.h"
+#include "detail/matrix3x2.h"
+#include "detail/matrix3x3.h"
+#include "detail/matrix3x4.h"
+#include "detail/matrix4x2.h"
+#include "detail/matrix4x3.h"
+#include "detail/matrix4x4.h"
 
 VERA_NAMESPACE_BEGIN
 
-template <size_t col, size_t row, class T>
-using matrix_base = glm::mat<col, row, T, glm::packed_highp>;
+typedef matrix_base<2, 2, float, packed_highp> float2x2;
+typedef matrix_base<2, 3, float, packed_highp> float2x3;
+typedef matrix_base<2, 4, float, packed_highp> float2x4;
+typedef matrix_base<3, 2, float, packed_highp> float3x2;
+typedef matrix_base<3, 3, float, packed_highp> float3x3;
+typedef matrix_base<3, 4, float, packed_highp> float3x4;
+typedef matrix_base<4, 2, float, packed_highp> float4x2;
+typedef matrix_base<4, 3, float, packed_highp> float4x3;
+typedef matrix_base<4, 4, float, packed_highp> float4x4;
 
-typedef glm::mat<2, 2, float, glm::packed_highp> float2x2;
-typedef glm::mat<2, 3, float, glm::packed_highp> float2x3;
-typedef glm::mat<2, 4, float, glm::packed_highp> float2x4;
-typedef glm::mat<3, 2, float, glm::packed_highp> float3x2;
-typedef glm::mat<3, 3, float, glm::packed_highp> float3x3;
-typedef glm::mat<3, 4, float, glm::packed_highp> float3x4;
-typedef glm::mat<4, 2, float, glm::packed_highp> float4x2;
-typedef glm::mat<4, 3, float, glm::packed_highp> float4x3;
-typedef glm::mat<4, 4, float, glm::packed_highp> float4x4;
-
-typedef glm::mat<2, 2, double, glm::packed_highp> double2x2;
-typedef glm::mat<2, 3, double, glm::packed_highp> double2x3;
-typedef glm::mat<2, 4, double, glm::packed_highp> double2x4;
-typedef glm::mat<3, 2, double, glm::packed_highp> double3x2;
-typedef glm::mat<3, 3, double, glm::packed_highp> double3x3;
-typedef glm::mat<3, 4, double, glm::packed_highp> double3x4;
-typedef glm::mat<4, 2, double, glm::packed_highp> double4x2;
-typedef glm::mat<4, 3, double, glm::packed_highp> double4x3;
-typedef glm::mat<4, 4, double, glm::packed_highp> double4x4;
+typedef matrix_base<2, 2, double, packed_highp> double2x2;
+typedef matrix_base<2, 3, double, packed_highp> double2x3;
+typedef matrix_base<2, 4, double, packed_highp> double2x4;
+typedef matrix_base<3, 2, double, packed_highp> double3x2;
+typedef matrix_base<3, 3, double, packed_highp> double3x3;
+typedef matrix_base<3, 4, double, packed_highp> double3x4;
+typedef matrix_base<4, 2, double, packed_highp> double4x2;
+typedef matrix_base<4, 3, double, packed_highp> double4x3;
+typedef matrix_base<4, 4, double, packed_highp> double4x4;
 
 VERA_NAMESPACE_END

@@ -16,15 +16,6 @@ static vk::ImageView get_vk_image_view(ref<Texture> texture)
 	return get_vk_image_view(texture->getTextureView());
 }
 
-static void clear_rendering_info(RenderingInfo& info)
-{
-	info.renderArea = {};
-	info.layerCount = 1;
-	info.colorAttachments.clear();
-	info.depthAttachment.reset();
-	info.stencilAttachment.reset();
-}
-
 vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> render_command)
 {
 	return CoreObject::getImpl(render_command).commandBuffer;
@@ -310,8 +301,8 @@ void CommandBuffer::endRendering()
 
 	impl.commandBuffer.endRendering();
 
-	impl.currentPipeline = {};
-	clear_rendering_info(impl.currentRenderingInfo);
+	impl.currentPipeline      = {};
+	impl.currentRenderingInfo = {};
 }
 
 void CommandBuffer::end()
@@ -326,12 +317,12 @@ void CommandBuffer::reset()
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 	
-	impl.currentViewport     = {};
-	impl.currentScissor      = {};
-	impl.currentVertexBuffer = {};
-	impl.currentIndexBuffer  = {};
-	clear_rendering_info(impl.currentRenderingInfo);
-	impl.currentPipeline     = {};
+	impl.currentViewport      = {};
+	impl.currentScissor       = {};
+	impl.currentVertexBuffer  = {};
+	impl.currentIndexBuffer   = {};
+	impl.currentRenderingInfo = {};
+	impl.currentPipeline      = {};
 
 	vk_device.resetCommandPool(impl.commandPool);
 }
