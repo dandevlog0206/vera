@@ -73,27 +73,80 @@ static bool check_swapchain_format(vk::PhysicalDevice physical_device, vk::Surfa
 	return iter != formats.cend();
 }
 
-static void recreate_swapchain_sync(SwapchainImpl& impl)
+static void prepare_swapchain_sync(SwapchainImpl& impl)
 {
-	impl.syncs.clear();
-
-	while (impl.syncs.size() < impl.imageCount) {
-		auto& sync = impl.syncs.emplace_back();
-		sync.waitSemaphore = Semaphore::create(impl.device);
-		sync.imageIndex    = -1;
-	}
+	while (impl.imageCount < impl.syncs.size())
+		impl.syncs.pop_back();
+	for (auto& sync : impl.syncs)
+		sync.imageIndex = -1;
+	while (impl.syncs.size() < impl.imageCount)
+		impl.syncs.emplace_back(Semaphore::create(impl.device), -1);
 }
 
-static void clear_swapchain_framebuffers(SwapchainImpl& impl)
+static void set_framebuffer_color_image(ref<FrameBuffer> framebuffer, vk::Image vk_image)
 {
-	for (auto& framebuffer : impl.framebuffers) {
-		auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
-		auto& texture_impl     = CoreObject::getImpl(framebuffer_impl.colorAttachment);
+	auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
+	auto& texture_impl     = CoreObject::getImpl(framebuffer_impl.colorAttachment);
 
-		texture_impl.image = nullptr;
+	texture_impl.image = vk_image;
+}
+
+static void prepare_framebuffer(DeviceImpl& device_impl, SwapchainImpl& impl)
+{
+	uint32_t  swapchain_image_count = impl.imageCount;
+	vk::Image swapchain_images[MAX_SWAPCHAIN_IMAGE_COUNT];
+
+	auto result = device_impl.device.getSwapchainImagesKHR(
+		impl.swapchain, &swapchain_image_count, swapchain_images);
+	
+	VERA_ASSERT(result == vk::Result::eSuccess && swapchain_image_count < MAX_SWAPCHAIN_IMAGE_COUNT);
+
+	while (impl.imageCount < impl.framebuffers.size()) {
+		set_framebuffer_color_image(impl.framebuffers.back(), nullptr);
+		impl.framebuffers.pop_back();
 	}
 
-	impl.framebuffers.clear();
+	for (size_t i = 0; i < impl.framebuffers.size(); ++i) {
+		auto& framebuffer_impl = CoreObject::getImpl(impl.framebuffers[i]);
+		auto& texture_impl     = CoreObject::getImpl(framebuffer_impl.colorAttachment);
+
+		texture_impl.textureView = {};
+		texture_impl.image       = swapchain_images[i];
+		texture_impl.width       = impl.width;
+		texture_impl.height      = impl.height;
+
+		framebuffer_impl.width  = impl.width;
+		framebuffer_impl.height = impl.height;
+		framebuffer_impl.format = impl.imageFormat;
+
+		// create image view
+		framebuffer_impl.colorAttachment->getTextureView();
+	}
+
+	for (size_t i = impl.framebuffers.size(); i < static_cast<size_t>(impl.imageCount); ++i) {
+		auto  framebuffer      = SwapchainFactory::createFrameBuffer(impl);
+		auto  texture          = SwapchainFactory::createTexture(impl);
+		auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
+		auto& texture_impl     = CoreObject::getImpl(texture);
+
+		texture_impl.frameBuffer = framebuffer;
+		texture_impl.image       = swapchain_images[i];
+		texture_impl.imageUsage  = SWAPCHAIN_IMAGE_USAGE | ImageUsageFlagBits::FrameBuffer;
+		texture_impl.width       = impl.width;
+		texture_impl.height      = impl.height;
+		texture_impl.depth       = 1;
+
+		// create image view
+		texture->getTextureView();
+
+		framebuffer_impl.device          = impl.device;
+		framebuffer_impl.colorAttachment = std::move(texture);
+		framebuffer_impl.width           = impl.width;
+		framebuffer_impl.height          = impl.height;
+		framebuffer_impl.format          = impl.imageFormat;
+
+		impl.framebuffers.push_back(std::move(framebuffer));
+	}
 }
 
 static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
@@ -111,7 +164,7 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 
 	device_impl.device.waitIdle();
 
-	recreate_swapchain_sync(impl);
+	prepare_swapchain_sync(impl);
 
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.surface          = impl.surface;
@@ -132,33 +185,8 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 	impl.acquiredImageIndex = -1;
 	impl.syncIndex          = 0;
 
-	// TODO: try without dynamic allocation
-	clear_swapchain_framebuffers(impl);
+	prepare_framebuffer(device_impl, impl);
 	
-	for (auto& swapchain_image : device_impl.device.getSwapchainImagesKHR(impl.swapchain)) {
-		auto  framebuffer      = SwapchainFactory::createFrameBuffer(impl);
-		auto  texture          = SwapchainFactory::createTexture(impl);
-		auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
-		auto& texture_impl     = CoreObject::getImpl(texture);
-
-		texture_impl.frameBuffer = framebuffer;
-		texture_impl.image       = swapchain_image;
-		texture_impl.imageUsage  = SWAPCHAIN_IMAGE_USAGE | ImageUsageFlagBits::FrameBuffer;
-		texture_impl.width       = impl.width;
-		texture_impl.height      = impl.height;
-		texture_impl.depth       = 1;
-
-		texture->getTextureView(); // create image view
-
-		framebuffer_impl.device          = impl.device;
-		framebuffer_impl.colorAttachment = std::move(texture);
-		framebuffer_impl.width           = impl.width;
-		framebuffer_impl.height          = impl.height;
-		framebuffer_impl.format          = impl.imageFormat;
-
-		impl.framebuffers.push_back(std::move(framebuffer));
-	}
-
 	device_impl.device.destroy(old_swapchain);
 }
 
@@ -209,7 +237,8 @@ Swapchain::~Swapchain()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
-	clear_swapchain_framebuffers(impl);
+	for (auto& framebuffer : impl.framebuffers)
+		set_framebuffer_color_image(framebuffer, nullptr);
 
 	device_impl.device.destroy(impl.swapchain);
 

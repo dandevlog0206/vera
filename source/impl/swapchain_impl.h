@@ -2,6 +2,8 @@
 
 #include "render_context_impl.h"
 
+#define MAX_SWAPCHAIN_IMAGE_COUNT 8
+
 VERA_NAMESPACE_BEGIN
 
 struct SwapchainSync
