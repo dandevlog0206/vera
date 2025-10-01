@@ -303,6 +303,12 @@
     <ClInclude Include="include\vera\util\timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\core\framebuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\impl\framebuffer_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\os\window.cpp">
@@ -411,6 +417,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\os\keyboard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core_object\framebuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

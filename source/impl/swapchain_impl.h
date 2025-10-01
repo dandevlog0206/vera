@@ -1,40 +1,32 @@
 #pragma once
 
-#include "object_impl.h"
-
-#include "../../include/vera/core/swapchain.h"
+#include "render_context_impl.h"
 
 VERA_NAMESPACE_BEGIN
 
 struct SwapchainSync
 {
 	obj<Semaphore> waitSemaphore;
-	ref<Fence>     fence;
-};
-
-struct SwapchainFrame
-{
-	obj<Texture> texture;
+	int32_t        imageIndex;
 };
 
 struct SwapchainImpl
 {
 	os::Window* window;
-	obj<Device>                 device;
-	obj<RenderContext>          renderContext;
+	obj<Device>                   device;
 
-	vk::SwapchainKHR            swapchain;
-	vk::SurfaceKHR              surface;
+	vk::SwapchainKHR              swapchain;
+	vk::SurfaceKHR                surface;
 
-	std::vector<SwapchainFrame> frames;
-	std::vector<SwapchainSync>  syncs;
-	Format                      imageFormat;
-	PresentMode                 presentMode;
-	uint32_t                    imageCount;
-	uint32_t                    width;
-	uint32_t                    height;
-	int32_t                     acquiredImageIndex;
-	int32_t                     syncIndex;
+	std::vector<obj<FrameBuffer>> framebuffers;
+	std::vector<SwapchainSync>    syncs;
+	Format                        imageFormat;
+	PresentMode                   presentMode;
+	uint32_t                      imageCount;
+	uint32_t                      width;
+	uint32_t                      height;
+	int32_t                       acquiredImageIndex;
+	int32_t                       syncIndex;
 };
 
 static vk::PresentModeKHR to_vk_present_mode(PresentMode mode)

@@ -15,6 +15,7 @@ class Context;
 class Device;
 class DeviceMemory;
 class Fence;
+class FrameBuffer;
 class Pipeline;
 class PipelineLayout;
 class CommandBuffer;

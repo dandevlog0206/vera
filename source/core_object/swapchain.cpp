@@ -1,5 +1,6 @@
 #include "../../include/vera/core/swapchain.h"
 #include "../impl/device_impl.h"
+#include "../impl/framebuffer_impl.h"
 #include "../impl/render_context_impl.h"
 #include "../impl/semaphore_impl.h"
 #include "../impl/swapchain_impl.h"
@@ -10,6 +11,7 @@
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/device_memory.h"
 #include "../../include/vera/core/fence.h"
+#include "../../include/vera/core/framebuffer.h"
 #include "../../include/vera/core/semaphore.h"
 #include "../../include/vera/core/render_context.h"
 #include "../../include/vera/core/texture_view.h"
@@ -25,18 +27,23 @@
 
 VERA_NAMESPACE_BEGIN
 
-class SwapchainTextureFactory : protected CoreObject {
+class SwapchainFactory : protected CoreObject {
 public:
-	static obj<Texture> create(SwapchainImpl& swapchain_impl)
+	static obj<FrameBuffer> createFrameBuffer(SwapchainImpl& swapchain_impl)
 	{
-		auto  obj            = createNewObject<Texture>();
-		auto& impl           = getImpl(obj);
-		auto& device_impl    = getImpl(swapchain_impl.device);
+		return createNewObject<FrameBuffer>();
+	}
 
-		impl.device           = swapchain_impl.device;
-		impl.imageAspect      = vk::ImageAspectFlagBits::eColor;
-		impl.imageLayout      = vk::ImageLayout::eUndefined;
-		impl.imageFormat      = swapchain_impl.imageFormat;
+	static obj<Texture> createTexture(SwapchainImpl& swapchain_impl)
+	{
+		auto  obj         = createNewObject<Texture>();
+		auto& impl        = getImpl(obj);
+		auto& device_impl = getImpl(swapchain_impl.device);
+
+		impl.device      = swapchain_impl.device;
+		impl.imageAspect = vk::ImageAspectFlagBits::eColor;
+		impl.imageLayout = vk::ImageLayout::eUndefined;
+		impl.imageFormat = swapchain_impl.imageFormat;
 
 		return obj;
 	}
@@ -66,29 +73,27 @@ static bool check_swapchain_format(vk::PhysicalDevice physical_device, vk::Surfa
 	return iter != formats.cend();
 }
 
-static void prepare_swapchain_sync(SwapchainImpl& impl)
+static void recreate_swapchain_sync(SwapchainImpl& impl)
 {
+	impl.syncs.clear();
+
 	while (impl.syncs.size() < impl.imageCount) {
 		auto& sync = impl.syncs.emplace_back();
-		
 		sync.waitSemaphore = Semaphore::create(impl.device);
+		sync.imageIndex    = -1;
 	}
-
-	for (auto& sync : impl.syncs)
-		sync.fence = {};
-
-	impl.syncs.resize(impl.imageCount);
 }
 
-static void clear_swapchain_frames(SwapchainImpl& impl)
+static void clear_swapchain_framebuffers(SwapchainImpl& impl)
 {
-	for (auto& frame : impl.frames) {
-		auto& texture_impl = CoreObject::getImpl(frame.texture);
+	for (auto& framebuffer : impl.framebuffers) {
+		auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
+		auto& texture_impl     = CoreObject::getImpl(framebuffer_impl.colorAttachment);
 
 		texture_impl.image = nullptr;
 	}
 
-	impl.frames.clear();
+	impl.framebuffers.clear();
 }
 
 static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
@@ -98,11 +103,15 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 
 	if (capabilities.maxImageCount == 0 || capabilities.maxImageCount < impl.imageCount)
 		throw Exception("too many swapchain image count");
+	if (!check_swapchain_present_mode(device_impl.physicalDevice, impl.surface, impl.presentMode))
+		throw Exception("unsupported present mode");
 
 	impl.width  = capabilities.currentExtent.width;
 	impl.height = capabilities.currentExtent.height;
 
-	prepare_swapchain_sync(impl);
+	device_impl.device.waitIdle();
+
+	recreate_swapchain_sync(impl);
 
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.surface          = impl.surface;
@@ -119,42 +128,47 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 	swapchain_info.clipped          = false;
 	swapchain_info.oldSwapchain     = old_swapchain;
 
-	// Wait just before to create swapchain
-	device_impl.device.waitIdle();
-
 	impl.swapchain          = device_impl.device.createSwapchainKHR(swapchain_info);
 	impl.acquiredImageIndex = -1;
 	impl.syncIndex          = 0;
 
-	clear_swapchain_frames(impl);
+	// TODO: try without dynamic allocation
+	clear_swapchain_framebuffers(impl);
 	
 	for (auto& swapchain_image : device_impl.device.getSwapchainImagesKHR(impl.swapchain)) {
-		auto  texture      = SwapchainTextureFactory::create(impl);
-		auto& texture_impl = CoreObject::getImpl(texture);
-		auto& frame        = impl.frames.emplace_back();
+		auto  framebuffer      = SwapchainFactory::createFrameBuffer(impl);
+		auto  texture          = SwapchainFactory::createTexture(impl);
+		auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
+		auto& texture_impl     = CoreObject::getImpl(texture);
 
+		texture_impl.frameBuffer = framebuffer;
 		texture_impl.image       = swapchain_image;
-		texture_impl.imageUsage  = SWAPCHAIN_IMAGE_USAGE | ImageUsageFlagBits::SwapchainImage;
+		texture_impl.imageUsage  = SWAPCHAIN_IMAGE_USAGE | ImageUsageFlagBits::FrameBuffer;
 		texture_impl.width       = impl.width;
 		texture_impl.height      = impl.height;
 		texture_impl.depth       = 1;
 
 		texture->getTextureView(); // create image view
 
-		frame.texture = texture;
+		framebuffer_impl.device          = impl.device;
+		framebuffer_impl.colorAttachment = std::move(texture);
+		framebuffer_impl.width           = impl.width;
+		framebuffer_impl.height          = impl.height;
+		framebuffer_impl.format          = impl.imageFormat;
+
+		impl.framebuffers.push_back(std::move(framebuffer));
 	}
 
 	device_impl.device.destroy(old_swapchain);
 }
 
-obj<Swapchain> Swapchain::create(obj<RenderContext> render_ctx, os::Window& window, const SwapchainCreateInfo& info)
+obj<Swapchain> Swapchain::create(obj<Device> device, os::Window& window, const SwapchainCreateInfo& info)
 {
 	VkSurfaceKHR surface;
 	
 	auto  obj              = createNewObject<Swapchain>();
 	auto& impl             = getImpl(obj);
-	auto& ctx_impl         = getImpl(render_ctx);
-	auto& device_impl      = getImpl(ctx_impl.device);
+	auto& device_impl      = getImpl(device);
 	auto& window_impl      = *window.m_impl;
 	auto  vk_instance      = get_vk_instance(device_impl.context);
 	auto  framebuffer_size = window.FramebufferSize.get();
@@ -164,22 +178,18 @@ obj<Swapchain> Swapchain::create(obj<RenderContext> render_ctx, os::Window& wind
 		throw Exception("Window already bound to another swapchain");
 	if (!glfwVulkanSupported())
 		throw Exception("Vulkan is not supported by glfw");
-	// if (!glfwGetPhysicalDevicePresentationSupport(
-	// 	context_impl.instance, device_impl.physicalDevice, device_impl.graphicsQueueFamilyIndex))
-	// 	throw Exception("Presentation is not supported by current physical device"); TODO: ????
+	if (!glfwGetPhysicalDevicePresentationSupport(
+	 	get_vk_instance(device_impl.context), device_impl.physicalDevice, device_impl.graphicsQueueFamilyIndex))
+	 	throw Exception("Presentation is not supported by current physical device");
 	if (glfwCreateWindowSurface(vk_instance, window_impl.window, nullptr, &surface) != VK_SUCCESS)
 		throw Exception(get_glfw_error());
-
-	if (!check_swapchain_present_mode(device_impl.physicalDevice, surface, info.presentMode))
-		throw Exception("unsupported present mode");
 	if (!check_swapchain_format(device_impl.physicalDevice, surface, format))
 		throw Exception("unsupported swapchain format");
 
 	window_impl.swapchain = obj;
 
 	impl.window             = &window;
-	impl.device             = ctx_impl.device;
-	impl.renderContext      = std::move(render_ctx);
+	impl.device             = std::move(device);
 	impl.surface            = surface;
 	impl.imageFormat        = format;
 	impl.presentMode        = info.presentMode;
@@ -199,7 +209,7 @@ Swapchain::~Swapchain()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
-	clear_swapchain_frames(impl);
+	clear_swapchain_framebuffers(impl);
 
 	device_impl.device.destroy(impl.swapchain);
 
@@ -211,23 +221,19 @@ obj<Device> Swapchain::getDevice()
 	return getImpl(this).device;
 }
 
-obj<RenderContext> Swapchain::getRenderContext()
+ref<FrameBuffer> Swapchain::acquireNextImage()
 {
-	return getImpl(this).renderContext;
-}
+	auto& impl        = getImpl(this);
+	auto& device_impl = getImpl(impl.device);
+	auto& sync        = impl.syncs[impl.syncIndex];
+	auto  trial       = 0u;
 
-ref<Texture> Swapchain::acquireNextImage()
-{
-	auto& impl         = getImpl(this);
-	auto& device_impl  = getImpl(impl.device);
-	auto& ctx_impl     = getImpl(impl.renderContext);
-	auto& render_frame = ctx_impl.renderFrames[ctx_impl.frameIndex];
-	auto& sync         = impl.syncs[impl.syncIndex];
-	auto  trial        = 0u;
+	if (sync.imageIndex != -1) {
+		auto& framebuffer_impl = getImpl(impl.framebuffers[sync.imageIndex]);
+		
+		framebuffer_impl.frameSync.waitForRenderComplete();
+	}
 
-	if (sync.fence)
-		sync.fence->wait();
-	
 	while (trial++ < 10) {
 		auto result = device_impl.device.acquireNextImageKHR(
 			impl.swapchain,
@@ -235,14 +241,16 @@ ref<Texture> Swapchain::acquireNextImage()
 			get_vk_semaphore(sync.waitSemaphore));
 
 		if (result.result == vk::Result::eSuccess) {
-			auto& texture      = impl.frames[result.value].texture;
-			auto& texture_impl = getImpl(texture);
+			auto  framebuffer      = impl.framebuffers[result.value];
+			auto& framebuffer_impl = getImpl(framebuffer);
+			auto& texture_impl     = getImpl(framebuffer_impl.colorAttachment);
 
-			impl.acquiredImageIndex         = result.value;
-			render_frame.imageWaitSemaphore = sync.waitSemaphore;
-			texture_impl.imageLayout        = vk::ImageLayout::eUndefined;
+			impl.acquiredImageIndex        = result.value;
+			sync.imageIndex                = result.value;
+			framebuffer_impl.waitSemaphore = sync.waitSemaphore;
+			texture_impl.imageLayout       = vk::ImageLayout::eUndefined;
 
-			return texture;
+			return framebuffer;
 		} else if (result.result == vk::Result::eSuboptimalKHR || result.result == vk::Result::eNotReady) {
 			recreate_swapchain(device_impl, impl);
 		} else {
@@ -265,15 +273,17 @@ void Swapchain::present()
 {
 	auto& impl         = getImpl(this);
 	auto& device_impl  = getImpl(impl.device);
-	auto& context_impl = getImpl(impl.renderContext);
-	auto& render_frame = context_impl.renderFrames[context_impl.lastFrameIndex];
-	auto& frame        = impl.frames[impl.acquiredImageIndex];
+	auto& texture_impl = getImpl(impl.framebuffers[impl.acquiredImageIndex]);
+	auto  semaphore    = texture_impl.frameSync.getRenderCompleteSemaphore();
 
-	impl.syncs[impl.syncIndex].fence = render_frame.fence;
+	if (!semaphore) {
+		device_impl.device.waitIdle();
+		throw Exception("cannot find frame for current image");
+	}
 
 	vk::PresentInfoKHR present_info;
 	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores    = &get_vk_semaphore(render_frame.renderCompleteSemaphore);
+	present_info.pWaitSemaphores    = &get_vk_semaphore(semaphore);
 	present_info.swapchainCount     = 1;
 	present_info.pSwapchains        = &impl.swapchain;
 	present_info.pImageIndices      = reinterpret_cast<uint32_t*>(&impl.acquiredImageIndex);
@@ -283,11 +293,11 @@ void Swapchain::present()
 	impl.syncIndex = (impl.syncIndex + 1) % impl.imageCount;
 }
 
-ref<Texture> Swapchain::getCurrentTexture()
+ref<FrameBuffer> Swapchain::getCurrentFrameBuffer()
 {
 	auto& impl = getImpl(this);
 
-	return impl.frames[impl.acquiredImageIndex].texture;
+	return impl.framebuffers[impl.acquiredImageIndex];
 }
 
 extent2d Swapchain::getFrameBufferExtent() const

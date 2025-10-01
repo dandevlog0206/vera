@@ -6,7 +6,9 @@ int main()
 
 	auto device    = vr::Device::create(vr::Context::create());
 	auto ctx       = vr::RenderContext::create(device);
-	auto swapchain = vr::Swapchain::create(ctx, window);
+	auto swapchain = vr::Swapchain::create(ctx, window, vr::SwapchainCreateInfo{
+		.presentMode = vr::PresentMode::Immediate
+	});
 
 	vr::GraphicsPass pass(device, vr::GraphicsPassCreateInfo{
 		.vertexShader   = vr::Shader::create(device, "shader/triangle_minimal.vert.glsl.spv"),

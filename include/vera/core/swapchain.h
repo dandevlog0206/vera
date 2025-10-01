@@ -12,8 +12,7 @@ class Window;
 VERA_OS_NAMESPACE_END
 
 class Device;
-class RenderContext;
-class Texture;
+class FrameBuffer;
 
 enum class PresentMode
 {
@@ -33,17 +32,16 @@ class Swapchain : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Swapchain)
 public:
-	static obj<Swapchain> create(obj<RenderContext> render_ctx, os::Window& window, const SwapchainCreateInfo& info = {});
+	static obj<Swapchain> create(obj<Device> device, os::Window& window, const SwapchainCreateInfo& info = {});
 	~Swapchain();
 
 	obj<Device> getDevice();
-	obj<RenderContext> getRenderContext();
 
-	ref<Texture> acquireNextImage();
+	ref<FrameBuffer> acquireNextImage();
 	void recreate();
 	void present();
 
-	ref<Texture> getCurrentTexture();
+	ref<FrameBuffer> getCurrentFrameBuffer();
 
 	extent2d getFrameBufferExtent() const;
 

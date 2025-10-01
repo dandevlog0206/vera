@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../core/framebuffer.h"
 #include "../core/pipeline.h"
 #include "../core/render_context.h"
 #include "../core/texture.h"
@@ -31,7 +32,7 @@ public:
 
 	ShaderParameter& getShaderParameter();
 
-	virtual void execute(obj<RenderContext> cmd, ref<Texture> texture);
+	virtual void execute(obj<RenderContext> cmd, ref<FrameBuffer> framebuffer);
 
 private:
 	obj<Device>     m_device;

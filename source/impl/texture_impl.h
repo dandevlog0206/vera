@@ -12,6 +12,7 @@ struct TextureImpl
 	obj<Device>          device;
 	obj<DeviceMemory>    deviceMemory;
 	obj<TextureView>     textureView;
+	ref<FrameBuffer>     frameBuffer;
 
 	vk::Image            image;
 	vk::ImageAspectFlags imageAspect;
@@ -97,8 +98,8 @@ static vk::ImageUsageFlags to_vk_image_usage_flags(ImageUsageFlags flags)
 		result |= vk::ImageUsageFlagBits::eInputAttachment;
 	if (flags.has(ImageUsageFlagBits::HostTransfer))
 		result |= vk::ImageUsageFlagBits::eHostTransfer;
-	if (flags.has(ImageUsageFlagBits::SwapchainImage))
-		VERA_ASSERT_MSG(false, "invalid image usage flag bit");
+
+	VERA_ASSERT_MSG(!flags.has(ImageUsageFlagBits::FrameBuffer), "invalid image usage flag bit");
 
 	return result;
 }

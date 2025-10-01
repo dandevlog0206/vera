@@ -159,6 +159,7 @@
   <ItemGroup>
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
+    <ClInclude Include="include\vera\core\framebuffer.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_storage.h" />
     <ClInclude Include="include\vera\math\constant.h" />
@@ -186,6 +187,7 @@
     <ClInclude Include="source\graphics\pixel.h" />
     <ClInclude Include="source\impl\buffer_impl.h" />
     <ClInclude Include="source\impl\device_memory_impl.h" />
+    <ClInclude Include="source\impl\framebuffer_impl.h" />
     <ClInclude Include="source\impl\sampler_impl.h" />
     <ClInclude Include="source\impl\semaphore_impl.h" />
     <ClInclude Include="source\impl\context_impl.h" />
@@ -253,6 +255,7 @@
     <ClInclude Include="source\internal\format.h" />
     <ClInclude Include="source\impl\window_impl.h" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
+    <ClCompile Include="source\core_object\framebuffer.cpp" />
     <ClCompile Include="source\core_object\shader_storage.cpp" />
     <ClCompile Include="source\core_object\texture_view.cpp" />
     <ClCompile Include="source\core_object\buffer.cpp" />

@@ -72,10 +72,10 @@ ShaderParameter& GraphicsPass::getShaderParameter()
 	return m_parameter;
 }
 
-void GraphicsPass::execute(obj<RenderContext> ctx, ref<Texture> texture)
+void GraphicsPass::execute(obj<RenderContext> ctx, ref<FrameBuffer> framebuffer)
 {
-	uint32_t width  = texture->width();
-	uint32_t height = texture->height();
+	uint32_t width  = framebuffer->width();
+	uint32_t height = framebuffer->height();
 
 	if (m_depth_format != DepthFormat::Unknown && !(m_depth && m_depth->width() == width && m_depth->height() == height)) {
 		auto cmd = ctx->getRenderCommand();
@@ -114,7 +114,7 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<Texture> texture)
 
 	rendering_info.colorAttachments.push_back(
 		ColorAtttachmentInfo{
-			.texture    = texture,
+			.texture    = framebuffer->getTexture(),
 			.loadOp     = LoadOp::Clear,
 			.storeOp    = StoreOp::Store,
 			.clearValue = Colors::Black

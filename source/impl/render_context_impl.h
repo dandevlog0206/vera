@@ -8,26 +8,47 @@ class CommandBuffer;
 class Fence;
 class Semaphore;
 class Texture;
+struct RenderFrame;
+
+class FrameSync
+{
+public:
+	FrameSync() = default;
+	FrameSync(const RenderFrame& ctx_impl, uint64_t frame_id);
+
+	void waitForRenderComplete() const;
+	bool isRenderComplete() const;
+	ref<Semaphore> getRenderCompleteSemaphore() const;
+
+	bool empty() const;
+
+private:
+	const RenderFrame* m_render_frame;
+	uint64_t           m_frame_id;
+};
 
 struct RenderFrame
 {
+	using FrameBuffers = std::vector<ref<FrameBuffer>>;
+
 	obj<CommandBuffer> renderCommand;
-	obj<Fence>         fence;
+	FrameBuffers       framebuffers;
+	FrameSync          frameSync;
 	obj<Semaphore>     renderCompleteSemaphore;
-	obj<Semaphore>     imageWaitSemaphore;
-	ref<Texture>       swapchainImage;
-	bool               isBegin;
-	bool               isSubmitted;
+	obj<Fence>         fence;
+	uint64_t           frameID;
 };
 
 struct RenderContextImpl
 {
-	obj<Device>              device;
+	using RenderFrames = std::vector<RenderFrame*>;
 
-	std::vector<RenderFrame> renderFrames;
-	int32_t                  frameIndex;
-	int32_t                  lastFrameIndex;
-	uint64_t                 totalFrameCount;
+	obj<Device>  device;
+
+	RenderFrames renderFrames;
+	int32_t      frameIndex;
+	int32_t      lastFrameIndex;
+	uint64_t     currentFrameID;
 };
 
 VERA_NAMESPACE_END

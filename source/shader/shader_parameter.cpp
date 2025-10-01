@@ -43,7 +43,8 @@ obj<ShaderStorage> ShaderParameter::getShaderStorage()
 
 void ShaderParameter::bindCommandBuffer(ref<PipelineLayout> layout, ref<CommandBuffer> cmd) const
 {
-	m_storage->bindCommandBuffer(layout, cmd);
+	if (m_storage)
+		m_storage->bindCommandBuffer(layout, cmd);
 }
 
 VERA_NAMESPACE_END

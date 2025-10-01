@@ -28,8 +28,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "texture", "test\texture\tex
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "triangle_minimal", "test\triangle_minimal\triangle_minimal.vcxproj", "{90C4EB1C-C3A6-4461-A241-030DE60A0E3F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{330A320D-04CA-4B5C-BF55-5E4E478DCA1D} = {330A320D-04CA-4B5C-BF55-5E4E478DCA1D}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "obj_loading", "test\obj_loading\obj_loading.vcxproj", "{5E4FEC98-549A-412E-B2E1-F399F6DC5070}"
+	ProjectSection(ProjectDependencies) = postProject
+		{330A320D-04CA-4B5C-BF55-5E4E478DCA1D} = {330A320D-04CA-4B5C-BF55-5E4E478DCA1D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

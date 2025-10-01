@@ -1,47 +1,80 @@
 #include "../../include/vera/core/render_context.h"
 #include "../impl/device_impl.h"
 #include "../impl/command_buffer_impl.h"
+#include "../impl/framebuffer_impl.h"
 #include "../impl/render_context_impl.h"
 #include "../impl/texture_impl.h"
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/fence.h"
+#include "../../include/vera/core/framebuffer.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/semaphore.h"
 #include "../../include/vera/graphics/graphics_state.h"
 #include "../../include/vera/shader/shader_parameter.h"
+#include "../../include/vera/util/static_vector.h"
 
 VERA_NAMESPACE_BEGIN
 
-static void append_render_frame(RenderContextImpl& impl)
+static void append_render_frame(RenderContextImpl& impl, uint32_t at)
 {
-	auto& render_frame = impl.renderFrames.emplace_back();
+	auto* render_frame = *impl.renderFrames.emplace(impl.renderFrames.cbegin() + at, new RenderFrame);
 
-	render_frame.renderCommand           = CommandBuffer::create(impl.device);
-	render_frame.fence                   = Fence::create(impl.device);
-	render_frame.renderCompleteSemaphore = Semaphore::create(impl.device);
-	render_frame.imageWaitSemaphore      = {};
-	render_frame.swapchainImage          = {};
-	render_frame.isBegin                 = true;
-	render_frame.isSubmitted             = false;
+	render_frame->renderCommand           = CommandBuffer::create(impl.device);
+	render_frame->framebuffers            = {};
+	render_frame->frameSync               = FrameSync(*render_frame, impl.currentFrameID + 1);
+	render_frame->renderCompleteSemaphore = Semaphore::create(impl.device);
+	render_frame->fence                   = Fence::create(impl.device);
+	render_frame->frameID                 = impl.currentFrameID + 1;
 
-	render_frame.renderCommand->begin();
+	render_frame->renderCommand->begin();	
 }
 
-static void reset_render_frame(RenderFrame& render_frame)
+static void reset_render_frame(RenderContextImpl& impl, RenderFrame& render_frame)
 {
 	render_frame.renderCommand->reset();
+	render_frame.framebuffers.clear();
+	render_frame.frameSync = FrameSync(render_frame, impl.currentFrameID + 1);
 	render_frame.fence->reset();
-	render_frame.imageWaitSemaphore = {};
-	render_frame.isBegin            = true;
-	render_frame.isSubmitted        = false;
+	render_frame.frameID   = impl.currentFrameID + 1;
 
 	render_frame.renderCommand->begin();
 }
 
 static RenderFrame& get_render_frame(RenderContextImpl& impl)
 {
-	return impl.renderFrames[impl.frameIndex];
+	return *impl.renderFrames[impl.frameIndex];
+}
+
+FrameSync::FrameSync(const RenderFrame& ctx_impl, uint64_t frame_id) :
+	m_render_frame(&ctx_impl), m_frame_id(frame_id) {}
+
+void FrameSync::waitForRenderComplete() const
+{
+	VERA_ASSERT(m_render_frame);
+
+	if (m_render_frame->frameID == m_frame_id)
+		m_render_frame->fence->wait();
+}
+
+bool FrameSync::isRenderComplete() const
+{
+	return m_render_frame->frameID == m_frame_id ? m_render_frame->fence->signaled() : true;
+}
+
+ref<Semaphore> FrameSync::getRenderCompleteSemaphore() const
+{
+	VERA_ASSERT(m_render_frame);
+
+	if (m_render_frame->frameID == m_frame_id)
+		return m_render_frame->renderCompleteSemaphore;
+	
+	return {};
+}
+
+bool FrameSync::empty() const
+{
+	return !m_render_frame;
 }
 
 obj<RenderContext> RenderContext::create(obj<Device> device)
@@ -49,12 +82,12 @@ obj<RenderContext> RenderContext::create(obj<Device> device)
 	auto  obj  = createNewObject<RenderContext>();
 	auto& impl = getImpl(obj);
 
-	impl.device          = std::move(device);
-	impl.frameIndex      = 0;
-	impl.lastFrameIndex  = -1;
-	impl.totalFrameCount = 0;
+	impl.device         = std::move(device);
+	impl.frameIndex     = 0;
+	impl.lastFrameIndex = -1;
+	impl.currentFrameID = 0;
 
-	append_render_frame(impl);
+	append_render_frame(impl, 0);
 
 	return obj;
 }
@@ -62,6 +95,9 @@ obj<RenderContext> RenderContext::create(obj<Device> device)
 RenderContext::~RenderContext()
 {
 	auto& impl = getImpl(this);
+
+	for (auto* frame_ptr : impl.renderFrames)
+		delete frame_ptr;
 
 	destroyObjectImpl(this);
 }
@@ -75,7 +111,7 @@ obj<CommandBuffer> RenderContext::getRenderCommand()
 {
 	auto& impl = getImpl(this);
 
-	return impl.renderFrames[impl.frameIndex].renderCommand;
+	return impl.renderFrames[impl.frameIndex]->renderCommand;
 }
 
 void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32_t vtx_off)
@@ -98,8 +134,20 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 		auto& texture_impl = getImpl(color.texture);
 
 		// Identify swapchain image and save for future use
-		if (texture_impl.imageUsage.has(ImageUsageFlagBits::SwapchainImage))
-			impl.renderFrames[impl.frameIndex].swapchainImage = color.texture;
+		if (texture_impl.imageUsage.has(ImageUsageFlagBits::FrameBuffer)) {
+			auto& render_frame = *impl.renderFrames[impl.frameIndex];
+
+			// TODO: optimize
+			if (std::none_of(VERA_SPAN(render_frame.framebuffers),
+				[=](const auto& elem) {
+					return elem == texture_impl.frameBuffer;
+				})) {
+				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
+				
+				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
+				framebuffer_impl.frameSync = render_frame.frameSync;
+			}
+		}
 
 		cmd->transitionImageLayout(
 			color.texture,
@@ -119,21 +167,19 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 
 void RenderContext::submit()
 {
-	static const vk::PipelineStageFlags wait_stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-	
 	auto& impl         = getImpl(this);
 	auto& device_impl  = getImpl(impl.device);
-	auto& render_frame = impl.renderFrames[impl.frameIndex];
+	auto& render_frame = *impl.renderFrames[impl.frameIndex];
 	auto& command_impl = getImpl(render_frame.renderCommand);
 	auto  next_index   = (impl.frameIndex + 1) % static_cast<int32_t>(impl.renderFrames.size());
-	auto& next_frame   = impl.renderFrames[next_index];
+	auto& next_frame   = *impl.renderFrames[next_index];
 
 	if (!command_impl.currentRenderingInfo.colorAttachments.empty())
 		render_frame.renderCommand->endRendering();
 
-	if (render_frame.swapchainImage) {
+	for (auto& framebuffer : render_frame.framebuffers) {
 		render_frame.renderCommand->transitionImageLayout(
-			render_frame.swapchainImage,
+			framebuffer->getTexture(),
 			vr::PipelineStageFlagBits::ColorAttachmentOutput,
 			vr::PipelineStageFlagBits::BottomOfPipe,
 			vr::AccessFlagBits::ColorAttachmentWrite | vr::AccessFlagBits::ColorAttachmentWrite,
@@ -143,7 +189,6 @@ void RenderContext::submit()
 	}
 
 	render_frame.renderCommand->end();
-	render_frame.isSubmitted = true;
 
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount   = 1;
@@ -151,23 +196,30 @@ void RenderContext::submit()
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &get_vk_semaphore(render_frame.renderCompleteSemaphore);
 
-	if (render_frame.imageWaitSemaphore) {
-		submit_info.waitSemaphoreCount = 1;
-		submit_info.pWaitSemaphores    = &get_vk_semaphore(render_frame.imageWaitSemaphore);
-		submit_info.pWaitDstStageMask  = &wait_stage;
+	static_vector<vk::Semaphore, 32>          semaphores;
+	static_vector<vk::PipelineStageFlags, 32> stage_masks;
+
+	if (!render_frame.framebuffers.empty()) {
+		for (auto& framebuffer : render_frame.framebuffers) {
+			semaphores.push_back(get_vk_semaphore(getImpl(framebuffer).waitSemaphore));
+			stage_masks.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		}
+
+		submit_info.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
+		submit_info.pWaitSemaphores    = semaphores.data();
+		submit_info.pWaitDstStageMask  = stage_masks.data();
 	}
 
 	device_impl.graphicsQueue.submit(submit_info, get_vk_fence(render_frame.fence));
 
 	if (next_frame.fence->signaled()) {
-		reset_render_frame(next_frame);
+		reset_render_frame(impl, next_frame);
 		impl.lastFrameIndex = std::exchange(impl.frameIndex, next_index);
 	} else {
-		append_render_frame(impl);
-		impl.lastFrameIndex = std::exchange(impl.frameIndex, static_cast<int32_t>(impl.renderFrames.size() - 1));
+		append_render_frame(impl, impl.frameIndex + 1);
+		impl.lastFrameIndex = std::exchange(impl.frameIndex, impl.frameIndex + 1);
 	}
-
-	impl.totalFrameCount++;
+	impl.currentFrameID++;
 }
 
 VERA_NAMESPACE_END

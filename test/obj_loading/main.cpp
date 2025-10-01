@@ -44,7 +44,7 @@ public:
 
 		m_render_ctx = vr::RenderContext::create(m_device);
 
-		m_swapchain = vr::Swapchain::create(m_render_ctx, m_window, vr::SwapchainCreateInfo{
+		m_swapchain = vr::Swapchain::create(m_device, m_window, vr::SwapchainCreateInfo{
 			.presentMode = vr::PresentMode::Immediate
 		});
 
