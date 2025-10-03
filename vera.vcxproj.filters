@@ -354,6 +354,27 @@
     <ClInclude Include="include\vera\math\detail\matrix4x4.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\asset\asset_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\smart_ptr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\asset\detail\fbx_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\asset\detail\gltf_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\result_message.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\scene\scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\scene\mesh_object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\os\window.cpp">
@@ -465,6 +486,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\framebuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\asset\asset_loader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

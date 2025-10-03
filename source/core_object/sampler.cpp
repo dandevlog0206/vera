@@ -59,7 +59,7 @@ obj<Sampler> Sampler::create(obj<Device> device, const SamplerCreateInfo& info)
 		return it->second;
 	}
 
-	auto   obj         = createNewObject<Sampler>();
+	auto   obj         = createNewCoreObject<Sampler>();
 	auto&  impl        = getImpl(obj);
 	bool   need_border = false;
 

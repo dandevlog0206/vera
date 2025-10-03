@@ -21,9 +21,9 @@
 	vk::ColorSpaceKHR::eSrgbNonlinear
 
 #define SWAPCHAIN_IMAGE_USAGE             \
-	ImageUsageFlagBits::ColorAttachment | \
-	ImageUsageFlagBits::TransferSrc |     \
-	ImageUsageFlagBits::TransferDst
+	TextureUsageFlagBits::ColorAttachment | \
+	TextureUsageFlagBits::TransferSrc |     \
+	TextureUsageFlagBits::TransferDst
 
 VERA_NAMESPACE_BEGIN
 
@@ -31,19 +31,19 @@ class SwapchainFactory : protected CoreObject {
 public:
 	static obj<FrameBuffer> createFrameBuffer(SwapchainImpl& swapchain_impl)
 	{
-		return createNewObject<FrameBuffer>();
+		return createNewCoreObject<FrameBuffer>();
 	}
 
 	static obj<Texture> createTexture(SwapchainImpl& swapchain_impl)
 	{
-		auto  obj         = createNewObject<Texture>();
+		auto  obj         = createNewCoreObject<Texture>();
 		auto& impl        = getImpl(obj);
 		auto& device_impl = getImpl(swapchain_impl.device);
 
-		impl.device      = swapchain_impl.device;
-		impl.imageAspect = vk::ImageAspectFlagBits::eColor;
-		impl.imageLayout = vk::ImageLayout::eUndefined;
-		impl.imageFormat = swapchain_impl.imageFormat;
+		impl.device        = swapchain_impl.device;
+		impl.textureFormat = swapchain_impl.imageFormat;
+		impl.textureAspect = TextureAspectFlagBits::Color;
+		impl.textureLayout = TextureLayout::Undefined;
 
 		return obj;
 	}
@@ -131,7 +131,7 @@ static void prepare_framebuffer(DeviceImpl& device_impl, SwapchainImpl& impl)
 
 		texture_impl.frameBuffer = framebuffer;
 		texture_impl.image       = swapchain_images[i];
-		texture_impl.imageUsage  = SWAPCHAIN_IMAGE_USAGE | ImageUsageFlagBits::FrameBuffer;
+		texture_impl.textureUsage  = SWAPCHAIN_IMAGE_USAGE | TextureUsageFlagBits::FrameBuffer;
 		texture_impl.width       = impl.width;
 		texture_impl.height      = impl.height;
 		texture_impl.depth       = 1;
@@ -194,7 +194,7 @@ obj<Swapchain> Swapchain::create(obj<Device> device, os::Window& window, const S
 {
 	VkSurfaceKHR surface;
 	
-	auto  obj              = createNewObject<Swapchain>();
+	auto  obj              = createNewCoreObject<Swapchain>();
 	auto& impl             = getImpl(obj);
 	auto& device_impl      = getImpl(device);
 	auto& window_impl      = *window.m_impl;
@@ -278,7 +278,7 @@ ref<FrameBuffer> Swapchain::acquireNextImage()
 
 			framebuffer_impl.waitSemaphore = sync.waitSemaphore;
 			framebuffer_impl.frameSync     = {};
-			texture_impl.imageLayout       = vk::ImageLayout::eUndefined;
+			texture_impl.textureLayout     = TextureLayout::Undefined;
 
 			return framebuffer;
 		} else if (result.result == vk::Result::eSuboptimalKHR || result.result == vk::Result::eNotReady) {

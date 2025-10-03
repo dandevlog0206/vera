@@ -21,7 +21,7 @@ static vk::ImageType get_image_type(const TextureCreateInfo& info)
 	return vk::ImageType::e3D;
 }
 
-static ImageUsageFlags get_image_usage_flags(Format format)
+static TextureUsageFlags get_image_usage_flags(Format format)
 {
 	switch (format) {
 	case Format::D16Unorm:
@@ -32,12 +32,12 @@ static ImageUsageFlags get_image_usage_flags(Format format)
 	case Format::D24UnormS8Uint:
 	case Format::D32FloatS8Uint:
 		return
-			ImageUsageFlagBits::DepthStencilAttachment;
+			TextureUsageFlagBits::DepthStencilAttachment;
 	default:
 		return
-			ImageUsageFlagBits::ColorAttachment |
-			ImageUsageFlagBits::Sampled |
-			ImageUsageFlagBits::TransferDst;
+			TextureUsageFlagBits::ColorAttachment |
+			TextureUsageFlagBits::Sampled |
+			TextureUsageFlagBits::TransferDst;
 	}
 }
 
@@ -106,29 +106,47 @@ obj<Texture> Texture::createDepth(obj<Device> device, uint32_t width, uint32_t h
 	auto  obj  = create(device, info);
 	auto& impl = getImpl(obj);
 
-	impl.imageAspect = vk::ImageAspectFlagBits::eDepth;
-	impl.imageUsage  = ImageUsageFlagBits::DepthStencilAttachment;
+	impl.textureUsage  = TextureUsageFlagBits::DepthStencilAttachment;
+	impl.textureAspect = TextureAspectFlagBits::Depth;
+
+	return obj;
+}
+
+obj<Texture> Texture::createStencil(obj<Device> device, uint32_t width, uint32_t height, StencilFormat format)
+{
+	TextureCreateInfo info = {
+		.type   = TextureType::Texture2D,
+		.format = static_cast<Format>(format),
+		.width  = width,
+		.height = height,
+	};
+
+	auto  obj  = create(device, info);
+	auto& impl = getImpl(obj);
+
+	impl.textureUsage  = TextureUsageFlagBits::DepthStencilAttachment;
+	impl.textureAspect = TextureAspectFlagBits::Stencil;
 
 	return obj;
 }
 
 obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 {
-	auto  obj         = createNewObject<Texture>();
-	auto  memory_obj  = createNewObject<DeviceMemory>();
+	auto  obj         = createNewCoreObject<Texture>();
+	auto  memory_obj  = createNewCoreObject<DeviceMemory>();
 	auto& impl        = getImpl(obj);
 	auto& memory_impl = getImpl(memory_obj);
 	auto  vk_device   = get_vk_device(device);
 
-	impl.device           = std::move(device);
-	impl.deviceMemory     = std::move(memory_obj);
-	impl.imageAspect      = vk::ImageAspectFlagBits::eColor;
-	impl.imageLayout      = vk::ImageLayout::eUndefined;
-	impl.imageUsage       = get_image_usage_flags(info.format);
-	impl.imageFormat      = info.format;
-	impl.width            = info.width;
-	impl.height           = info.height;
-	impl.depth            = info.depth;
+	impl.device        = std::move(device);
+	impl.deviceMemory  = std::move(memory_obj);
+	impl.textureFormat = info.format;
+	impl.textureUsage  = info.usage ? info.usage : get_image_usage_flags(info.format);
+	impl.textureAspect = TextureAspectFlagBits::Color;
+	impl.textureLayout = TextureLayout::Undefined;
+	impl.width         = info.width;
+	impl.height        = info.height;
+	impl.depth         = info.depth;
 
 	vk::ImageCreateInfo image_info;
 	image_info.imageType     = get_image_type(info);
@@ -140,7 +158,7 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 	image_info.arrayLayers   = info.arraySize;
 	image_info.samples       = get_sample_count(info.sampleCount);
 	image_info.tiling        = vk::ImageTiling::eOptimal;
-	image_info.usage         = to_vk_image_usage_flags(impl.imageUsage);
+	image_info.usage         = to_vk_image_usage_flags(impl.textureUsage);
 	image_info.sharingMode   = vk::SharingMode::eExclusive;
 
 	impl.image = vk_device.createImage(image_info);
@@ -202,8 +220,8 @@ void Texture::upload(const Image& image)
 		vr::PipelineStageFlagBits::Transfer,
 		vr::AccessFlagBits{},
 		vr::AccessFlagBits::TransferWrite,
-		vr::ImageLayout::Undefined,
-		vr::ImageLayout::TransferDstOptimal);
+		vr::TextureLayout::Undefined,
+		vr::TextureLayout::TransferDstOptimal);
 
 	command_buffer->copyBufferToTexture(
 		ref<Texture>(this),
@@ -220,8 +238,8 @@ void Texture::upload(const Image& image)
 		vr::PipelineStageFlagBits::FragmentShader,
 		vr::AccessFlagBits::TransferWrite,
 		vr::AccessFlagBits::ShaderRead,
-		vr::ImageLayout::TransferDstOptimal,
-		vr::ImageLayout::ShaderReadOnlyOptimal);
+		vr::TextureLayout::TransferDstOptimal,
+		vr::TextureLayout::ShaderReadOnlyOptimal);
 	command_buffer->end();
 
 	impl.device->submitCommand(command_buffer);
@@ -243,19 +261,19 @@ ref<TextureView> Texture::getTextureView()
 	auto& impl = getImpl(this);
 	
 	if (!impl.textureView) {
-		auto  obj       = createNewObject<TextureView>();
+		auto  obj       = createNewCoreObject<TextureView>();
 		auto& view_impl = getImpl(obj);
 		auto  vk_device = get_vk_device(impl.device);
 
 		vk::ImageViewCreateInfo view_info;
 		view_info.image                           = impl.image;
 		view_info.viewType                        = vk::ImageViewType::e2D;
-		view_info.format                          = to_vk_format(impl.imageFormat);
+		view_info.format                          = to_vk_format(impl.textureFormat);
 		view_info.components.r                    = vk::ComponentSwizzle::eIdentity;
 		view_info.components.g                    = vk::ComponentSwizzle::eIdentity;
 		view_info.components.b                    = vk::ComponentSwizzle::eIdentity;
 		view_info.components.a                    = vk::ComponentSwizzle::eIdentity;
-		view_info.subresourceRange.aspectMask     = impl.imageAspect;
+		view_info.subresourceRange.aspectMask     = to_vk_image_aspect_flags(impl.textureAspect);
 		view_info.subresourceRange.baseMipLevel   = 0;
 		view_info.subresourceRange.levelCount     = 1;
 		view_info.subresourceRange.baseArrayLayer = 0;
@@ -274,9 +292,9 @@ ref<TextureView> Texture::getTextureView()
 	return impl.textureView;
 }
 
-ImageUsageFlags Texture::getUsageFlags()
+TextureUsageFlags Texture::getUsageFlags()
 {
-	return getImpl(this).imageUsage;
+	return getImpl(this).textureUsage;
 }
 
 uint32_t Texture::width() const

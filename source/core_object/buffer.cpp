@@ -144,8 +144,8 @@ obj<Buffer> Buffer::createStaging(obj<Device> device, size_t size)
 
 obj<Buffer> Buffer::create(obj<Device> device, const BufferCreateInfo& info)
 {
-	auto  obj           = createNewObject<Buffer>();
-	auto  memory_obj    = createNewObject<DeviceMemory>();
+	auto  obj           = createNewCoreObject<Buffer>();
+	auto  memory_obj    = createNewCoreObject<DeviceMemory>();
 	auto& impl          = getImpl(obj);
 	auto& memory_impl   = getImpl(memory_obj);
 	auto& device_impl   = getImpl(device);
@@ -176,7 +176,7 @@ obj<Buffer> Buffer::create(obj<Device> device, const BufferCreateInfo& info)
 
 obj<Buffer> Buffer::create(obj<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info)
 {
-	auto  obj         = createNewObject<Buffer>();
+	auto  obj         = createNewCoreObject<Buffer>();
 	auto& impl        = getImpl(obj);
 	auto& memory_impl = getImpl(memory);
 	auto& device_impl = getImpl(memory_impl.device);

@@ -4,13 +4,16 @@
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/core/semaphore.h"
+#include "../../include/vera/graphics/format_traits.h"
 
 VERA_NAMESPACE_BEGIN
 
 obj<FrameBuffer> FrameBuffer::create(obj<Device> device, const FrameBufferCreateInfo& info)
 {
-	auto  obj  = createNewObject<FrameBuffer>();
-	auto& impl = getImpl(obj);
+	auto  obj            = createNewCoreObject<FrameBuffer>();
+	auto& impl           = getImpl(obj);
+	auto  depth_format   = static_cast<Format>(info.depthFormat);
+	auto  stencil_format = static_cast<Format>(info.stencilFormat);
 
 	// TODO: implement later
 
@@ -19,6 +22,23 @@ obj<FrameBuffer> FrameBuffer::create(obj<Device> device, const FrameBufferCreate
 	};
 
 	impl.colorAttachment = Texture::create(device, color_info);
+	
+	bool has_depth_ds     = format_has_stencil(depth_format);
+	bool has_stencil_ds   = format_has_depth(stencil_format);
+	bool is_depth_stencil = has_depth_ds || has_stencil_ds;
+
+	VERA_ASSERT_MSG(!(has_depth_ds && has_stencil_ds) || depth_format == stencil_format,
+		"if depth format and stencil format both are depth-stencil format, both format must be identical");
+
+	if (is_depth_stencil) {
+		impl.depthAttachment = Texture::createDepth(device, info.width, info.height, info.depthFormat);
+	} else {
+		if (info.depthFormat != DepthFormat::Unknown)
+			impl.depthAttachment = Texture::createDepth(device, info.width, info.height, info.depthFormat);
+
+		if (info.stencilFormat != StencilFormat::Unknown)
+			impl.stencilAttachment = Texture::createStencil(device, info.width, info.height, info.stencilFormat);
+	}
 
 	return obj;
 }
@@ -49,7 +69,10 @@ ref<Texture> FrameBuffer::getDepthTexture()
 
 ref<Texture> FrameBuffer::getStencilTexture()
 {
-	return getImpl(this).stencilAttachment;
+	auto& impl      = getImpl(this);
+	auto  has_depth = format_has_depth(static_cast<Format>(impl.stencilFormat));
+
+	return has_depth ? impl.depthAttachment : impl.stencilAttachment;
 }
 
 void FrameBuffer::waitForComplete() const

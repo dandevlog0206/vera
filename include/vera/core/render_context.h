@@ -21,8 +21,8 @@ public:
 
 	void transitionImageLayout(
 		ref<Texture> texture,
-		ImageLayout  old_layout,
-		ImageLayout  new_layout);
+		TextureLayout  old_layout,
+		TextureLayout  new_layout);
 
 	void draw(
 		const GraphicsState& states,

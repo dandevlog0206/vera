@@ -1,8 +1,6 @@
 #pragma once
 
-#include "core_object.h"
-#include "../graphics/format.h"
-#include "../util/flag.h"
+#include "texture.h"
 #include "../util/extent.h"
 
 #define VERA_COMPONENT_MAPPING(r, g, b, a) \
@@ -40,13 +38,6 @@ enum class ComponentSwizzle VERA_ENUM
 	A
 };
 
-enum class ImageAspectFlagBits VERA_FLAG_BITS
-{
-	Color,
-	Depth,
-	Stencil
-} VERA_ENUM_FLAGS(ImageAspectFlagBits, ImageAspectFlags)
-
 struct ComponentMapping
 {
 	ComponentSwizzle r = ComponentSwizzle::Identity;
@@ -57,23 +48,23 @@ struct ComponentMapping
 
 struct TextureSubresourceRange
 {
-	ImageAspectFlags aspectFlags;
-	uint32_t         baseMipLevel;
-	uint32_t         levelCount;
-	uint32_t         baseArrayLayer;
-	uint32_t         layerCount;
+	TextureAspectFlags aspectFlags;
+	uint32_t           baseMipLevel;
+	uint32_t           levelCount;
+	uint32_t           baseArrayLayer;
+	uint32_t           layerCount;
 };
 
 struct TextureViewCreateInfo
 {
-	TextureViewType   type           = TextureViewType::Unknown;
-	Format            format         = Format::Unknown;
-	ComponentMapping  mapping        = VERA_COMPONENT_MAPPING(R, G, B, A);
-	ImageAspectFlags  aspectFlags    = ImageAspectFlagBits::Color;
-	uint32_t          baseMipLevel   = 0;
-	uint32_t          levelCount     = 1;
-	uint32_t          baseArrayLayer = 0;
-	uint32_t          layerCount     = 1;
+	TextureViewType    type           = TextureViewType::Unknown;
+	Format             format         = Format::Unknown;
+	ComponentMapping   mapping        = VERA_COMPONENT_MAPPING(R, G, B, A);
+	TextureAspectFlags aspectFlags    = TextureAspectFlagBits::Color;
+	uint32_t           baseMipLevel   = 0;
+	uint32_t           levelCount     = 1;
+	uint32_t           baseArrayLayer = 0;
+	uint32_t           layerCount     = 1;
 };
 
 class TextureView : protected CoreObject

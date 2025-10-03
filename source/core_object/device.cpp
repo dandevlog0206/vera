@@ -98,7 +98,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	std::vector<const char*> device_layers;
 	std::vector<const char*> device_extensions;
 
-	auto  obj      = createNewObject<Device>();
+	auto  obj      = createNewCoreObject<Device>();
 	auto& impl     = getImpl(obj);
 	auto& ctx_impl = getImpl(context);
 

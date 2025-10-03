@@ -7,6 +7,9 @@
 resource/pjw.png
 resource/lsm.png
 
+# copyrighted assets
+resource/angry bot/
+
 # Compiled SPIR-V source code
 *.spv
 

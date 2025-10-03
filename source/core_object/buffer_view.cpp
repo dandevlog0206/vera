@@ -8,7 +8,7 @@ VERA_NAMESPACE_BEGIN
 
 obj<BufferView> BufferView::create(obj<Buffer> buffer, const BufferViewCreateInfo& info)
 {
-	auto obj          = createNewObject<BufferView>();
+	auto obj          = createNewCoreObject<BufferView>();
 	auto& impl        = getImpl(obj);
 	auto& buffer_impl = getImpl(buffer);
 	auto  vk_device   = get_vk_device(buffer_impl.device);

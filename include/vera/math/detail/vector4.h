@@ -50,7 +50,7 @@ public:
 
 	VERA_NODISCARD VERA_CONSTEXPR vector_base operator+() const VERA_NOEXCEPT
 	{
-		return { x, y, z };
+		return *this;
 	}
 
 	VERA_NODISCARD VERA_CONSTEXPR vector_base operator-() const VERA_NOEXCEPT

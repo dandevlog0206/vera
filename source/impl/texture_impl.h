@@ -15,11 +15,11 @@ struct TextureImpl
 	ref<FrameBuffer>     frameBuffer;
 
 	vk::Image            image;
-	vk::ImageAspectFlags imageAspect;
-	vk::ImageLayout      imageLayout;
 
-	ImageUsageFlags      imageUsage;
-	Format               imageFormat;
+	Format               textureFormat;
+	TextureUsageFlags    textureUsage;
+	TextureAspectFlags   textureAspect;
+	TextureLayout        textureLayout;
 	uint32_t             width;
 	uint32_t             height;
 	uint32_t             depth;
@@ -30,76 +30,91 @@ struct TextureViewImpl
 {
 	using object_type = class TextureView;
 
-	obj<Device>      device;
-	obj<Texture>     texture;
+	obj<Device>        device;
+	obj<Texture>       texture;
 
-	vk::ImageView    imageView;
+	vk::ImageView      imageView;
 
-	uint32_t         width;
-	uint32_t         height;
-	uint32_t         depth;
-	TextureViewType  type;
-	Format           format;
-	ComponentMapping mapping;
-	ImageAspectFlags aspectFlags;
-	uint32_t         baseMipLevel;
-	uint32_t         levelCount;
-	uint32_t         baseArrayLayer;
-	uint32_t         layerCount;
+	uint32_t           width;
+	uint32_t           height;
+	uint32_t           depth;
+	TextureViewType    type;
+	Format             format;
+	ComponentMapping   mapping;
+	TextureAspectFlags aspectFlags;
+	uint32_t           baseMipLevel;
+	uint32_t           levelCount;
+	uint32_t           baseArrayLayer;
+	uint32_t           layerCount;
 };
 
-static vk::ImageLayout to_vk_image_layout(ImageLayout layout)
+static vk::ImageLayout to_vk_image_layout(TextureLayout layout)
 {
 	switch (layout) {
-	case ImageLayout::Undefined:                             return vk::ImageLayout::eUndefined;
-	case ImageLayout::General:                               return vk::ImageLayout::eGeneral;
-	case ImageLayout::ColorAttachmentOptimal:                return vk::ImageLayout::eColorAttachmentOptimal;
-	case ImageLayout::DepthStencilAttachmentOptimal:         return vk::ImageLayout::eDepthStencilAttachmentOptimal;
-	case ImageLayout::DepthStencilReadOnlyOptimal:           return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
-	case ImageLayout::ShaderReadOnlyOptimal:                 return vk::ImageLayout::eShaderReadOnlyOptimal;
-	case ImageLayout::TransferSrcOptimal:                    return vk::ImageLayout::eTransferSrcOptimal;
-	case ImageLayout::TransferDstOptimal:                    return vk::ImageLayout::eTransferDstOptimal;
-	case ImageLayout::Preinitialized:                        return vk::ImageLayout::ePreinitialized;
-	case ImageLayout::DepthReadOnlyStencilAttachmentOptimal: return vk::ImageLayout::eDepthReadOnlyStencilAttachmentOptimal;
-	case ImageLayout::DepthAttachmentStencilReadOnlyOptimal: return vk::ImageLayout::eDepthAttachmentStencilReadOnlyOptimal;
-	case ImageLayout::DepthAttachmentOptimal:                return vk::ImageLayout::eDepthAttachmentOptimal;
-	case ImageLayout::DepthReadOnlyOptimal:                  return vk::ImageLayout::eDepthReadOnlyOptimal;
-	case ImageLayout::StencilAttachmentOptimal:              return vk::ImageLayout::eStencilAttachmentOptimal;
-	case ImageLayout::StencilReadOnlyOptimal:                return vk::ImageLayout::eStencilReadOnlyOptimal;
-	case ImageLayout::ReadOnlyOptimal:                       return vk::ImageLayout::eReadOnlyOptimal;
-	case ImageLayout::AttachmentOptimal:                     return vk::ImageLayout::eAttachmentOptimal;
-	case ImageLayout::RenderingLocalRead:                    return vk::ImageLayout::eRenderingLocalRead;
-	case ImageLayout::PresentSrc:                            return vk::ImageLayout::ePresentSrcKHR;
+	case TextureLayout::Undefined:                             return vk::ImageLayout::eUndefined;
+	case TextureLayout::General:                               return vk::ImageLayout::eGeneral;
+	case TextureLayout::ColorAttachmentOptimal:                return vk::ImageLayout::eColorAttachmentOptimal;
+	case TextureLayout::DepthStencilAttachmentOptimal:         return vk::ImageLayout::eDepthStencilAttachmentOptimal;
+	case TextureLayout::DepthStencilReadOnlyOptimal:           return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+	case TextureLayout::ShaderReadOnlyOptimal:                 return vk::ImageLayout::eShaderReadOnlyOptimal;
+	case TextureLayout::TransferSrcOptimal:                    return vk::ImageLayout::eTransferSrcOptimal;
+	case TextureLayout::TransferDstOptimal:                    return vk::ImageLayout::eTransferDstOptimal;
+	case TextureLayout::Preinitialized:                        return vk::ImageLayout::ePreinitialized;
+	case TextureLayout::DepthReadOnlyStencilAttachmentOptimal: return vk::ImageLayout::eDepthReadOnlyStencilAttachmentOptimal;
+	case TextureLayout::DepthAttachmentStencilReadOnlyOptimal: return vk::ImageLayout::eDepthAttachmentStencilReadOnlyOptimal;
+	case TextureLayout::DepthAttachmentOptimal:                return vk::ImageLayout::eDepthAttachmentOptimal;
+	case TextureLayout::DepthReadOnlyOptimal:                  return vk::ImageLayout::eDepthReadOnlyOptimal;
+	case TextureLayout::StencilAttachmentOptimal:              return vk::ImageLayout::eStencilAttachmentOptimal;
+	case TextureLayout::StencilReadOnlyOptimal:                return vk::ImageLayout::eStencilReadOnlyOptimal;
+	case TextureLayout::ReadOnlyOptimal:                       return vk::ImageLayout::eReadOnlyOptimal;
+	case TextureLayout::AttachmentOptimal:                     return vk::ImageLayout::eAttachmentOptimal;
+	case TextureLayout::RenderingLocalRead:                    return vk::ImageLayout::eRenderingLocalRead;
+	case TextureLayout::PresentSrc:                            return vk::ImageLayout::ePresentSrcKHR;
 	}
 
 	VERA_ASSERT_MSG(false, "invalid image layout");
 	return {};
 }
 
-static vk::ImageUsageFlags to_vk_image_usage_flags(ImageUsageFlags flags)
+static vk::ImageAspectFlags to_vk_image_aspect_flags(TextureAspectFlags flags)
+{
+	vk::ImageAspectFlags result;
+
+	if (flags.has(TextureAspectFlagBits::Color))
+		result |= vk::ImageAspectFlagBits::eColor;
+	if (flags.has(TextureAspectFlagBits::Depth))
+		result |= vk::ImageAspectFlagBits::eDepth;
+	if (flags.has(TextureAspectFlagBits::Stencil))
+		result |= vk::ImageAspectFlagBits::eStencil;
+	if (flags.has(TextureAspectFlagBits::Metadata))
+		result |= vk::ImageAspectFlagBits::eMetadata;
+
+	return result;
+}
+
+static vk::ImageUsageFlags to_vk_image_usage_flags(TextureUsageFlags flags)
 {
 	vk::ImageUsageFlags result;
 
-	if (flags.has(ImageUsageFlagBits::TransferSrc))
+	if (flags.has(TextureUsageFlagBits::TransferSrc))
 		result |= vk::ImageUsageFlagBits::eTransferSrc;
-	if (flags.has(ImageUsageFlagBits::TransferDst))
+	if (flags.has(TextureUsageFlagBits::TransferDst))
 		result |= vk::ImageUsageFlagBits::eTransferDst;
-	if (flags.has(ImageUsageFlagBits::Sampled))
+	if (flags.has(TextureUsageFlagBits::Sampled))
 		result |= vk::ImageUsageFlagBits::eSampled;
-	if (flags.has(ImageUsageFlagBits::Storage))
+	if (flags.has(TextureUsageFlagBits::Storage))
 		result |= vk::ImageUsageFlagBits::eStorage;
-	if (flags.has(ImageUsageFlagBits::ColorAttachment))
+	if (flags.has(TextureUsageFlagBits::ColorAttachment))
 		result |= vk::ImageUsageFlagBits::eColorAttachment;
-	if (flags.has(ImageUsageFlagBits::DepthStencilAttachment))
+	if (flags.has(TextureUsageFlagBits::DepthStencilAttachment))
 		result |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
-	if (flags.has(ImageUsageFlagBits::TransientAttachment))
+	if (flags.has(TextureUsageFlagBits::TransientAttachment))
 		result |= vk::ImageUsageFlagBits::eTransientAttachment;
-	if (flags.has(ImageUsageFlagBits::InputAttachment))
+	if (flags.has(TextureUsageFlagBits::InputAttachment))
 		result |= vk::ImageUsageFlagBits::eInputAttachment;
-	if (flags.has(ImageUsageFlagBits::HostTransfer))
+	if (flags.has(TextureUsageFlagBits::HostTransfer))
 		result |= vk::ImageUsageFlagBits::eHostTransfer;
-
-	VERA_ASSERT_MSG(!flags.has(ImageUsageFlagBits::FrameBuffer), "invalid image usage flag bit");
+	VERA_ASSERT_MSG(!flags.has(TextureUsageFlagBits::FrameBuffer), "invalid image usage flag bit");
 
 	return result;
 }
@@ -134,20 +149,6 @@ static vk::ComponentSwizzle to_vk_component_swizzle(ComponentSwizzle swizzle)
 
 	VERA_ASSERT_MSG(false, "invalid component swizzle");
 	return {};
-}
-
-static vk::ImageAspectFlags to_vk_image_aspect_flags(ImageAspectFlags flags)
-{
-	vk::ImageAspectFlags result;
-
-	if (flags.has(ImageAspectFlagBits::Color))
-		result |= vk::ImageAspectFlagBits::eColor;
-	if (flags.has(ImageAspectFlagBits::Depth))
-		result |= vk::ImageAspectFlagBits::eDepth;
-	if (flags.has(ImageAspectFlagBits::Stencil))
-		result |= vk::ImageAspectFlagBits::eStencil;
-
-	return result;
 }
 
 VERA_NAMESPACE_END

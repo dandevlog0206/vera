@@ -12,7 +12,7 @@ VERA_NAMESPACE_BEGIN
 
 obj<DeviceMemory> DeviceMemory::create(obj<Device> device, const DeviceMemoryCreateInfo& info)
 {
-	auto  obj         = createNewObject<DeviceMemory>();
+	auto  obj         = createNewCoreObject<DeviceMemory>();
 	auto& impl        = getImpl(obj);
 	auto& device_impl = getImpl(device);
 

@@ -34,8 +34,8 @@ public:
 		m_window.registerEventHandler(eventHandler);
 
 		m_context = vr::Context::create(vr::ContextCreateInfo{
-			.enableValidation = true,
-			.enableDebugUtils = true
+			.enableValidation = VERA_IS_DEBUG,
+			.enableDebugUtils = VERA_IS_DEBUG
 		});
 
 		m_device = vr::Device::create(m_context, vr::DeviceCreateInfo{

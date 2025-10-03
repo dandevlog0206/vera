@@ -1,5 +1,8 @@
 #pragma once
 
+// asset
+#include "asset/asset_loader.h"
+
 // core
 #include "core/context.h"
 #include "core/core_object.h"
@@ -67,6 +70,7 @@
 #include "util/hash.h"
 #include "util/property.h"
 #include "util/rect.h"
+#include "util/result_message.h"
 #include "util/small_vector.h"
 #include "util/static_vector.h"
 #include "util/timer.h"

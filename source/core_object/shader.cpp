@@ -528,7 +528,7 @@ obj<Shader> Shader::create(obj<Device> device, const uint32_t* spirv_code, size_
 		return it->second;
 	}
 
-	auto  obj  = createNewObject<Shader>();
+	auto  obj  = createNewCoreObject<Shader>();
 	auto& impl = getImpl(obj);
 
 	vk::ShaderModuleCreateInfo shader_info;

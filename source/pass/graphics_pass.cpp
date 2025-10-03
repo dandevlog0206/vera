@@ -88,8 +88,8 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<FrameBuffer> framebuffer)
 			vr::PipelineStageFlagBits::EarlyFragmentTests,
 			vr::AccessFlagBits::None,
 			vr::AccessFlagBits::DepthStencilAttachmentWrite | vr::AccessFlagBits::DepthStencilAttachmentWrite,
-			vr::ImageLayout::Undefined,
-			vr::ImageLayout::DepthAttachmentOptimal);
+			vr::TextureLayout::Undefined,
+			vr::TextureLayout::DepthAttachmentOptimal);
 	}
 
 	m_states.setViewport(Viewport{

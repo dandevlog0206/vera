@@ -42,7 +42,7 @@ obj<ShaderReflection> ShaderReflection::create(std::vector<obj<Shader>> shaders)
 
 	// TODO: check duplicate reflection name
 
-	auto  obj  = createNewObject<ShaderReflection>();
+	auto  obj  = createNewCoreObject<ShaderReflection>();
 	auto& impl = getImpl(obj);
 	
 	impl.device = shaders[0]->getDevice();

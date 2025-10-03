@@ -23,7 +23,7 @@ vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> render_command)
 
 obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 {
-	auto  obj       = createNewObject<CommandBuffer>();
+	auto  obj       = createNewCoreObject<CommandBuffer>();
 	auto& impl      = getImpl(obj);
 	auto  vk_device = get_vk_device(device);
 
@@ -141,8 +141,8 @@ void CommandBuffer::transitionImageLayout(
 	PipelineStageFlags dst_stage_mask,
 	AccessFlags        src_access_mask,
 	AccessFlags        dst_access_mask,
-	ImageLayout        old_layout,
-	ImageLayout        new_layout)
+	TextureLayout        old_layout,
+	TextureLayout        new_layout)
 {
 	auto& impl         = getImpl(this);
 	auto& texture_impl = getImpl(texture);
@@ -155,7 +155,7 @@ void CommandBuffer::transitionImageLayout(
 	barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image                           = get_vk_image(texture);
-	barrier.subresourceRange.aspectMask     = texture_impl.imageAspect;
+	barrier.subresourceRange.aspectMask     = to_vk_image_aspect_flags(texture_impl.textureAspect);
 	barrier.subresourceRange.baseMipLevel   = 0;
 	barrier.subresourceRange.levelCount     = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;

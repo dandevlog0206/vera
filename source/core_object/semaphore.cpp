@@ -69,7 +69,7 @@ bool Semaphore::waitAny(std::span<obj<Semaphore>> semaphores, uint64_t timeout)
 
 obj<Semaphore> Semaphore::create(obj<Device> device)
 {
-	auto  obj       = createNewObject<Semaphore>();
+	auto  obj       = createNewCoreObject<Semaphore>();
 	auto& impl      = getImpl(obj);
 	auto  vk_device = get_vk_device(device);
 

@@ -21,7 +21,7 @@ enum class TextureType VERA_ENUM
 	Texture2DMultisample,
 };
 
-enum class ImageLayout VERA_ENUM
+enum class TextureLayout VERA_ENUM
 {
 	Undefined,
 	General,
@@ -44,7 +44,15 @@ enum class ImageLayout VERA_ENUM
 	PresentSrc
 };
 
-enum class ImageUsageFlagBits VERA_FLAG_BITS
+enum class TextureAspectFlagBits VERA_FLAG_BITS
+{
+	Color    = 1 << 0,
+	Depth    = 1 << 1,
+	Stencil  = 1 << 2,
+	Metadata = 1 << 3
+} VERA_ENUM_FLAGS(TextureAspectFlagBits, TextureAspectFlags)
+
+enum class TextureUsageFlagBits VERA_FLAG_BITS
 {
 	TransferSrc            = 1 << 0,
 	TransferDst            = 1 << 1,
@@ -56,12 +64,13 @@ enum class ImageUsageFlagBits VERA_FLAG_BITS
 	InputAttachment        = 1 << 7,
 	HostTransfer           = 1 << 8,
 	FrameBuffer            = 1 << 9
-} VERA_ENUM_FLAGS(ImageUsageFlagBits, ImageUsageFlags)
+} VERA_ENUM_FLAGS(TextureUsageFlagBits, TextureUsageFlags)
 
 struct TextureCreateInfo
 {
 	TextureType       type        = TextureType::Texture2D;
 	Format            format      = {};
+	TextureUsageFlags usage       = {};
 	uint32_t          width       = {};
 	uint32_t          height      = {};
 	uint32_t          depth       = 1;
@@ -75,7 +84,9 @@ class Texture : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Texture)
 public:
+	static obj<Texture> createColorAtt(obj<Device> device, uint32_t width, uint32_t height, DepthFormat format);
 	static obj<Texture> createDepth(obj<Device> device, uint32_t width, uint32_t height, DepthFormat format);
+	static obj<Texture> createStencil(obj<Device> device, uint32_t width, uint32_t height, StencilFormat format);
 	static obj<Texture> create(obj<Device> device, const TextureCreateInfo& info);
 	~Texture();
 
@@ -86,7 +97,8 @@ public:
 
 	ref<TextureView> getTextureView();
 
-	ImageUsageFlags getUsageFlags();
+
+	TextureUsageFlags getUsageFlags();
 
 	uint32_t width() const;
 	uint32_t height() const;

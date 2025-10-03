@@ -323,6 +323,46 @@ uint32_t get_format_component_count(Format format)
 	return {};
 }
 
+bool format_has_depth(Format format)
+{
+	switch (format) {
+	case Format::D16Unorm:
+	case Format::X8D24Unorm:
+	case Format::D32Float:
+	case Format::D16UnormS8Uint:
+	case Format::D24UnormS8Uint:
+	case Format::D32FloatS8Uint:
+		return true;
+	}
+
+	return false;
+}
+
+bool format_has_stencil(Format format)
+{
+	switch (format) {
+	case Format::S8Uint:
+	case Format::D16UnormS8Uint:
+	case Format::D24UnormS8Uint:
+	case Format::D32FloatS8Uint:
+		return true;
+	}
+
+	return false;
+}
+
+bool format_is_depth_stencil(Format format)
+{
+	switch (format) {
+	case Format::D16UnormS8Uint:
+	case Format::D24UnormS8Uint:
+	case Format::D32FloatS8Uint:
+		return true;
+	}
+
+	return false;
+}
+
 bool format_has_alpha(Format format)
 {
 	switch (format) {

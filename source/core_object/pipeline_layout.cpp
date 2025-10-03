@@ -42,7 +42,7 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLay
 		return it->second;
 	}
 
-	auto  obj  = createNewObject<PipelineLayout>();
+	auto  obj  = createNewCoreObject<PipelineLayout>();
 	auto& impl = getImpl(obj);
 
 	static_vector<vk::DescriptorSetLayout, 20> vk_layouts;

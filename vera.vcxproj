@@ -162,6 +162,7 @@
     <ClInclude Include="include\vera\core\framebuffer.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_storage.h" />
+    <ClInclude Include="include\vera\core\smart_ptr.h" />
     <ClInclude Include="include\vera\math\constant.h" />
     <ClInclude Include="include\vera\math\detail\config.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x2.h" />
@@ -180,6 +181,8 @@
     <ClInclude Include="include\vera\math\detail\matrix2x4.h" />
     <ClInclude Include="include\vera\math\quaternion.h" />
     <ClInclude Include="include\vera\math\vector_math.h" />
+    <ClInclude Include="include\vera\scene\mesh_object.h" />
+    <ClInclude Include="include\vera\scene\scene.h" />
     <ClInclude Include="include\vera\util\arcball.h" />
     <ClInclude Include="include\vera\graphics\format_traits.h" />
     <ClInclude Include="include\vera\graphics\image.h" />
@@ -193,12 +196,16 @@
     <ClInclude Include="include\vera\math\matrix_types.h" />
     <ClInclude Include="include\vera\shader\shader_variable.h" />
     <ClInclude Include="include\vera\graphics\colormap.h" />
+    <ClInclude Include="include\vera\asset\asset_loader.h" />
     <ClInclude Include="include\vera\util\camera.h" />
     <ClInclude Include="include\vera\util\direction.h" />
     <ClInclude Include="include\vera\util\flycam.h" />
     <ClInclude Include="include\vera\math\radian.h" />
+    <ClInclude Include="include\vera\util\result_message.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
     <ClInclude Include="include\vera\util\timer.h" />
+    <ClInclude Include="source\asset\detail\fbx_loader.h" />
+    <ClInclude Include="source\asset\detail\gltf_loader.h" />
     <ClInclude Include="source\graphics\pixel.h" />
     <ClInclude Include="source\impl\buffer_impl.h" />
     <ClInclude Include="source\impl\device_memory_impl.h" />
@@ -307,6 +314,7 @@
     <ClCompile Include="source\core_object\swapchain.cpp" />
     <ClCompile Include="source\core_object\texture.cpp" />
     <ClCompile Include="source\util\arcball.cpp" />
+    <ClCompile Include="source\asset\asset_loader.cpp" />
     <ClCompile Include="source\util\flycam.cpp" />
     <ClCompile Include="source\os\window.cpp" />
   </ItemGroup>

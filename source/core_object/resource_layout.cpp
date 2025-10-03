@@ -38,7 +38,7 @@ obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const std::vector
 		return it->second;
 	}
 
-	auto  obj  = createNewObject<ResourceLayout>();
+	auto  obj  = createNewCoreObject<ResourceLayout>();
 	auto& impl = getImpl(obj);
 
 	std::vector<vk::DescriptorSetLayoutBinding> vk_bindings;

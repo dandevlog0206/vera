@@ -97,8 +97,8 @@ public:
 		PipelineStageFlags dst_stage_mask,
 		AccessFlags        src_access_mask,
 		AccessFlags        dst_access_mask,
-		ImageLayout        old_layout,
-		ImageLayout        new_layout);
+		TextureLayout        old_layout,
+		TextureLayout        new_layout);
 
 	void copyBufferToTexture(
 		ref<Texture> dst,

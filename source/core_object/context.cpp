@@ -86,7 +86,7 @@ std::vector<InstanceExtensionInfo> Context::enumerateInstanceExtensions()
 
 obj<Context> Context::create(const ContextCreateInfo& info)
 {
-	auto  obj  = createNewObject<Context>();
+	auto  obj  = createNewCoreObject<Context>();
 	auto& impl = getImpl(obj);
 
 	vk::ApplicationInfo app_info;

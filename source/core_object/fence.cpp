@@ -64,7 +64,7 @@ bool Fence::waitAny(std::span<obj<Fence>> fences, uint64_t timeout)
 
 obj<Fence> Fence::create(obj<Device> device, bool signaled)
 {
-	auto  obj       = createNewObject<Fence>();
+	auto  obj       = createNewCoreObject<Fence>();
 	auto& impl      = getImpl(obj);
 	auto  vk_device = get_vk_device(device);
 

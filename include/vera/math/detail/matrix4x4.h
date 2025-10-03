@@ -150,6 +150,21 @@ public:
 		return col[idx];
 	}
 
+	VERA_NODISCARD VERA_CONSTEXPR matrix_base operator+() const VERA_NOEXCEPT
+	{
+		return *this;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR matrix_base operator-() const VERA_NOEXCEPT
+	{
+		return {
+			-col[0],
+			-col[1],
+			-col[2],
+			-col[3]
+		};
+	}
+
 	VERA_NODISCARD VERA_CONSTEXPR matrix_base operator+(const matrix_base& rhs) const VERA_NOEXCEPT
 	{
 		return {

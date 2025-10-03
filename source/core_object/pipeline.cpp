@@ -235,7 +235,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 		return it->second;
 	}
 
-	auto  obj  = createNewObject<Pipeline>();
+	auto  obj  = createNewCoreObject<Pipeline>();
 	auto& impl = getImpl(obj);
 
 	impl.pipelineLayout = register_pipeline_layout(device, info);

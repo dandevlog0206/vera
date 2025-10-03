@@ -254,7 +254,7 @@ static void destroy_shader_storage_frame(ShaderStorageImpl& impl)
 
 obj<ShaderStorage> ShaderStorage::create(obj<ShaderReflection> reflection)
 {
-	auto  obj       = createNewObject<ShaderStorage>();
+	auto  obj       = createNewCoreObject<ShaderStorage>();
 	auto& impl      = getImpl(obj);
 	auto& refl_impl = getImpl(reflection);
 	auto  vk_device = get_vk_device(refl_impl.device);

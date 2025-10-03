@@ -93,7 +93,7 @@ bool FrameSync::empty() const
 
 obj<RenderContext> RenderContext::create(obj<Device> device)
 {
-	auto  obj  = createNewObject<RenderContext>();
+	auto  obj  = createNewCoreObject<RenderContext>();
 	auto& impl = getImpl(obj);
 
 	impl.device         = std::move(device);
@@ -127,7 +127,7 @@ obj<CommandBuffer> RenderContext::getRenderCommand()
 	return impl.renderFrames[impl.frameIndex]->renderCommand;
 }
 
-void RenderContext::transitionImageLayout(ref<Texture> texture, ImageLayout old_layout, ImageLayout new_layout)
+void RenderContext::transitionImageLayout(ref<Texture> texture, TextureLayout old_layout, TextureLayout new_layout)
 {
 	auto& impl     = getImpl(this);
 	auto& cmd      = get_render_frame(impl).renderCommand;
@@ -136,24 +136,24 @@ void RenderContext::transitionImageLayout(ref<Texture> texture, ImageLayout old_
 	if (!cmd_impl.currentRenderingInfo.colorAttachments.empty())
 		cmd->endRendering();
 
-	if (old_layout == ImageLayout::Undefined && new_layout == ImageLayout::AttachmentOptimal) {
+	if (old_layout == TextureLayout::Undefined && new_layout == TextureLayout::AttachmentOptimal) {
 		cmd->transitionImageLayout(
 			texture,
 			vr::PipelineStageFlagBits::ColorAttachmentOutput,
 			vr::PipelineStageFlagBits::ColorAttachmentOutput,
 			vr::AccessFlagBits{},
 			vr::AccessFlagBits::ColorAttachmentWrite,
-			vr::ImageLayout::Undefined,
-			vr::ImageLayout::ColorAttachmentOptimal);
-	} else if (old_layout == ImageLayout::ColorAttachmentOptimal && new_layout == ImageLayout::PresentSrc) {
+			vr::TextureLayout::Undefined,
+			vr::TextureLayout::ColorAttachmentOptimal);
+	} else if (old_layout == TextureLayout::ColorAttachmentOptimal && new_layout == TextureLayout::PresentSrc) {
 		cmd->transitionImageLayout(
 			texture,
 			vr::PipelineStageFlagBits::ColorAttachmentOutput,
 			vr::PipelineStageFlagBits::BottomOfPipe,
 			vr::AccessFlagBits::ColorAttachmentWrite | vr::AccessFlagBits::ColorAttachmentWrite,
 			vr::AccessFlagBits{},
-			vr::ImageLayout::ColorAttachmentOptimal,
-			vr::ImageLayout::PresentSrc);
+			vr::TextureLayout::ColorAttachmentOptimal,
+			vr::TextureLayout::PresentSrc);
 	} else {
 		throw Exception("unsupported image layout transition");
 	}
@@ -180,7 +180,7 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 		auto& texture_impl = getImpl(color.texture);
 
 		// Identify swapchain image and save for future use
-		if (texture_impl.imageUsage.has(ImageUsageFlagBits::FrameBuffer)) {
+		if (texture_impl.textureUsage.has(TextureUsageFlagBits::FrameBuffer)) {
 			auto& render_frame = *impl.renderFrames[impl.frameIndex];
 
 			// TODO: optimize
@@ -201,8 +201,8 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 			vr::PipelineStageFlagBits::ColorAttachmentOutput,
 			vr::AccessFlagBits{},
 			vr::AccessFlagBits::ColorAttachmentWrite,
-			vr::ImageLayout::Undefined,
-			vr::ImageLayout::ColorAttachmentOptimal);
+			vr::TextureLayout::Undefined,
+			vr::TextureLayout::ColorAttachmentOptimal);
 	}
 
 	states.bindCommandBuffer(cmd);
@@ -224,8 +224,8 @@ void RenderContext::submit()
 	for (auto& framebuffer : render_frame.framebuffers)
 		transitionImageLayout(
 			framebuffer->getTexture(),
-			ImageLayout::ColorAttachmentOptimal,
-			ImageLayout::PresentSrc);
+			TextureLayout::ColorAttachmentOptimal,
+			TextureLayout::PresentSrc);
 
 	render_frame.renderCommand->end();
 

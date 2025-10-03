@@ -13,7 +13,7 @@ vk::ImageView& get_vk_image_view(ref<TextureView> texture_view)
 
 obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCreateInfo& info)
 {
-	auto  obj          = createNewObject<TextureView>();
+	auto  obj          = createNewCoreObject<TextureView>();
 	auto& impl         = getImpl(obj);
 	auto& texture_impl = getImpl(texture);
 	auto  vk_device    = get_vk_device(texture_impl.device);
@@ -35,9 +35,9 @@ obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCrea
 	impl.device         = texture_impl.device;
 	impl.texture        = std::move(texture);
 	impl.imageView      = vk_device.createImageView(view_info);
-	impl.width          = 0; // TODO: fill TextureView width, height, depth
-	impl.height         = 0;
-	impl.depth          = 0;
+	impl.width          = texture_impl.width;
+	impl.height         = texture_impl.height;
+	impl.depth          = texture_impl.depth;
 	impl.type           = info.type;
 	impl.format         = info.format;
 	impl.mapping        = info.mapping;
