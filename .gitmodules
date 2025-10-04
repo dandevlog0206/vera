@@ -4,3 +4,6 @@
 [submodule "thirdparty/spirv-reflect"]
 	path = thirdparty/spirv-reflect
 	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
+[submodule "thirdparty/zlib"]
+	path = thirdparty/zlib
+	url = https://github.com/madler/zlib.git
