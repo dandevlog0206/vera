@@ -1,15 +1,16 @@
 #pragma once
 
 #include "../../../include/vera/asset/asset_loader.h"
+#include "../../../include/vera/scene/mesh_attribute.h"
 #include "../../../include/vera/util/result_message.h"
 #include "../../../include/vera/util/stack_allocator.h"
+#include <zlib.h>
 #include <string_view>
 #include <fstream>
 #include <vector>
 
 #define FBX_HEADER_MAGIC "Kaydara FBX Binary  \x00\x1a\x00"
 #define FBX_FOOTER_MAGIC "\xF8\x5A\x8C\x6A\xDE\xF5\xD9\x7E\xEC\xE9\x0C\xE3\x75\x8F\x29\x0B"
-#define FBX_FOOTER_ID "\xFA\xBC\xAB\x09\xD0\xC8\xD4\x66\xB1\x76\xFB\x83\x1C\xF7\x26\x7E"
 
 #define FBX_FORWARD_RESULT(expression)                                \
 	do {                                                              \
@@ -62,6 +63,32 @@ struct FBXLoader
 		ARRAY_COMP_LONG   = 'z' + 4,
 		ARRAY_COMP_FLOAT  = 'z' + 5,
 		ARRAY_COMP_DOUBLE = 'z' + 6
+	};
+
+	enum class NodeAttributeType VERA_ENUM
+	{
+		Unknown,
+		Null,
+		Marker,
+		Skeleton,
+		Mesh,
+		Nurbs,
+		Patch,
+		Camera,
+		CameraStereo,
+		CameraSwitcher,
+		Light,
+		OpticalReference,
+		OpticalMarker,
+		NurbsCurve,
+		TrimNurbsSurface,
+		Boundary,
+		NurbsSurface,
+		Shape,
+		LODGroup,
+		SubDiv,
+		CachedEffect,
+		Line
 	};
 
 	struct PropertyRecord
@@ -236,6 +263,7 @@ struct FBXLoader
 		PropertyRecord** properties;
 		uint32_t         childCount;
 		NodeRecord*      childs;
+		NodeRecord*      parent;
 	};
 
 #pragma pack(push, 1)
@@ -293,10 +321,7 @@ struct FBXLoader
 
 		input_file.close();
 
-		// root_node.name = "Root Node";
-		// print_node(root_node);
-
-		
+		FBX_FORWARD_RESULT(parse_objects_node(loader, find_node(&root_node, "Objects")));
 		
 		loader.m_file_format = AssetFileFormat::FBX;
 		loader.m_version     = Version(
@@ -308,85 +333,93 @@ struct FBXLoader
 	}
 
 private:
-	static const char* get_property_code_name(PropertyTypeCode code)
+	static Result parse_objects_node(AssetLoader& loader, NodeRecord* node)
 	{
-		switch (code) {
-		case BYTE:              return "BYTE";
-		case SHORT:             return "SHORT";
-		case BOOL:              return "BOOL";
-		case CHAR:              return "CHAR";
-		case INT:               return "INT";
-		case FLOAT:             return "FLOAT";
-		case DOUBLE:            return "DOUBLE";
-		case LONG:              return "LONG";
-		case BINARY:            return "BINARY";
-		case STRING:            return "STRING";
-		case ARRAY_BOOL:        return "ARRAY_BOOL";
-		case ARRAY_UBYTE:       return "ARRAY_UBYTE";
-		case ARRAY_INT:         return "ARRAY_INT";
-		case ARRAY_LONG:        return "ARRAY_LONG";
-		case ARRAY_FLOAT:       return "ARRAY_FLOAT";
-		case ARRAY_DOUBLE:      return "ARRAY_DOUBLE";
-		case ARRAY_COMP_BOOL:   return "ARRAY_COMP_BOOL";
-		case ARRAY_COMP_UBYTE:  return "ARRAY_COMP_UBYTE";
-		case ARRAY_COMP_INT:    return "ARRAY_COMP_INT";
-		case ARRAY_COMP_LONG:   return "ARRAY_COMP_LONG";
-		case ARRAY_COMP_FLOAT:  return "ARRAY_COMP_FLOAT";
-		case ARRAY_COMP_DOUBLE: return "ARRAY_COMP_DOUBLE";
-		};
+		if (!node)
+			return { AssetResult::InvalidFormat, "missing Objects node" };
 
-		return "UNKNOWN";
-	}
+		auto model_node = scene::Node::create("model");
 
-	static void print_node(const NodeRecord& node, int indent = 0)
-	{
-		for (int i = 0; i < indent; ++i)
-			printf("  ");
+		for (uint32_t i = 0; i < node->childCount; ++i) {
+			auto* child_node = &node->childs[i];
 
-		printf("Node: %s, props: %u, childs: %u\n", node.name, node.propertyCount, node.childCount);
-		for (uint32_t i = 0; i < node.propertyCount; ++i) {
-			for (int j = 0; j < indent + 1; ++j) printf("  ");
-			printf("Prop: %s\n", get_property_code_name(node.properties[i]->type));
+			if (strcmp(child_node->name, "NodeAttribute") == 0) {
+				FBX_FORWARD_RESULT(parse_node_attribute(loader, child_node));
+			} else if (strcmp(child_node->name, "Geometry") == 0) {
+				FBX_FORWARD_RESULT(parse_geometry_node(model_node, child_node));
+			}
 		}
-		for (uint32_t i = 0; i < node.childCount; ++i)
-			print_node(node.childs[i], indent + 1);
+
+		loader.m_scene->getRootNode()->addChild(model_node);
 	}
 
-	static Result check_footer(std::ifstream& input_file, uint32_t header_version)
+	static Result parse_node_attribute(AssetLoader& loader, NodeRecord* node)
 	{
-		char     footer_id[16];
-		char     padding[16];
-		char     zeros[4];
-		char     static_padding[120];
-		char     magic[16];
-		size_t   padding_size;
-		uint32_t version;
+		return AssetResult::Success;
+	}
 
-		input_file.read(reinterpret_cast<char*>(&footer_id), sizeof(footer_id));
-		//if (memcmp(footer_id, FBX_FOOTER_ID, sizeof(footer_id)) != 0)
-		//	return { AssetResult::InvalidID, "invalid footer id" };
+	// TODO: check error handling
+	static Result parse_geometry_node(ref<scene::Node> model_node, NodeRecord* node)
+	{
+		auto* vertex_node = find_node(node, "Vertices");
+		auto* index_node  = find_node(node, "PolygonVertexIndex");
 
-		padding_size = 0x10 - input_file.tellg() % 0x10;
+		auto* vert_prop = static_cast<PropertyRecordType<ARRAY_COMP_DOUBLE>*>(vertex_node->properties[0]);
+		auto* idx_prop  = static_cast<PropertyRecordType<ARRAY_COMP_INT>*>(index_node->properties[0]);
 
-		input_file.read(reinterpret_cast<char*>(&padding), padding_size);
-		if (!memvcmp(padding, padding_size, 0))
-			return { AssetResult::InvalidPadding, "found non-zero values in alignment padding" };
+		std::vector<float3>   vertices(vert_prop->length / 3);
+		std::vector<uint32_t> indices;
 
-		input_file.read(reinterpret_cast<char*>(&zeros), sizeof(zeros));
-		if (!memvcmp(zeros, sizeof(zeros), 0))
-			return { AssetResult::InvalidPadding, "found non-zero values after footer id" };
+		std::vector<double3> vert_buffer(vert_prop->length / 3);
+		std::vector<int32_t> idx_buffer(idx_prop->length);
+		uint32_t             vert_buffer_size;
+		uint32_t             idx_buffer_size;
 
-		input_file.read(reinterpret_cast<char*>(&version), sizeof(version));
-		if (version != header_version)
-			return { AssetResult::InvalidFormat, "footer version mismatch" };
+		uncompress(
+			reinterpret_cast<Bytef*>(vert_buffer.data()),
+			reinterpret_cast<uLongf*>(&vert_buffer_size),
+			reinterpret_cast<const Bytef*>(vert_prop->value),
+			vert_prop->size);
 
-		input_file.read(reinterpret_cast<char*>(&static_padding), sizeof(static_padding));
-		if (!memvcmp(static_padding, sizeof(static_padding), 0))
-			return { AssetResult::InvalidPadding, "found non-zero values in static padding" };
-		
-		input_file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
-		if (memcmp(magic, FBX_FOOTER_MAGIC, sizeof(magic)) != 0)
-			return { AssetResult::InvalidMagic, "invalid footer magic" };
+		for (size_t i = 0; i < vert_buffer.size(); ++i) {
+			vertices[i].x = 0.01f * static_cast<float>(vert_buffer[i].x);
+			vertices[i].y = 0.01f * static_cast<float>(vert_buffer[i].y);
+			vertices[i].z = 0.01f * static_cast<float>(vert_buffer[i].z);
+		}
+
+		uncompress(
+			reinterpret_cast<Bytef*>(idx_buffer.data()),
+			reinterpret_cast<uLongf*>(&idx_buffer_size),
+			reinterpret_cast<const Bytef*>(idx_prop->value),
+			idx_prop->size);
+
+		for (size_t i = 0, count = 0; i < idx_buffer.size(); i++) {
+			count++;
+
+			if (0 <= idx_buffer[i]) continue;
+
+			if (count == 3) {
+				indices.push_back(static_cast<uint32_t>(idx_buffer[i - 2]));
+				indices.push_back(static_cast<uint32_t>(idx_buffer[i - 1]));
+				indices.push_back(static_cast<uint32_t>(~idx_buffer[i - 0]));
+			} else if (count == 4) {
+				indices.push_back(static_cast<uint32_t>(idx_buffer[i - 3]));
+				indices.push_back(static_cast<uint32_t>(idx_buffer[i - 2]));
+				indices.push_back(static_cast<uint32_t>(idx_buffer[i - 1]));
+				indices.push_back(static_cast<uint32_t>(idx_buffer[i - 3]));
+				indices.push_back(static_cast<uint32_t>(idx_buffer[i - 1]));
+				indices.push_back(static_cast<uint32_t>(~idx_buffer[i - 0]));
+			}
+
+			count = 0;
+		}
+
+		auto mesh_attr = scene::MeshAttribute::create();
+
+		mesh_attr->setVertices(std::move(vertices));
+		mesh_attr->setIndices(std::move(indices));
+
+		model_node->addAttribute(mesh_attr);
 
 		return AssetResult::Success;
 	}
@@ -409,6 +442,8 @@ private:
 			if (raw_node.endOffset == 0) break;
 			
 			NodeRecord& node = parent_node.childs[i] = {};
+
+			node.parent = &parent_node;
 			
 			name_buffer = allocator.allocate<char>(raw_node.nameLength + 1);
 			FBX_CHECK_ALLOC(name_buffer);
@@ -688,6 +723,142 @@ private:
 		}
 
 		return AssetResult::Success;
+	}
+
+	static Result check_footer(std::ifstream& input_file, uint32_t header_version)
+	{
+		char     footer_id[16];
+		char     padding[16];
+		char     zeros[4];
+		char     static_padding[120];
+		char     magic[16];
+		size_t   padding_size;
+		uint32_t version;
+
+		input_file.read(reinterpret_cast<char*>(&footer_id), sizeof(footer_id));
+
+		padding_size = 0x10 - input_file.tellg() % 0x10;
+
+		input_file.read(reinterpret_cast<char*>(&padding), padding_size);
+		if (!memvcmp(padding, padding_size, 0))
+			return { AssetResult::InvalidPadding, "found non-zero values in alignment padding" };
+
+		input_file.read(reinterpret_cast<char*>(&zeros), sizeof(zeros));
+		if (!memvcmp(zeros, sizeof(zeros), 0))
+			return { AssetResult::InvalidPadding, "found non-zero values after footer id" };
+
+		input_file.read(reinterpret_cast<char*>(&version), sizeof(version));
+		if (version != header_version)
+			return { AssetResult::InvalidFormat, "footer version mismatch" };
+
+		input_file.read(reinterpret_cast<char*>(&static_padding), sizeof(static_padding));
+		if (!memvcmp(static_padding, sizeof(static_padding), 0))
+			return { AssetResult::InvalidPadding, "found non-zero values in static padding" };
+		
+		input_file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+		if (memcmp(magic, FBX_FOOTER_MAGIC, sizeof(magic)) != 0)
+			return { AssetResult::InvalidMagic, "invalid footer magic" };
+
+		return AssetResult::Success;
+	}
+
+	static NodeAttributeType get_node_attribute_type(NodeRecord* node)
+	{
+		if (strcmp(node->name, "NodeAttribute"))
+			return NodeAttributeType::Unknown;
+
+		if (auto* type_node = find_node(node, "TypeFlags")) {
+			if (type_node->propertyCount == 0)
+				return NodeAttributeType::Unknown;
+
+			auto* type_prop = static_cast<PropertyRecordType<STRING>*>(type_node->properties[0]);
+
+			if (strcmp(type_prop->value, "Null") == 0)             return NodeAttributeType::Null;
+			if (strcmp(type_prop->value, "Marker") == 0)           return NodeAttributeType::Marker;
+			if (strcmp(type_prop->value, "Skeleton") == 0)         return NodeAttributeType::Skeleton;
+			if (strcmp(type_prop->value, "Mesh") == 0)             return NodeAttributeType::Mesh;
+			if (strcmp(type_prop->value, "Nurbs") == 0)            return NodeAttributeType::Nurbs;
+			if (strcmp(type_prop->value, "Patch") == 0)            return NodeAttributeType::Patch;
+			if (strcmp(type_prop->value, "Camera") == 0)           return NodeAttributeType::Camera;
+			if (strcmp(type_prop->value, "CameraStereo") == 0)     return NodeAttributeType::CameraStereo;
+			if (strcmp(type_prop->value, "CameraSwitcher") == 0)   return NodeAttributeType::CameraSwitcher;
+			if (strcmp(type_prop->value, "Light") == 0)            return NodeAttributeType::Light;
+			if (strcmp(type_prop->value, "OpticalReference") == 0) return NodeAttributeType::OpticalReference;
+			if (strcmp(type_prop->value, "OpticalMarker") == 0)    return NodeAttributeType::OpticalMarker;
+			if (strcmp(type_prop->value, "NurbsCurve") == 0)       return NodeAttributeType::NurbsCurve;
+			if (strcmp(type_prop->value, "TrimNurbsSurface") == 0) return NodeAttributeType::TrimNurbsSurface;
+			if (strcmp(type_prop->value, "Boundary") == 0)         return NodeAttributeType::Boundary;
+			if (strcmp(type_prop->value, "NurbsSurface") == 0)     return NodeAttributeType::NurbsSurface;
+			if (strcmp(type_prop->value, "Shape") == 0)            return NodeAttributeType::Shape;
+			if (strcmp(type_prop->value, "LODGroup") == 0)         return NodeAttributeType::LODGroup;
+			if (strcmp(type_prop->value, "SubDiv") == 0)           return NodeAttributeType::SubDiv;
+			if (strcmp(type_prop->value, "CachedEffect") == 0)     return NodeAttributeType::CachedEffect;
+			if (strcmp(type_prop->value, "Line") == 0)             return NodeAttributeType::Line;
+		}
+
+		return NodeAttributeType::Unknown;
+	}
+
+	static const char* get_property_code_name(PropertyTypeCode code)
+	{
+		switch (code) {
+		case BYTE:              return "BYTE";
+		case SHORT:             return "SHORT";
+		case BOOL:              return "BOOL";
+		case CHAR:              return "CHAR";
+		case INT:               return "INT";
+		case FLOAT:             return "FLOAT";
+		case DOUBLE:            return "DOUBLE";
+		case LONG:              return "LONG";
+		case BINARY:            return "BINARY";
+		case STRING:            return "STRING";
+		case ARRAY_BOOL:        return "ARRAY_BOOL";
+		case ARRAY_UBYTE:       return "ARRAY_UBYTE";
+		case ARRAY_INT:         return "ARRAY_INT";
+		case ARRAY_LONG:        return "ARRAY_LONG";
+		case ARRAY_FLOAT:       return "ARRAY_FLOAT";
+		case ARRAY_DOUBLE:      return "ARRAY_DOUBLE";
+		case ARRAY_COMP_BOOL:   return "ARRAY_COMP_BOOL";
+		case ARRAY_COMP_UBYTE:  return "ARRAY_COMP_UBYTE";
+		case ARRAY_COMP_INT:    return "ARRAY_COMP_INT";
+		case ARRAY_COMP_LONG:   return "ARRAY_COMP_LONG";
+		case ARRAY_COMP_FLOAT:  return "ARRAY_COMP_FLOAT";
+		case ARRAY_COMP_DOUBLE: return "ARRAY_COMP_DOUBLE";
+		};
+
+		return "UNKNOWN";
+	}
+
+	static const char* get_string_property(PropertyRecord* prop)
+	{
+		if (prop->type != STRING)
+			return nullptr;
+
+		return static_cast<PropertyRecordType<STRING>*>(prop)->value;
+	}
+
+	static NodeRecord* find_node(NodeRecord* parent_node, std::string_view name)
+	{
+		for (uint32_t i = 0; i < parent_node->childCount; ++i)
+			if (parent_node->childs[i].name == name)
+				return &(parent_node->childs[i]);
+
+		return nullptr;
+	}
+
+	static NodeRecord* find_next_node(NodeRecord* node, std::string_view name)
+	{
+		if (!node->parent)
+			return nullptr;
+
+		NodeRecord* parent = node->parent;
+		uint32_t    idx = static_cast<uint32_t>(node - parent->childs);
+
+		for (uint32_t i = idx + 1; i < parent->childCount; ++i)
+			if (parent->childs[i].name == name)
+				return &(parent->childs[i]);
+
+		return nullptr;
 	}
 
 	static uint32_t count_child_node(std::ifstream& input_file)

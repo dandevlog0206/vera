@@ -57,6 +57,13 @@
 // pass
 #include "pass/graphics_pass.h"
 
+// scene
+#include "scene/attribute.h"
+#include "scene/axis_system.h"
+#include "scene/mesh_attribute.h"
+#include "scene/node.h"
+#include "scene/scene.h"
+
 // shader
 #include "shader/shader_parameter.h"
 #include "shader/shader_variable.h"

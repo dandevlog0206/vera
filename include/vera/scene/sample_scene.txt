@@ -1,0 +1,68 @@
+Scene
+弛
+戌式式 Root SceneNode
+    戍式式 Transform
+    弛
+    戍式式 PlayerCharacter (SceneNode)
+    弛   戍式式 Transform (Position, Rotation, Scale)
+    弛   戌式式 Components:
+    弛       戍式式 MeshRenderer (Mesh: CharacterBody.mesh, Material: PlayerSkin.material)
+    弛       戍式式 Animator (Animation Clips: Walk, Run, Idle; Skeleton: PlayerSkeleton)
+    弛       戍式式 CharacterController (Logic for movement, input, etc.)
+    弛       戌式式 Collider (Physics component for collision detection)
+    弛
+    戍式式 Environment (SceneNode - for organizational grouping)
+    弛   戍式式 Transform
+    弛   弛
+    弛   戍式式 House (SceneNode)
+    弛   弛   戍式式 Transform (Position: 20, 0, 15)
+    弛   弛   戌式式 Components:
+    弛   弛       戍式式 MeshRenderer (Mesh: House.mesh, Material: House.material)
+    弛   弛       戌式式 Collider (Static physics collider)
+    弛   弛
+    弛   戌式式 Tree (SceneNode)
+    弛       戍式式 Transform (Position: -10, 0, 8, Scale: 1.5)
+    弛       戌式式 Components:
+    弛           戍式式 MeshRenderer (Mesh: TreeTrunk.mesh, Material: Bark.material)
+    弛           戍式式 MeshRenderer (Mesh: TreeLeaves.mesh, Material: Leaves.material - might be separate for LOD/transparency)
+    弛           戌式式 Collider (Static physics collider)
+    弛
+    戍式式 InstancedObjects (SceneNode - for instanced rendering groups)
+    弛   戍式式 Transform
+    弛   弛
+    弛   戍式式 Rocks (SceneNode)
+    弛   弛   戍式式 Transform
+    弛   弛   戌式式 Components:
+    弛   弛       戌式式 InstancedMeshRenderer (Mesh: Rock_A.mesh, Material: Rock.material)
+    弛   弛           戌式式 Instances: (implicitly managed children or references)
+    弛   弛               戍式式 Rock_Instance_1 (SceneNode - Transform for specific rock)
+    弛   弛               戍式式 Rock_Instance_2 (SceneNode - Transform for specific rock)
+    弛   弛               戌式式 ...
+    弛   弛
+    弛   戌式式 GrassPatches (SceneNode)
+    弛       戍式式 Transform
+    弛       戌式式 Components:
+    弛           戌式式 InstancedMeshRenderer (Mesh: GrassBlade.mesh, Material: Grass.material)
+    弛               戌式式 Instances:
+    弛                   戍式式 Grass_Instance_1 (SceneNode - Transform for specific patch)
+    弛                   戍式式 Grass_Instance_2 (SceneNode - Transform for specific patch)
+    弛                   戌式式 ...
+    弛
+    戍式式 MainCamera (SceneNode)
+    弛   戍式式 Transform (Often attached to PlayerCharacter for 3rd person)
+    弛   戌式式 Components:
+    弛       戍式式 Camera (FOV, aspect, clip planes, RenderTarget if needed)
+    弛       戌式式 AudioListener (For 3D sound)
+    弛
+    戌式式 Lighting (SceneNode - for organizational grouping)
+        戍式式 Transform
+        弛
+        戍式式 DirectionalLight_Sun (SceneNode)
+        弛   戍式式 Transform (Rotation defines sun direction)
+        弛   戌式式 Components:
+        弛       戌式式 Light (Type: Directional, Color: Warm White, Intensity: 1.0)
+        弛
+        戌式式 PointLight_Lamp (SceneNode)
+            戍式式 Transform (Position: 18, 5, 12 - e.g., inside the house)
+            戌式式 Components:
+                戌式式 Light (Type: Point, Color: Yellow, Intensity: 0.5, Radius: 10.0)

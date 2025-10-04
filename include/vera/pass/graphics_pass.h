@@ -17,6 +17,8 @@ struct GraphicsPassCreateInfo
 
 	VertexInputInfo vertexInput;
 	uint32_t        vertexCount;
+	IndexType       indexType   = IndexType::Unknown;
+	uint32_t        indexCount;
 	DepthFormat     depthFormat = DepthFormat::Unknown;
 };
 
@@ -29,6 +31,7 @@ public:
 	obj<Device> getDevice();
 	obj<Pipeline> getPipeline();
 	obj<Buffer> getVertexBuffer();
+	obj<Buffer> getIndexBuffer();
 
 	ShaderParameter& getShaderParameter();
 
@@ -38,12 +41,14 @@ private:
 	obj<Device>     m_device;
 	obj<Pipeline>   m_pipeline;
 	obj<Buffer>     m_vertex_buffer;
+	obj<Buffer>     m_index_buffer;
 	obj<Texture>    m_depth;
 	ShaderParameter m_parameter;
 	GraphicsState   m_states;
 
 	DepthFormat     m_depth_format;
 	uint32_t        m_vertex_count;
+	uint32_t        m_index_count;
 };
 
 VERA_NAMESPACE_END

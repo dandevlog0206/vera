@@ -12,7 +12,8 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 	m_device(device),
 	m_parameter(ShaderReflection::create({ info.vertexShader, info.fragmentShader })),
 	m_depth_format(info.depthFormat),
-	m_vertex_count(info.vertexCount)
+	m_vertex_count(info.vertexCount),
+	m_index_count(info.indexCount)
 {
 	GraphicsPipelineCreateInfo pipeline_info = {
 		.vertexShader                  = info.vertexShader,
@@ -33,6 +34,11 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 
 		m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * vertex_size);
 		m_states.setVertexBuffer(m_vertex_buffer);
+	}
+
+	if (info.indexType != IndexType::Unknown) {
+		m_index_buffer = Buffer::createIndex(device, info.indexType, info.indexCount);
+		m_states.setIndexBuffer(m_index_buffer);
 	}
 
 	if (info.depthFormat != DepthFormat::Unknown) {
@@ -65,6 +71,11 @@ obj<Pipeline> GraphicsPass::getPipeline()
 obj<Buffer> GraphicsPass::getVertexBuffer()
 {
 	return m_vertex_buffer;
+}
+
+obj<Buffer> GraphicsPass::getIndexBuffer()
+{
+	return m_index_buffer;
 }
 
 ShaderParameter& GraphicsPass::getShaderParameter()
@@ -132,7 +143,10 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<FrameBuffer> framebuffer)
 
 	m_states.setRenderingInfo(rendering_info);
 
-	ctx->draw(m_states, m_parameter, m_vertex_count, 0);
+	if (m_index_buffer)
+		ctx->drawIndexed(m_states, m_parameter, m_index_count, 0, 0);
+	else
+		ctx->draw(m_states, m_parameter, m_vertex_count, 0);
 }
 
 VERA_NAMESPACE_END

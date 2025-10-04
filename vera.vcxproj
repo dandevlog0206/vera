@@ -113,7 +113,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -123,7 +123,7 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib</AdditionalDependencies>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -138,7 +138,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -150,7 +150,7 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib</AdditionalDependencies>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -160,6 +160,7 @@
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
     <ClInclude Include="include\vera\core\framebuffer.h" />
+    <ClInclude Include="include\vera\core\frame_sync.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_storage.h" />
     <ClInclude Include="include\vera\core\smart_ptr.h" />
@@ -181,8 +182,11 @@
     <ClInclude Include="include\vera\math\detail\matrix2x4.h" />
     <ClInclude Include="include\vera\math\quaternion.h" />
     <ClInclude Include="include\vera\math\vector_math.h" />
-    <ClInclude Include="include\vera\scene\mesh_object.h" />
+    <ClInclude Include="include\vera\scene\axis_system.h" />
+    <ClInclude Include="include\vera\scene\mesh_attribute.h" />
     <ClInclude Include="include\vera\scene\scene.h" />
+    <ClInclude Include="include\vera\scene\attribute.h" />
+    <ClInclude Include="include\vera\scene\node.h" />
     <ClInclude Include="include\vera\util\arcball.h" />
     <ClInclude Include="include\vera\graphics\format_traits.h" />
     <ClInclude Include="include\vera\graphics\image.h" />
@@ -278,6 +282,7 @@
     <ClInclude Include="source\impl\window_impl.h" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
     <ClCompile Include="source\core_object\framebuffer.cpp" />
+    <ClCompile Include="source\core_object\frame_sync.cpp" />
     <ClCompile Include="source\core_object\shader_storage.cpp" />
     <ClCompile Include="source\core_object\texture_view.cpp" />
     <ClCompile Include="source\core_object\buffer.cpp" />
@@ -308,6 +313,9 @@
     <ClCompile Include="source\core_object\shader.cpp" />
     <ClCompile Include="source\core_object\command_buffer.cpp" />
     <ClCompile Include="source\core_object\semaphore.cpp" />
+    <ClCompile Include="source\scene\mesh_attribute.cpp" />
+    <ClCompile Include="source\scene\scene.cpp" />
+    <ClCompile Include="source\scene\scene_node.cpp" />
     <ClCompile Include="source\shader\shader_parameter.cpp" />
     <ClCompile Include="source\shader\shader_variable.cpp" />
     <ClCompile Include="source\core_object\shader_reflection.cpp" />
@@ -317,6 +325,9 @@
     <ClCompile Include="source\asset\asset_loader.cpp" />
     <ClCompile Include="source\util\flycam.cpp" />
     <ClCompile Include="source\os\window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="include\vera\scene\sample_scene.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

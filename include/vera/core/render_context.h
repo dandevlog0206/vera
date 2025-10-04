@@ -1,6 +1,7 @@
 #pragma once
 
 #include "texture.h"
+#include "frame_sync.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -19,6 +20,8 @@ public:
 	obj<Device> getDevice();
 	obj<CommandBuffer> getRenderCommand();
 
+	FrameSync getFrameSync() const;
+
 	void transitionImageLayout(
 		ref<Texture> texture,
 		TextureLayout  old_layout,
@@ -35,7 +38,12 @@ public:
 		uint32_t               vtx_count,
 		uint32_t               vtx_off);
 
-	// void draw(ref<GraphicsState> states, ref<Geometry>);
+	void drawIndexed(
+		const GraphicsState&   states,
+		const ShaderParameter& params,
+		uint32_t               idx_count,
+		uint32_t               idx_off,
+		uint32_t               vtx_off);
 
 	void submit();
 };

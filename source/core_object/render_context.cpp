@@ -7,6 +7,7 @@
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/fence.h"
+#include "../../include/vera/core/frame_sync.h"
 #include "../../include/vera/core/framebuffer.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/semaphore.h"
@@ -60,37 +61,6 @@ static RenderFrame& get_render_frame(RenderContextImpl& impl)
 	return *impl.renderFrames[impl.frameIndex];
 }
 
-FrameSync::FrameSync(const RenderFrame& ctx_impl, uint64_t frame_id) :
-	m_render_frame(&ctx_impl), m_frame_id(frame_id) {}
-
-void FrameSync::waitForRenderComplete() const
-{
-	VERA_ASSERT(m_render_frame);
-
-	if (m_render_frame->frameID == m_frame_id)
-		m_render_frame->fence->wait();
-}
-
-bool FrameSync::isRenderComplete() const
-{
-	return m_render_frame->frameID == m_frame_id ? m_render_frame->fence->signaled() : true;
-}
-
-ref<Semaphore> FrameSync::getRenderCompleteSemaphore() const
-{
-	VERA_ASSERT(m_render_frame);
-
-	if (m_render_frame->frameID == m_frame_id)
-		return m_render_frame->renderCompleteSemaphore;
-	
-	return {};
-}
-
-bool FrameSync::empty() const
-{
-	return !m_render_frame;
-}
-
 obj<RenderContext> RenderContext::create(obj<Device> device)
 {
 	auto  obj  = createNewCoreObject<RenderContext>();
@@ -125,6 +95,13 @@ obj<CommandBuffer> RenderContext::getRenderCommand()
 	auto& impl = getImpl(this);
 
 	return impl.renderFrames[impl.frameIndex]->renderCommand;
+}
+
+FrameSync RenderContext::getFrameSync() const
+{
+	auto& impl = getImpl(this);
+
+	return FrameSync(*impl.renderFrames[impl.frameIndex], impl.currentFrameID);
 }
 
 void RenderContext::transitionImageLayout(ref<Texture> texture, TextureLayout old_layout, TextureLayout new_layout)
@@ -170,8 +147,12 @@ void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }
 
-void RenderContext::draw(const GraphicsState& states, const ShaderParameter& params, uint32_t vtx_count, uint32_t vtx_off)
-{
+void RenderContext::draw(
+	const GraphicsState&   states,
+	const ShaderParameter& params,
+	uint32_t               vtx_count,
+	uint32_t               vtx_off
+) {
 	auto& impl = getImpl(this);
 	auto& cmd  = get_render_frame(impl).renderCommand;
 
@@ -209,6 +190,52 @@ void RenderContext::draw(const GraphicsState& states, const ShaderParameter& par
 	params.bindCommandBuffer(states.getPipeline()->getPipelineLayout(), cmd);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
+}
+
+void RenderContext::drawIndexed(
+	const GraphicsState&   states,
+	const ShaderParameter& params,
+	uint32_t               idx_count,
+	uint32_t               idx_off,
+	uint32_t               vtx_off
+) {
+	auto& impl = getImpl(this);
+	auto& cmd  = get_render_frame(impl).renderCommand;
+
+	// TODO: verify image layout transition
+	for (auto& color : states.getRenderingInfo().colorAttachments) {
+		auto& texture_impl = getImpl(color.texture);
+
+		// Identify swapchain image and save for future use
+		if (texture_impl.textureUsage.has(TextureUsageFlagBits::FrameBuffer)) {
+			auto& render_frame = *impl.renderFrames[impl.frameIndex];
+
+			// TODO: optimize
+			if (std::none_of(VERA_SPAN(render_frame.framebuffers),
+				[=](const auto& elem) {
+					return elem == texture_impl.frameBuffer;
+				})) {
+				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
+				
+				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
+				framebuffer_impl.frameSync = FrameSync(render_frame, impl.currentFrameID);
+			}
+		}
+
+		cmd->transitionImageLayout(
+			color.texture,
+			vr::PipelineStageFlagBits::ColorAttachmentOutput,
+			vr::PipelineStageFlagBits::ColorAttachmentOutput,
+			vr::AccessFlagBits{},
+			vr::AccessFlagBits::ColorAttachmentWrite,
+			vr::TextureLayout::Undefined,
+			vr::TextureLayout::ColorAttachmentOptimal);
+	}
+
+	states.bindCommandBuffer(cmd);
+	params.bindCommandBuffer(states.getPipeline()->getPipelineLayout(), cmd);
+
+	cmd->drawIndexed(idx_count, 1, idx_off, vtx_off, 0);
 }
 
 void RenderContext::submit()

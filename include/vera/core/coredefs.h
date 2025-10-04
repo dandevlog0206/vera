@@ -45,10 +45,10 @@
 // namespace
 #define VERA_NAMESPACE_BEGIN namespace vr {
 #define VERA_NAMESPACE_END }
-#define VERA_ASSET_NAMESPACE_BEGIN namespace asset {
-#define VERA_ASSET_NAMESPACE_END }
 #define VERA_OS_NAMESPACE_BEGIN namespace os {
 #define VERA_OS_NAMESPACE_END }
+#define VERA_SCENE_NAMESPACE_BEGIN namespace scene {
+#define VERA_SCENE_NAMESPACE_END }
 #define VERA_PRIV_NAMESPACE_BEGIN namespace priv {
 #define VERA_PRIV_NAMESPACE_END }
 

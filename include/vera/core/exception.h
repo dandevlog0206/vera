@@ -3,6 +3,7 @@
 #include "logger.h"
 #include <exception>
 #include <sstream>
+#include <format>
 
 #define VERA_CHECK(expression) \
 	(static_cast<bool>(expression)) ? (void)(0) : \
@@ -20,9 +21,13 @@ VERA_NAMESPACE_BEGIN
 class Exception : public std::exception
 {
 public:
-	Exception() {}
+	VERA_INLINE Exception() {}
 
-	Exception(std::string_view msg) :
+	template <class... Args>
+	VERA_INLINE Exception(const std::format_string<Args...> fmt, Args&&... params) :
+		m_msg(std::format(fmt, std::forward<Args>(params)...)) {}
+
+	VERA_INLINE Exception(std::string_view msg) :
 		m_msg(msg) {}
 
 	const char* what() const override

@@ -91,8 +91,28 @@ public:
 		return m_offset;
 	}
 
-    VERA_NODISCARD VERA_INLINE float calculateUsageRatio() const VERA_NOEXCEPT
-    {
+	VERA_NODISCARD VERA_INLINE size_t sizeInUse() const VERA_NOEXCEPT
+	{
+		size_t used = 0;
+
+		for (const auto& page : m_pages)
+			used += page.used;
+
+		return used;
+	}
+
+	VERA_NODISCARD VERA_INLINE size_t totalSize() const VERA_NOEXCEPT
+	{
+		size_t allocated = 0;
+
+		for (const auto& page : m_pages)
+			allocated += page.allocated;
+
+		return allocated;
+	}
+
+	VERA_NODISCARD VERA_INLINE float usageRatio() const VERA_NOEXCEPT
+	{
 		size_t used      = 0;
 		size_t allocated = 0;
 		
@@ -102,7 +122,7 @@ public:
 		}
 
 		return static_cast<float>(used) / static_cast<float>(allocated);
-    }
+	}
 
 private:
 	void* allocateImpl(size_t size, size_t alignment)

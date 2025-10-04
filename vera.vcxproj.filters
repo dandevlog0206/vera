@@ -372,7 +372,19 @@
     <ClInclude Include="include\vera\scene\scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\scene\mesh_object.h">
+    <ClInclude Include="include\vera\scene\axis_system.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\frame_sync.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\scene\node.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\scene\mesh_attribute.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\scene\attribute.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -491,5 +503,20 @@
     <ClCompile Include="source\asset\asset_loader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\scene\scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core_object\frame_sync.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\scene_node.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\mesh_attribute.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="include\vera\scene\sample_scene.txt" />
   </ItemGroup>
 </Project>

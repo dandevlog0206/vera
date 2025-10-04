@@ -7,19 +7,16 @@ VERA_NAMESPACE_BEGIN
 
 AssetLoader::AssetLoader() VERA_NOEXCEPT :
 	m_result(AssetResult::Uninitialized),
-	m_file_format(AssetFileFormat::Unknown) {}
-
-AssetLoader::AssetLoader(std::string_view path) VERA_NOEXCEPT :
-	AssetLoader()
+	m_file_format(AssetFileFormat::Unknown)
 {
-	m_result = loadScene(path);
+	m_scene = scene::Scene::create("scene");
 }
 
 AssetLoader::~AssetLoader()
 {
 }
 
-AssetResult AssetLoader::loadScene(std::string_view path) VERA_NOEXCEPT
+AssetResult AssetLoader::loadModel(std::string_view path) VERA_NOEXCEPT
 {
 	ResultMessage<AssetResult> result;
 
@@ -39,7 +36,7 @@ AssetResult AssetLoader::loadScene(std::string_view path) VERA_NOEXCEPT
 	return m_result;
 }
 
-obj<AssetScene> AssetLoader::getScene() VERA_NOEXCEPT
+obj<scene::Scene> AssetLoader::getScene() VERA_NOEXCEPT
 {
 	return m_scene;
 }

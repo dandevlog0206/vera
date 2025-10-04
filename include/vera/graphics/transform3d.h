@@ -6,10 +6,19 @@
 
 VERA_NAMESPACE_BEGIN
 
+struct TransformDesc3D
+{
+	float3 origin   = { 0.f, 0.f, 0.f };
+	float3 position = { 0.f, 0.f, 0.f };
+	float3 rotation = { 0.f, 0.f, 0.f }; // in radian
+	float3 scale    = { 1.f, 1.f, 1.f };
+};
+
 class Transform3D
 {
 public:
 	Transform3D();
+	Transform3D(const TransformDesc3D& desc);
 	Transform3D(const float4x4& mat);
 	Transform3D(const Transform3D& rhs) = default;
 

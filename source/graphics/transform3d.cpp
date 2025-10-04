@@ -1,5 +1,6 @@
 #include "../../include/vera/graphics/transform3d.h"
 
+#include "../../include/vera/math/quaternion.h"
 #include "../../include/vera/math/vector_math.h"
 
 VERA_NAMESPACE_BEGIN
@@ -10,6 +11,38 @@ Transform3D::Transform3D() :
 		0.f, 1.f, 0.f, 0.f,
 		0.f, 0.f, 1.f, 0.f,
 		0.f, 0.f, 0.f, 1.f) {
+}
+
+Transform3D::Transform3D(const TransformDesc3D& desc)
+{
+	const auto qx = Quaternion::fromAxisAngle(float3(1.f, 0.f, 0.f), desc.rotation.x);
+	const auto qy = Quaternion::fromAxisAngle(float3(0.f, 1.f, 0.f), desc.rotation.y);
+	const auto qz = Quaternion::fromAxisAngle(float3(0.f, 0.f, 1.f), desc.rotation.z);
+
+	const auto t0 = float4x4{
+		1.f, 0.f, 0.f, 0.f,
+		0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 1.f, 0.f,
+		desc.position.x, desc.position.y, desc.position.z, 1.f
+	};
+
+	const auto r = (qx * qy * qz).toMatrix4x4();
+
+	const auto s = float4x4{
+		desc.scale.x, 0.f, 0.f, 0.f,
+		0.f, desc.scale.y, 0.f, 0.f,
+		0.f, 0.f, desc.scale.z, 0.f,
+		0.f, 0.f, 0.f, 1.f
+	};
+
+	const auto t1 = float4x4{
+		1.f, 0.f, 0.f, 0.f,
+		0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 1.f, 0.f,
+		-desc.origin.x, -desc.origin.y, -desc.origin.z, 1.f
+	};
+
+	m_mat = t0 * r * s * t1;
 }
 
 Transform3D::Transform3D(const float4x4& mat) :

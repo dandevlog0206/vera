@@ -1,6 +1,7 @@
 #pragma once
 
 #include "render_context_impl.h"
+#include "../../include/vera/core/frame_sync.h"
 
 VERA_NAMESPACE_BEGIN
 

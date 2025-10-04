@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../core/smart_ptr.h"
-#include "../math/vector_types.h"
+#include "../scene/scene.h"
 #include "../util/version.h"
+#include <vector>
 #include <string_view>
 
 VERA_NAMESPACE_BEGIN
@@ -30,16 +30,6 @@ enum class AssetResult VERA_ENUM
 	UnknownError
 };
 
-class AssetMesh
-{
-
-};
-
-class AssetScene : public ManangedObject
-{
-
-};
-
 class AssetLoader
 {
 	friend struct FBXLoader;
@@ -50,9 +40,9 @@ public:
 	AssetLoader(std::string_view path) VERA_NOEXCEPT;
 	~AssetLoader();
 
-	AssetResult loadScene(std::string_view path) VERA_NOEXCEPT;
+	AssetResult loadModel(std::string_view path) VERA_NOEXCEPT;
 
-	VERA_NODISCARD obj<AssetScene> getScene() VERA_NOEXCEPT;
+	VERA_NODISCARD obj<scene::Scene> getScene() VERA_NOEXCEPT;
 
 	VERA_NODISCARD AssetResult getResult() const VERA_NOEXCEPT;
 	VERA_NODISCARD std::string_view getErrorMessage() const VERA_NOEXCEPT;
@@ -60,11 +50,11 @@ public:
 	VERA_NODISCARD Version getVersion() const VERA_NOEXCEPT;
 
 private:
-	obj<AssetScene> m_scene;
-	AssetResult     m_result;
-	std::string     m_message;
-	AssetFileFormat m_file_format;
-	Version         m_version;
+	obj<scene::Scene> m_scene;
+	AssetResult       m_result;
+	std::string       m_message;
+	AssetFileFormat   m_file_format;
+	Version           m_version;
 };
 
 VERA_NAMESPACE_END
