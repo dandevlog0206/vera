@@ -139,24 +139,40 @@ public:
 
 	using base_type::base_type;
 
-	VERA_NODISCARD VERA_CONSTEXPR const reference operator*() const VERA_NOEXCEPT
-	{
-		return base_type::operator*();
-	}
-
-	VERA_NODISCARD VERA_CONSTEXPR reference operator*() VERA_NOEXCEPT
+	VERA_NODISCARD VERA_CONSTEXPR reference operator*() const VERA_NOEXCEPT
 	{
 		return const_cast<reference>(base_type::operator*());
 	}
 
-	VERA_NODISCARD VERA_CONSTEXPR const pointer operator->() const VERA_NOEXCEPT
-	{
-		return base_type::operator->();
-	}
-
-	VERA_NODISCARD VERA_CONSTEXPR pointer operator->() VERA_NOEXCEPT
+	VERA_NODISCARD VERA_CONSTEXPR pointer operator->() const VERA_NOEXCEPT
 	{
 		return const_cast<pointer>(base_type::operator->());
+	}
+
+	VERA_CONSTEXPR index_map_iterator& operator++() VERA_NOEXCEPT
+	{
+		base_type::operator++();
+		return *this;
+	}
+
+	VERA_CONSTEXPR index_map_iterator operator++(int) VERA_NOEXCEPT
+	{
+		auto temp = *this;
+		++*this;
+		return temp;
+	}
+
+	VERA_CONSTEXPR index_map_iterator& operator--() VERA_NOEXCEPT
+	{
+		base_type::operator--();
+		return *this;
+	}
+
+	VERA_CONSTEXPR index_map_iterator operator--(int) VERA_NOEXCEPT
+	{
+		auto temp = *this;
+		--*this;
+		return temp;
 	}
 };
 

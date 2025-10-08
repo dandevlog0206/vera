@@ -3,7 +3,7 @@
 #include "object_impl.h"
 
 #include "../../include/vera/core/command_buffer_sync.h"
-#include <map>
+#include "../../include/vera/util/ring_vector.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -62,31 +62,31 @@ public:
 class ShaderStorageSamplerArrayData : public ShaderStorageData
 {
 public:
-	std::vector<ShaderStorageSamplerData> elements;
+	std::vector<ShaderStorageSamplerData*> elements;
 };
 
 class ShaderStorageCombinedImageSamplerArrayData : public ShaderStorageData
 {
 public:
-	std::vector<ShaderStorageCombinedImageSamplerData> elements;
+	std::vector<ShaderStorageCombinedImageSamplerData*> elements;
 };
 
 class ShaderStorageTextureArrayData : public ShaderStorageData
 {
 public:
-	std::vector<ShaderStorageTextureData> elements;
+	std::vector<ShaderStorageTextureData*> elements;
 };
 
 class ShaderStorageTexelBufferArrayData : public ShaderStorageData
 {
 public:
-	std::vector<ShaderStorageTexelBufferData> elements;
+	std::vector<ShaderStorageTexelBufferData*> elements;
 };
 
 class ShaderStorageBufferArrayData : public ShaderStorageData
 {
 public:
-	std::vector<ShaderStorageBufferData> elements;
+	std::vector<ShaderStorageBufferData*> elements;
 };
 
 class ShaderStorageBufferBlockArrayData : public ShaderStorageData
@@ -99,6 +99,14 @@ struct ShaderStorageResource
 {
 	obj<ResourceBinding> resourceBinding;
 	uint32_t             poolIndex;
+};
+
+struct ShaderStorageFrameData
+{
+	using ShaderStorageDatas = std::vector<ShaderStorageData*>;
+
+	ShaderStorageDatas storageDatas;
+	uint32_t           frameIndex;
 };
 
 struct ShaderStorageFrame

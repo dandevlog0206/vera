@@ -408,6 +408,9 @@
     <ClInclude Include="include\vera\core\render_frame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\util\ring_vector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\os\window.cpp">

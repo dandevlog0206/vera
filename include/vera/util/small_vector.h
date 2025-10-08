@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/exception.h"
+#include "../core/assertion.h"
 #include <iterator>
 #include <memory>
 #include <bit>
