@@ -2,7 +2,6 @@
 
 #include "core_object.h"
 #include "../util/array_view.h"
-#include "../util/hash.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -57,8 +56,8 @@ public:
 	struct BufferBindingInfo
 	{
 		ref<Buffer> buffer;
-		uint32_t    offset;
-		uint32_t    range;
+		size_t      offset;
+		size_t      range;
 	};
 
 	ResourceType resourceType;

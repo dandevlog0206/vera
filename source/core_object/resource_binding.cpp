@@ -266,6 +266,16 @@ static void update_descriptor_buffer_info(
 	}
 }
 
+const vk::DescriptorSet& get_vk_descriptor_set(const_ref<ResourceBinding> resource_binding)
+{
+	return CoreObject::getImpl(resource_binding).descriptorSet;
+}
+
+vk::DescriptorSet& get_vk_descriptor_set(ref<ResourceBinding> resource_binding)
+{
+	return CoreObject::getImpl(resource_binding).descriptorSet;
+}
+
 ResourceBindingInfo::ResourceBindingInfo() VERA_NOEXCEPT :
 	resourceType(ResourceType::Unknown),
 	dstBinding(0),

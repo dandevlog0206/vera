@@ -24,17 +24,17 @@ static hash_t hash_resource_set_layout(const ResourceLayoutCreateInfo& info)
 {
 	hash_t seed = 0;
 
-	hash_combine(seed, info.flags);
+	hash_combine(seed, static_cast<uint32_t>(info.flags));
 
 	hash_combine(seed, info.bindings.size());
 	for (const auto& binding : info.bindings) {
 		hash_t local_seed = 0;
 
-		hash_combine(local_seed, binding.flags);
+		hash_combine(local_seed, static_cast<uint32_t>(binding.flags));
 		hash_combine(local_seed, binding.binding);
 		hash_combine(local_seed, binding.resourceType);
 		hash_combine(local_seed, binding.resourceCount);
-		hash_combine(local_seed, binding.stageFlags);
+		hash_combine(local_seed, static_cast<uint32_t>(binding.stageFlags));
 
 		hash_unordered(seed, local_seed);
 	}

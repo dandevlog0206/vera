@@ -6,7 +6,7 @@
 #include "../core/texture.h"
 #include "../graphics/graphics_state.h"
 #include "../graphics/vertex_input.h"
-#include "../shader/shader_parameter.h"
+#include "../graphics/shader_parameter.h"
 
 VERA_NAMESPACE_BEGIN
 

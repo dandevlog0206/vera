@@ -12,7 +12,7 @@
 #include "../../include/vera/core/semaphore.h"
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/graphics/graphics_state.h"
-#include "../../include/vera/shader/shader_parameter.h"
+#include "../../include/vera/graphics/shader_parameter.h"
 #include "../../include/vera/util/static_vector.h"
 
 VERA_NAMESPACE_BEGIN
@@ -110,7 +110,7 @@ uint32_t RenderContext::getCurrentFrameIndex() const
 
 VERA_NODISCARD uint32_t RenderContext::getFrameCount() const
 {
-	return getImpl(this).renderFrames.size();
+	return static_cast<uint32_t>(getImpl(this).renderFrames.size());
 }
 
 VERA_NODISCARD const RenderFrame& RenderContext::getCurrentFrame() const
@@ -165,7 +165,7 @@ void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32
 	auto& cmd      = get_current_frame(impl).commandBuffer;
 
 
-	states.bindCommandBuffer(cmd);
+	cmd->bindGraphicsState(states);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }
@@ -209,8 +209,8 @@ void RenderContext::draw(
 			vr::TextureLayout::ColorAttachmentOptimal);
 	}
 
-	states.bindCommandBuffer(cmd);
-	params.bindCommandBuffer(states.getPipeline()->getPipelineLayout(), cmd);
+	cmd->bindGraphicsState(states);
+	cmd->bindShaderParameter(states.getPipeline()->getPipelineLayout(), params);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }
@@ -255,8 +255,8 @@ void RenderContext::drawIndexed(
 			vr::TextureLayout::ColorAttachmentOptimal);
 	}
 
-	states.bindCommandBuffer(cmd);
-	params.bindCommandBuffer(states.getPipeline()->getPipelineLayout(), cmd);
+	cmd->bindGraphicsState(states);
+	cmd->bindShaderParameter(states.getPipeline()->getPipelineLayout(), params);
 
 	cmd->drawIndexed(idx_count, 1, idx_off, vtx_off, 0);
 }

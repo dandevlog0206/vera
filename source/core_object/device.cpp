@@ -152,7 +152,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	vk::PhysicalDeviceProperties2 device_props;
 	device_props.pNext = &impl.descriptorIndexingProperties;
 
-	physical_device.getFeatures2(&device_props);
+	physical_device.getProperties2(&device_props);
 
 	// Create logical device
 	vk::DeviceCreateInfo device_info;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "shader_variable.h"
+#include "../core/shader_storage.h"
 #include <vector>
 #include <string_view>
 
@@ -20,9 +20,11 @@ public:
 
 	ShaderVariable operator[](std::string_view name);
 
-	obj<Device> getDevice();
-	obj<ShaderReflection> getShaderReflection();
-	obj<ShaderStorage> getShaderStorage();
+	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
+	VERA_NODISCARD obj<ShaderReflection> getShaderReflection() VERA_NOEXCEPT;
+	VERA_NODISCARD obj<ShaderStorage> getShaderStorage() VERA_NOEXCEPT;
+
+	VERA_NODISCARD bool empty() const VERA_NOEXCEPT;
 
 private:
 	obj<ShaderReflection> m_reflection;

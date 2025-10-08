@@ -586,11 +586,14 @@ VERA_NODISCARD VERA_CONSTEXPR obj<T> make_obj(Args&&... params)
 }
 
 template <class Target, class T>
-VERA_NODISCARD VERA_CONSTEXPR obj<Target> obj_cast(obj<T>& source) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT
 {
 	static_assert(std::is_base_of_v<ManangedObject, Target> || std::is_base_of_v<ManangedObject, T>);
 
-	return static_cast<Target*>(source.m_ptr);
+	obj<Target> result;
+	result.m_ptr = static_cast<Target*>(std::exchange(source.m_ptr, nullptr));
+
+	return result;
 }
 
 template <class Target, class T>

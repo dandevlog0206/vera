@@ -42,7 +42,8 @@ public:
 		T m00, T m01, T m02, T m03,
 		T m10, T m11, T m12, T m13,
 		T m20, T m21, T m22, T m23,
-		T m30, T m31, T m32, T m33) VERA_NOEXCEPT :
+		T m30, T m31, T m32, T m33
+	) VERA_NOEXCEPT :
 		col{
 			col_type(m00, m01, m02, m03),
 			col_type(m10, m11, m12, m13),
@@ -53,7 +54,8 @@ public:
 		const col_type& col0,
 		const col_type& col1,
 		const col_type& col2,
-		const col_type& col3) VERA_NOEXCEPT :
+		const col_type& col3
+	) VERA_NOEXCEPT :
 		col{
 			col0,
 			col1,

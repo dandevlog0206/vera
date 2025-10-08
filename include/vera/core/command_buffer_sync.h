@@ -28,7 +28,7 @@ public:
 
 	VERA_NODISCARD CommandBufferState getState() const VERA_NOEXCEPT;
 
-	VERA_NODISCARD ref<Semaphore> getCompleteSemaphore();
+	VERA_NODISCARD const_ref<Semaphore> getCompleteSemaphore() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD void waitForComplete() const VERA_NOEXCEPT;
 	VERA_NODISCARD bool isComplete() const VERA_NOEXCEPT;

@@ -23,7 +23,7 @@ class RenderContext : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(RenderContext)
 public:
-	static obj<RenderContext> create(obj<Device> device, const RenderContextCreateInfo& info);
+	static obj<RenderContext> create(obj<Device> device, const RenderContextCreateInfo& info = {});
 	~RenderContext();
 
 	obj<Device> getDevice();

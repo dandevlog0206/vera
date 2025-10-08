@@ -7,7 +7,7 @@
 VERA_NAMESPACE_BEGIN
 
 class Device;
-class Shader;
+class ResourceLayout;
 
 enum class ShaderStageFlagBits VERA_FLAG_BITS
 {
@@ -28,6 +28,7 @@ public:
 	~Shader();
 
 	obj<Device> getDevice();
+	obj<ResourceLayout> getResourceLayout(uint32_t set);
 	
 	ShaderStageFlags getShaderStageFlags() const;
 

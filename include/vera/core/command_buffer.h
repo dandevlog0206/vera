@@ -118,6 +118,13 @@ public:
 	void bindVertexBuffer(ref<Buffer> buffer);
 	void bindIndexBuffer(ref<Buffer> buffer);
 	void bindPipeline(ref<Pipeline> pipeline);
+	
+	void pushConstant(
+		const_ref<PipelineLayout> pipeline_layout,
+		ShaderStageFlags          stage_flags,
+		uint32_t                  offset,
+		const void*               data,
+		uint32_t                  size);
 
 	void bindGraphicsState(const GraphicsState& state);
 
@@ -126,9 +133,15 @@ public:
 		uint32_t                  set,
 		ref<ResourceBinding>      binding);
 
+	void bindResource(
+		const_ref<PipelineLayout> pipeline_layout,
+		uint32_t                  set,
+		ref<ResourceBinding>      binding,
+		array_view<uint32_t>      dynamic_offsets);
+
 	void bindShaderParameter(
-		const_ref<PipelineLayout>  pipeline_layout,
-		const_ref<ShaderParameter> shader_parameter);
+		const_ref<PipelineLayout> pipeline_layout,
+		const ShaderParameter&    shader_parameter);
 
 	void beginRendering(const RenderingInfo& info);
 

@@ -419,7 +419,7 @@ private:
 		mesh_attr->setVertices(std::move(vertices));
 		mesh_attr->setIndices(std::move(indices));
 
-		model_node->addAttribute(mesh_attr);
+		model_node->addAttribute(obj_cast<scene::Attribute>(mesh_attr));
 
 		return AssetResult::Success;
 	}

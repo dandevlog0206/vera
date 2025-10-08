@@ -91,3 +91,6 @@
 #define VERA_ENUM64 : uint32_t
 #define VERA_FLAG_BITS : uint32_t
 #define VERA_FLAG_BITS64 : uint32_t
+
+// some constants
+#define VERA_UNSIZED_ARRAY_RESOURCE_COUNT 4096

@@ -35,6 +35,7 @@
 #include "graphics/image_edit.h"
 #include "graphics/image_sampler.h"
 #include "graphics/model_loader.h"
+#include "graphics/shader_parameter.h"
 #include "graphics/transform2d.h"
 #include "graphics/transform3d.h"
 #include "graphics/vertex_input.h"
@@ -63,10 +64,6 @@
 #include "scene/mesh_attribute.h"
 #include "scene/node.h"
 #include "scene/scene.h"
-
-// shader
-#include "shader/shader_parameter.h"
-#include "shader/shader_variable.h"
 
 // util
 #include "util/arcball.h"

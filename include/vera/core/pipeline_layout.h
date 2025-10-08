@@ -39,7 +39,7 @@ public:
 	obj<Device> getDevice();
 
 	uint32_t getResourceLayoutCount() const;
-	ref<ResourceLayout> getResourceLayout(uint32_t idx) const;
+	const_ref<ResourceLayout> getResourceLayout(uint32_t idx) const;
 	array_view<ref<ResourceLayout>> getResourceLayouts() const;
 
 	array_view<PushConstantRange> getPushConstantRanges() const;

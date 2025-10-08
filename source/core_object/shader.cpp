@@ -8,8 +8,6 @@
 #include <spirv_reflect.h>
 #include <fstream>
 
-#define UNSIZED_ARRAY_DESCRIPTOR_COUNT 4096
-
 VERA_NAMESPACE_BEGIN
 
 static ResourceType to_resource_type(SpvReflectDescriptorType type)
@@ -345,9 +343,9 @@ static ReflectionDesc* reflect_resource(ShaderImpl& impl, const SpvReflectDescri
 		result->resourceType     = to_resource_type(binding.descriptor_type);
 		result->set              = binding.set;
 		result->binding          = binding.binding;
-		result->elementCount     = binding.array.dims[0];
+		result->elementCount     = is_unsized_array(binding.array) ? UINT32_MAX : binding.array.dims[0];
 		result->element          = reflect_resource(impl, binding, array_dim + 1);
-		
+
 		return result;
 	}
 
@@ -404,43 +402,43 @@ static ReflectionDesc* reflect_push_constant(ShaderImpl& impl, const SpvReflectB
 	return result;
 }
 
-static void destroy_reflection_descriptor(ReflectionDesc* desc_ptr)
+static void destroy_reflection_descriptor(ReflectionDesc* ptr)
 {
-	switch (desc_ptr->type) {
+	switch (ptr->type) {
 	case ReflectionType::Array: {
-		auto& desc = *static_cast<ReflectionArrayDesc*>(desc_ptr);
+		auto& desc = *static_cast<ReflectionArrayDesc*>(ptr);
 
 		destroy_reflection_descriptor(desc.element);
 	} break;
 	case ReflectionType::Struct: {
-		auto& desc = *static_cast<ReflectionStructDesc*>(desc_ptr);
+		auto& desc = *static_cast<ReflectionStructDesc*>(ptr);
 
 		for (uint32_t i = 0; i < desc.memberCount; ++i)
 			destroy_reflection_descriptor(desc.members[i]);
 		delete[] desc.members;
 	} break;
 	case ReflectionType::ResourceBlock: {
-		auto& desc = *static_cast<ReflectionResourceBlockDesc*>(desc_ptr);
+		auto& desc = *static_cast<ReflectionResourceBlockDesc*>(ptr);
 
 		for (uint32_t i = 0; i < desc.memberCount; ++i)
 			destroy_reflection_descriptor(desc.members[i]);
 		delete[] desc.members;
 	} break;
 	case ReflectionType::PushConstant: {
-		auto& desc = *static_cast<ReflectionPushConstantDesc*>(desc_ptr);
+		auto& desc = *static_cast<ReflectionPushConstantDesc*>(ptr);
 	
 		for (uint32_t i = 0; i < desc.memberCount; ++i)
 			destroy_reflection_descriptor(desc.members[i]);
 		delete[] desc.members;
 	} break;
 	case ReflectionType::ResourceArray: {
-		auto& desc = *static_cast<ReflectionResourceArrayDesc*>(desc_ptr);
+		auto& desc = *static_cast<ReflectionResourceArrayDesc*>(ptr);
 	
 		destroy_reflection_descriptor(desc.element);
 	} break;
 	}
 
-	delete desc_ptr;
+	delete ptr;
 }
 
 static void parse_shader(ShaderImpl& impl, const uint32_t* spirv_code, size_t size_in_byte)
@@ -466,16 +464,20 @@ static void parse_shader(ShaderImpl& impl, const uint32_t* spirv_code, size_t si
 		for (uint32_t j = 0; j < set.binding_count; ++j) {
 			auto& binding = *set.bindings[j];
 
+			if (binding.binding != j)
+				throw Exception("binding numbers must be sequentially defined starting from 0");
+
 			auto& layout_binding = layout_info.bindings.emplace_back();
-			layout_binding.binding       = binding.binding;
+			layout_binding.binding       = j;
 			layout_binding.resourceType  = to_resource_type(binding.descriptor_type);
 			layout_binding.resourceCount = binding.count;
 			layout_binding.stageFlags    = impl.shaderStageFlags;
 
 			if (is_unsized_array(binding.array)) {
-				// TODO: if unsized array is not last binding of layout, this will cause error
+				if (j != set.binding_count - 1)
+					throw Exception("only last binding of descriptor set can be unsized array");
 
-				layout_binding.resourceCount = UNSIZED_ARRAY_DESCRIPTOR_COUNT;
+				layout_binding.resourceCount = VERA_UNSIZED_ARRAY_RESOURCE_COUNT;
 				layout_binding.flags         =
 					ResourceLayoutBindingFlagBits::UpdateAfterBind |
 					ResourceLayoutBindingFlagBits::VariableBindingCount |
@@ -489,8 +491,10 @@ static void parse_shader(ShaderImpl& impl, const uint32_t* spirv_code, size_t si
 
 		auto resource_layout = ResourceLayout::create(impl.device, layout_info);
 
-		for (size_t i = refl_offset; i < impl.reflections.size(); ++i)
-			impl.reflections[i]->resourceLayout = resource_layout;
+		for (size_t i = refl_offset; i < impl.reflections.size(); ++i) {
+			auto& desc = static_cast<ReflectionRootDesc&>(*impl.reflections[i]);
+			desc.resourceLayout = resource_layout;
+		}
 
 		impl.resourceLayouts.push_back(resource_layout);
 	}
@@ -582,6 +586,11 @@ obj<Device> Shader::getDevice()
 	auto& impl = getImpl(this);
 
 	return impl.device;
+}
+
+obj<ResourceLayout> Shader::getResourceLayout(uint32_t set)
+{
+	return getImpl(this).resourceLayouts[set];
 }
 
 ShaderStageFlags Shader::getShaderStageFlags() const

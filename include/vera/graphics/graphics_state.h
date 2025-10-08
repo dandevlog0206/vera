@@ -42,8 +42,6 @@ public:
 	void pushPipeline(ref<Pipeline> pipeline);
 	void popPipelineInfo();
 
-	void bindCommandBuffer(ref<CommandBuffer> cmd) const;
-
 	void clear();
 
 private:

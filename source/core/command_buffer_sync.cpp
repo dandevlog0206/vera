@@ -20,14 +20,15 @@ CommandBufferState CommandBufferSync::getState() const VERA_NOEXCEPT
 	return m_impl->state;
 }
 
-ref<Semaphore> CommandBufferSync::getCompleteSemaphore()
+const_ref<Semaphore> CommandBufferSync::getCompleteSemaphore() const VERA_NOEXCEPT
 {
 	VERA_ASSERT_MSG(m_impl, "empty command buffer sync");
 
-	if (m_submit_id < m_impl->submitID || m_impl->fence->signaled())
-		throw Exception("command buffer already completed");
+	if (m_impl->submitID == m_submit_id)
+		return m_impl->semaphore;
 
-	return m_impl->semaphore;
+	// next recording already begun
+	return nullptr;
 }
 
 void CommandBufferSync::waitForComplete() const VERA_NOEXCEPT

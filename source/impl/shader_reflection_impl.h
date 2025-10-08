@@ -125,7 +125,6 @@ struct ReflectionDesc
 {
 	ReflectionType      type;
 	const char*         name;
-	obj<ResourceLayout> resourceLayout;
 };
 
 struct ReflectionPrimitiveDesc : ReflectionDesc
@@ -138,7 +137,7 @@ struct ReflectionArrayDesc : ReflectionDesc
 {
 	uint32_t        stride;
 	uint32_t        elementCount; // UINT32_MAX for unsized array
-	ReflectionDesc* element;       // pointer to single element descriptor
+	ReflectionDesc* element;      // pointer to single element descriptor
 	uint32_t        offset;
 };
 
@@ -149,17 +148,21 @@ struct ReflectionStructDesc : ReflectionDesc
 	uint32_t         offset;
 };
 
-struct ReflectionResourceDesc : ReflectionDesc
+struct ReflectionRootDesc : ReflectionDesc
 {
-	ShaderStageFlags shaderStageFlags;
+	ShaderStageFlags    shaderStageFlags;
+	ref<ResourceLayout> resourceLayout;
+};
+
+struct ReflectionResourceDesc : ReflectionRootDesc
+{
 	ResourceType     resourceType;
 	uint16_t         set;
 	uint16_t         binding;
 };
 
-struct ReflectionResourceBlockDesc : ReflectionDesc
+struct ReflectionResourceBlockDesc : ReflectionRootDesc
 {
-	ShaderStageFlags  shaderStageFlags;
 	uint32_t          sizeInByte;
 	ResourceType      resourceType;
 	uint16_t          set;
@@ -168,17 +171,15 @@ struct ReflectionResourceBlockDesc : ReflectionDesc
 	ReflectionDesc**  members;
 };
 
-struct ReflectionPushConstantDesc : ReflectionDesc
+struct ReflectionPushConstantDesc : ReflectionRootDesc
 {
-	ShaderStageFlags  shaderStageFlags;
 	uint32_t          sizeInByte;
 	uint32_t          memberCount;
 	ReflectionDesc**  members;
 };
 
-struct ReflectionResourceArrayDesc : ReflectionDesc
+struct ReflectionResourceArrayDesc : ReflectionRootDesc
 {
-	ShaderStageFlags shaderStageFlags;
 	ResourceType     resourceType;
 	uint16_t         set;
 	uint16_t         binding;
@@ -188,15 +189,16 @@ struct ReflectionResourceArrayDesc : ReflectionDesc
 
 struct ShaderReflectionImpl
 {
-	using object_type = class ShaderReflection;
-	using hash_map    = std::unordered_map<std::string_view, uint32_t>;
+	using hash_map        = std::unordered_map<std::string_view, uint32_t>;
+	using Shaders         = std::vector<obj<Shader>>;
+	using ReflectionDescs = std::vector<ReflectionDesc*>;
 
-	obj<Device>                  device;
-	std::vector<obj<Shader>>     shaders;
+	obj<Device>      device;
+	Shaders          shaders;
 
-	hash_map                     hashMap;
-	std::vector<ReflectionDesc*> descriptors;
-	ShaderStageFlags             shaderStageFlags;
+	hash_map         hashMap;
+	ReflectionDescs  descriptors;
+	ShaderStageFlags shaderStageFlags;
 };
 
 VERA_NAMESPACE_END

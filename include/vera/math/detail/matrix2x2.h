@@ -38,14 +38,16 @@ public:
 	
 	VERA_CONSTEXPR matrix_base(
 		T m00, T m01,
-		T m10, T m11) VERA_NOEXCEPT :
+		T m10, T m11
+	) VERA_NOEXCEPT :
 		col{
 			col_type(m00, m01),
 			col_type(m10, m11) } {}
 
 	VERA_CONSTEXPR matrix_base(
 		const col_type& col0,
-		const col_type& col1) VERA_NOEXCEPT :
+		const col_type& col1
+	) VERA_NOEXCEPT :
 		col{
 			col0,
 			col1 } {}

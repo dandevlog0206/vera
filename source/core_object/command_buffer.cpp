@@ -4,7 +4,6 @@
 #include "../impl/command_buffer_impl.h"
 #include "../impl/pipeline_impl.h"
 #include "../impl/pipeline_layout_impl.h"
-#include "../impl/resource_binding_impl.h"
 #include "../impl/texture_impl.h"
 #include "../impl/device_memory_impl.h"
 
@@ -13,9 +12,42 @@
 #include "../../include/vera/core/semaphore.h"
 #include "../../include/vera/core/fence.h"
 #include "../../include/vera/core/resource_binding.h"
+#include "../../include/vera/graphics/shader_parameter.h"
 #include "../../include/vera/util/static_vector.h"
 
 VERA_NAMESPACE_BEGIN
+
+template <class ClearType>
+bool operator==(const AttachmentInfo<ClearType>& lhs, const AttachmentInfo<ClearType>& rhs)
+{
+	return !memcmp(&lhs, &rhs, sizeof(lhs));
+}
+
+bool operator==(const RenderingInfo& lhs, const RenderingInfo& rhs)
+{
+	if (&lhs == &rhs) return true;
+
+	if (lhs.renderArea != rhs.renderArea ||
+		lhs.layerCount != rhs.layerCount ||
+		lhs.colorAttachments.size() != rhs.colorAttachments.size()) return false;
+
+	auto* colorl_ptr = lhs.colorAttachments.data();
+	auto* colorr_ptr = rhs.colorAttachments.data();
+	auto  color_size = sizeof(AttachmentInfo<Color>) * lhs.colorAttachments.size();
+	if (memcmp(colorl_ptr, colorr_ptr, color_size)) return false;
+
+	auto& depthl = lhs.depthAttachment;
+	auto& depthr = rhs.depthAttachment;
+	if (depthl.has_value() != depthr.has_value()) return false;
+	if (depthl.has_value() && depthl.value() == depthr.value()) return false;
+
+	auto& stencill = lhs.stencilAttachment;
+	auto& stencilr = rhs.stencilAttachment;
+	if (stencill.has_value() != stencilr.has_value()) return false;
+	if (stencill.has_value() && stencill.value() == stencilr.value()) return false;
+
+	return true;
+}
 
 static vk::ImageView get_vk_image_view(ref<Texture> texture)
 {
@@ -89,6 +121,8 @@ void CommandBuffer::reset()
 
 	if (impl.state == CommandBufferState::Submitted && !impl.fence->signaled())
 		throw Exception("cannot reset a submitted command buffer that is not completed");
+
+	impl.fence->reset();
 	
 	impl.submitID            += 1;
 	impl.submitQueueType      = SubmitQueueType::Transfer;
@@ -239,7 +273,6 @@ void CommandBuffer::bindIndexBuffer(ref<Buffer> buffer)
 	if (!buffer_impl.usage.has(BufferUsageFlagBits::IndexBuffer))
 		throw Exception("buffer is not for index");
 
-	// consider unbinding index buffer
 	impl.commandBuffer.bindIndexBuffer(buffer_impl.buffer, 0, to_vk_index_type(buffer_impl.indexType));
 	impl.currentIndexBuffer = buffer;
 }
@@ -253,6 +286,99 @@ void CommandBuffer::bindPipeline(ref<Pipeline> pipeline)
 		pipeline_impl.pipelineBindPoint,
 		pipeline_impl.pipeline);
 	impl.currentPipeline = pipeline;
+}
+
+void CommandBuffer::pushConstant(
+	const_ref<PipelineLayout> pipeline_layout,
+	ShaderStageFlags          stage_flags,
+	uint32_t                  offset,
+	const void*               data,
+	uint32_t                  size)
+{
+	auto& impl = getImpl(this);
+
+	impl.commandBuffer.pushConstants(
+		get_vk_pipeline_layout(pipeline_layout),
+		to_vk_shader_stage_flags(stage_flags),
+		offset,
+		size,
+		data);
+}
+
+void CommandBuffer::bindGraphicsState(const GraphicsState& state)
+{
+	auto& impl   = getImpl(this);
+	auto  vk_cmd = impl.commandBuffer;
+
+	if (!state.m_viewports.empty())
+		setViewport(state.m_viewports.back());
+
+	if (!state.m_scissors.empty())
+		setScissor(state.m_scissors.back());
+
+	if (!state.m_vertex_buffers.empty())
+		bindVertexBuffer(state.m_vertex_buffers.back());
+
+	if (!state.m_index_buffers.empty())
+		bindIndexBuffer(state.m_index_buffers.back());
+
+	if (!state.m_pipelines.empty())
+		bindPipeline(state.m_pipelines.back());
+
+	if (!state.m_renderingInfos.empty()) {
+		if (impl.currentRenderingInfo.colorAttachments.empty()) {
+			beginRendering(state.m_renderingInfos.back());
+		} else if (!(state.m_renderingInfos.back() == impl.currentRenderingInfo)) {
+			endRendering();
+			beginRendering(state.m_renderingInfos.back());
+		}
+	}
+}
+
+void CommandBuffer::bindResource(
+	const_ref<PipelineLayout> pipeline_layout,
+	uint32_t                  set,
+	ref<ResourceBinding>      binding
+) {
+	auto& impl = getImpl(this);
+
+	impl.commandBuffer.bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics,
+		get_vk_pipeline_layout(pipeline_layout),
+		set,
+		1,
+		&get_vk_descriptor_set(binding),
+		0,
+		nullptr);
+}
+
+void CommandBuffer::bindResource(
+	const_ref<PipelineLayout> pipeline_layout,
+	uint32_t                  set,
+	ref<ResourceBinding>      binding,
+	array_view<uint32_t>      dynamic_offsets
+) {
+	VERA_ASSERT_MSG(pipeline_layout, "pipeline layout is null");
+	
+	auto& impl = getImpl(this);
+
+	impl.commandBuffer.bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics,
+		get_vk_pipeline_layout(pipeline_layout),
+		set,
+		1,
+		&get_vk_descriptor_set(binding),
+		static_cast<uint32_t>(dynamic_offsets.size()),
+		dynamic_offsets.data());
+}
+
+void CommandBuffer::bindShaderParameter(const_ref<PipelineLayout> pipeline_layout, const ShaderParameter& shader_parameter)
+{
+	VERA_ASSERT_MSG(pipeline_layout, "pipeline layout is null");
+
+	if (shader_parameter.empty()) return;
+
+	VERA_ASSERT_MSG(false, "not implemented");
 }
 
 void CommandBuffer::beginRendering(const RenderingInfo& info)

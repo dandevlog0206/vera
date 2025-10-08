@@ -1,12 +1,14 @@
 #pragma once
 
 #include "core_object.h"
+#include "../util/array_view.h"
 
 VERA_NAMESPACE_BEGIN
 
 class Device;
 class ResourceLayout;
 class ResourceBinding;
+class ResourceBindingInfo;
 
 class ResourceBindingPool : protected CoreObject
 {

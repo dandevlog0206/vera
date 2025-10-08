@@ -201,7 +201,6 @@
     <ClInclude Include="include\vera\graphics\vertex_input.h" />
     <ClInclude Include="include\vera\math\math_util.h" />
     <ClInclude Include="include\vera\math\matrix_types.h" />
-    <ClInclude Include="include\vera\shader\shader_variable.h" />
     <ClInclude Include="include\vera\graphics\colormap.h" />
     <ClInclude Include="include\vera\asset\asset_loader.h" />
     <ClInclude Include="include\vera\util\array_view.h" />
@@ -245,7 +244,7 @@
     <ClInclude Include="include\vera\graphics\format.h" />
     <ClInclude Include="include\vera\graphics\graphics_state.h" />
     <ClInclude Include="include\vera\core\device_memory.h" />
-    <ClInclude Include="include\vera\shader\shader_parameter.h" />
+    <ClInclude Include="include\vera\graphics\shader_parameter.h" />
     <ClInclude Include="include\vera\util\rect.h" />
     <ClInclude Include="include\vera\util\small_vector.h" />
     <ClInclude Include="source\impl\device_impl.h" />
@@ -327,8 +326,7 @@
     <ClCompile Include="source\scene\mesh_attribute.cpp" />
     <ClCompile Include="source\scene\scene.cpp" />
     <ClCompile Include="source\scene\scene_node.cpp" />
-    <ClCompile Include="source\shader\shader_parameter.cpp" />
-    <ClCompile Include="source\shader\shader_variable.cpp" />
+    <ClCompile Include="source\graphics\shader_parameter.cpp" />
     <ClCompile Include="source\core_object\shader_reflection.cpp" />
     <ClCompile Include="source\core_object\swapchain.cpp" />
     <ClCompile Include="source\core_object\texture.cpp" />

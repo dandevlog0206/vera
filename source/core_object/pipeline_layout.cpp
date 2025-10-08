@@ -29,6 +29,11 @@ static size_t hash_pipeline_layout(const PipelineLayoutCreateInfo& info)
 	return seed;
 }
 
+const vk::PipelineLayout& get_vk_pipeline_layout(const_ref<PipelineLayout> pipeline_layout)
+{
+	return CoreObject::getImpl(pipeline_layout).pipelineLayout;
+}
+
 vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout)
 {
 	return CoreObject::getImpl(pipeline_layout).pipelineLayout;
@@ -51,7 +56,7 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLay
 	static_vector<vk::PushConstantRange, 32>   vk_constants;
 
 	for (const auto& layout : info.resourceLayouts)
-		vk_layouts.push_back(getImpl(layout).layout);
+		vk_layouts.push_back(getImpl(layout).descriptorSetLayout);
 	for (const auto& range : info.pushConstantRanges)
 		vk_constants.push_back(get_push_constant_range(range));
 
@@ -104,7 +109,7 @@ uint32_t PipelineLayout::getResourceLayoutCount() const
 	return  getImpl(this).resourceLayout.size();
 }
 
-ref<ResourceLayout> PipelineLayout::getResourceLayout(uint32_t set) const
+const_ref<ResourceLayout> PipelineLayout::getResourceLayout(uint32_t set) const
 {
 	return getImpl(this).resourceLayout[set];
 }

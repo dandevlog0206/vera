@@ -36,7 +36,7 @@ void __error_impl(
 	throw ::vr::Exception(message);
 }
 
-static void __assert_impl(
+void __assert_impl(
 	const char* expression,
 	const char* message,
 	const char* file,

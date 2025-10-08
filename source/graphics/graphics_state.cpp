@@ -3,38 +3,6 @@
 
 VERA_NAMESPACE_BEGIN
 
-template <class ClearType>
-bool operator==(const AttachmentInfo<ClearType>& lhs, const AttachmentInfo<ClearType>& rhs)
-{
-	return !memcmp(&lhs, &rhs, sizeof(lhs));
-}
-
-bool operator==(const RenderingInfo& lhs, const RenderingInfo& rhs)
-{
-	if (&lhs == &rhs) return true;
-
-	if (lhs.renderArea != rhs.renderArea ||
-		lhs.layerCount != rhs.layerCount ||
-		lhs.colorAttachments.size() != rhs.colorAttachments.size()) return false;
-	
-	auto* colorl_ptr = lhs.colorAttachments.data();
-	auto* colorr_ptr = rhs.colorAttachments.data();
-	auto  color_size = sizeof(AttachmentInfo<Color>) * lhs.colorAttachments.size();
-	if (memcmp(colorl_ptr, colorr_ptr, color_size)) return false;
-
-	auto& depthl = lhs.depthAttachment;
-	auto& depthr = rhs.depthAttachment;
-	if (depthl.has_value() != depthr.has_value()) return false;
-	if (depthl.has_value() && depthl.value() == depthr.value()) return false;
-
-	auto& stencill = lhs.stencilAttachment;
-	auto& stencilr = rhs.stencilAttachment;
-	if (stencill.has_value() != stencilr.has_value()) return false;
-	if (stencill.has_value() && stencill.value() == stencilr.value()) return false;
-
-	return true;
-}
-
 GraphicsState::GraphicsState()
 {
 }
@@ -191,35 +159,6 @@ void GraphicsState::pushPipeline(ref<Pipeline> pipeline)
 void GraphicsState::popPipelineInfo()
 {
 	m_pipelines.pop_back();
-}
-
-void GraphicsState::bindCommandBuffer(ref<CommandBuffer> cmd) const
-{
-	auto& cmd_impl = CoreObject::getImpl(cmd);
-
-	if (!m_viewports.empty())
-		cmd->setViewport(m_viewports.back());
-
-	if (!m_scissors.empty())
-		cmd->setScissor(m_scissors.back());
-
-	if (!m_vertex_buffers.empty() && m_vertex_buffers.back() != cmd_impl.currentVertexBuffer)
-		cmd->bindVertexBuffer(m_vertex_buffers.back());
-
-	if (!m_index_buffers.empty() && m_index_buffers.back() != cmd_impl.currentIndexBuffer)
-		cmd->bindIndexBuffer(m_index_buffers.back());
-
-	if (!m_pipelines.empty() && m_pipelines.back() != cmd_impl.currentPipeline)
-		cmd->bindPipeline(m_pipelines.back());
-
-	if (!m_renderingInfos.empty()) {
-		if (cmd_impl.currentRenderingInfo.colorAttachments.empty()) {
-			cmd->beginRendering(m_renderingInfos.back());
-		} else if (!(m_renderingInfos.back() == cmd_impl.currentRenderingInfo)) {
-			cmd->endRendering();
-			cmd->beginRendering(m_renderingInfos.back());
-		}
-	}
 }
 
 void GraphicsState::clear()

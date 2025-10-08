@@ -18,7 +18,7 @@ void hash_combine(hash_t& seed, const T& val)
 }
 
 // A hash combine function for unordered elements
-void hash_unordered(hash_t& seed, hash_t hash)
+static void hash_unordered(hash_t& seed, hash_t hash)
 {
 	if constexpr (sizeof(hash_t) == 4)
 		seed ^= (hash * 0x9e3779b9);

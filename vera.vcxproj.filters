@@ -159,7 +159,7 @@
     <ClInclude Include="include\vera\core\device_memory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\shader\shader_parameter.h">
+    <ClInclude Include="include\vera\graphics\shader_parameter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\buffer.h">
@@ -226,9 +226,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\stack_allocator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\vera\shader\shader_variable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\math\matrix_types.h">
@@ -473,10 +470,7 @@
     <ClCompile Include="source\core_object\shader_reflection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\shader\shader_parameter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\shader\shader_variable.cpp">
+    <ClCompile Include="source\graphics\shader_parameter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\colormap.cpp">
