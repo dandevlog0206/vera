@@ -10,6 +10,13 @@ class ShaderReflection;
 class CommandBuffer;
 class PipelineLayout;
 
+struct ShaderStorageAddress
+{
+	uint32_t resourceIndex = 0;
+	uint32_t arrayIndex    = 0;
+	uint32_t blockOffset   = 0;
+};
+
 class ShaderStorage : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ShaderStorage)
@@ -21,10 +28,6 @@ public:
 	obj<ShaderReflection> getShaderReflection();
 
 	ShaderVariable accessVariable(std::string_view name);
-
-	uint32_t getFrameCount();
-
-	void bindCommandBuffer(ref<PipelineLayout> layout, ref<CommandBuffer> cmd) const;
 };
 
 VERA_NAMESPACE_END

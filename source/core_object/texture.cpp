@@ -242,8 +242,9 @@ void Texture::upload(const Image& image)
 		vr::TextureLayout::ShaderReadOnlyOptimal);
 	command_buffer->end();
 
-	impl.device->submitCommand(command_buffer);
-	impl.device->waitIdle();
+	auto sync = command_buffer->submit();
+
+	sync.waitForComplete();
 }
 
 obj<Device> Texture::getDevice()

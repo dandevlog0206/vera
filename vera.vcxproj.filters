@@ -357,7 +357,7 @@
     <ClInclude Include="include\vera\asset\asset_loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\smart_ptr.h">
+    <ClInclude Include="include\vera\core\intrusive_ptr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\asset\detail\fbx_loader.h">
@@ -375,9 +375,6 @@
     <ClInclude Include="include\vera\scene\axis_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\frame_sync.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\vera\scene\node.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -385,6 +382,33 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\scene\attribute.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\resource_binding_pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\impl\resource_binding_pool_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\impl\resource_binding_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\core_object\detail\resource_binding_desc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\command_buffer_sync.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\array_view.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\index_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\resource_binding.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\render_frame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -506,17 +530,27 @@
     <ClCompile Include="source\scene\scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core_object\frame_sync.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\scene\scene_node.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\scene\mesh_attribute.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\core_object\resource_binding_pool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core\command_buffer_sync.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core\exception.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core_object\resource_binding.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="include\vera\scene\sample_scene.txt" />
+    <Text Include="vera.natjmc" />
   </ItemGroup>
 </Project>

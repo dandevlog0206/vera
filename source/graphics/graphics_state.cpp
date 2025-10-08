@@ -204,13 +204,13 @@ void GraphicsState::bindCommandBuffer(ref<CommandBuffer> cmd) const
 		cmd->setScissor(m_scissors.back());
 
 	if (!m_vertex_buffers.empty() && m_vertex_buffers.back() != cmd_impl.currentVertexBuffer)
-		cmd->setVertexBuffer(m_vertex_buffers.back());
+		cmd->bindVertexBuffer(m_vertex_buffers.back());
 
 	if (!m_index_buffers.empty() && m_index_buffers.back() != cmd_impl.currentIndexBuffer)
-		cmd->setIndexBuffer(m_index_buffers.back());
+		cmd->bindIndexBuffer(m_index_buffers.back());
 
 	if (!m_pipelines.empty() && m_pipelines.back() != cmd_impl.currentPipeline)
-		cmd->setPipeline(m_pipelines.back());
+		cmd->bindPipeline(m_pipelines.back());
 
 	if (!m_renderingInfos.empty()) {
 		if (cmd_impl.currentRenderingInfo.colorAttachments.empty()) {

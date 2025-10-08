@@ -53,6 +53,11 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
+vk::Buffer& get_vk_buffer(ref<Buffer> buffer)
+{
+	return CoreObject::getImpl(buffer).buffer;
+}
+
 obj<Buffer> Buffer::createVertex(obj<Device> device, size_t size)
 {
 	BufferCreateInfo info;

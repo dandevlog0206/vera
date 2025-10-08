@@ -60,8 +60,6 @@ public:
 
 	const std::vector<DeviceMemoryType>& getMemoryTypes() const;
 
-	void submitCommand(ref<CommandBuffer> command);
-
 	void waitIdle() const;
 };
 

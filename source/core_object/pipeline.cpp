@@ -32,6 +32,8 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Gr
 	append_shader_layout_info(layout_info, info.geometryShader);
 	append_shader_layout_info(layout_info, info.fragmentShader);
 
+	layout_info.pipelineBindPoint = PipelineBindPoint::Graphics;
+
 	return PipelineLayout::create(device, layout_info);
 }
 
@@ -232,7 +234,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 	if (auto it = device_impl.pipelineMap.find(hash_value);
 		it != device_impl.pipelineMap.end()) {
-		return it->second;
+		return obj<Pipeline>(it->second.get());
 	}
 
 	auto  obj  = createNewCoreObject<Pipeline>();
@@ -421,6 +423,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	impl.device            = std::move(device);
 	impl.pipeline          = result.value;
 	impl.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+
+	device_impl.pipelineMap[hash_value] = obj;
 
 	return obj;
 }

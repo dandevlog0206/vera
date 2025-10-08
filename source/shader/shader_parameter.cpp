@@ -18,7 +18,6 @@ ShaderParameter::ShaderParameter(obj<ShaderReflection> reflection) :
 
 ShaderParameter::~ShaderParameter()
 {
-
 }
 
 ShaderVariable ShaderParameter::operator[](std::string_view name)
@@ -39,12 +38,6 @@ obj<ShaderReflection> ShaderParameter::getShaderReflection()
 obj<ShaderStorage> ShaderParameter::getShaderStorage()
 {
 	return m_storage;
-}
-
-void ShaderParameter::bindCommandBuffer(ref<PipelineLayout> layout, ref<CommandBuffer> cmd) const
-{
-	if (m_storage)
-		m_storage->bindCommandBuffer(layout, cmd);
 }
 
 VERA_NAMESPACE_END

@@ -3,12 +3,18 @@
 #include "pipeline.h"
 #include "buffer.h"
 #include "texture.h"
+#include "command_buffer_sync.h"
 #include "device_memory.h"
 #include "../graphics/color.h"
 #include "../util/rect.h"
+#include "../util/array_view.h"
 #include <vector>
 
 VERA_NAMESPACE_BEGIN
+
+class ResourceBinding;
+class GraphicsState;
+class ShaderParameter;
 
 enum class ResolveMode VERA_ENUM
 {
@@ -81,24 +87,13 @@ public:
 	static obj<CommandBuffer> create(obj<Device> device);
 	~CommandBuffer();
 
-	obj<Device> getDevice();
+	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
+
+	VERA_NODISCARD CommandBufferSync getSync() const VERA_NOEXCEPT;
+
+	void reset();
 
 	void begin();
-
-	void setViewport(const Viewport& viewport);
-	void setScissor(const Scissor& scissor);
-	void setVertexBuffer(ref<Buffer> buffer);
-	void setIndexBuffer(ref<Buffer> buffer);
-	void setPipeline(ref<Pipeline> pipeline);
-
-	void transitionImageLayout(
-		ref<Texture>       texture,
-		PipelineStageFlags src_stage_mask,
-		PipelineStageFlags dst_stage_mask,
-		AccessFlags        src_access_mask,
-		AccessFlags        dst_access_mask,
-		TextureLayout        old_layout,
-		TextureLayout        new_layout);
 
 	void copyBufferToTexture(
 		ref<Texture> dst,
@@ -109,6 +104,32 @@ public:
 		uint3        image_offset,
 		extent3d     image_extent);
 
+	void transitionImageLayout(
+		ref<Texture>       texture,
+		PipelineStageFlags src_stage_mask,
+		PipelineStageFlags dst_stage_mask,
+		AccessFlags        src_access_mask,
+		AccessFlags        dst_access_mask,
+		TextureLayout      old_layout,
+		TextureLayout      new_layout);
+
+	void setViewport(const Viewport& viewport);
+	void setScissor(const Scissor& scissor);
+	void bindVertexBuffer(ref<Buffer> buffer);
+	void bindIndexBuffer(ref<Buffer> buffer);
+	void bindPipeline(ref<Pipeline> pipeline);
+
+	void bindGraphicsState(const GraphicsState& state);
+
+	void bindResource(
+		const_ref<PipelineLayout> pipeline_layout,
+		uint32_t                  set,
+		ref<ResourceBinding>      binding);
+
+	void bindShaderParameter(
+		const_ref<PipelineLayout>  pipeline_layout,
+		const_ref<ShaderParameter> shader_parameter);
+
 	void beginRendering(const RenderingInfo& info);
 
 	void draw(
@@ -116,7 +137,7 @@ public:
 		uint32_t instance_count,
 		uint32_t vtx_offset,
 		uint32_t instance_offset);
-	
+
 	void drawIndexed(
 		uint32_t idx_count,
 		uint32_t instance_count,
@@ -128,7 +149,7 @@ public:
 
 	void end();
 
-	void reset();
+	CommandBufferSync submit();
 };
 
 VERA_NAMESPACE_END

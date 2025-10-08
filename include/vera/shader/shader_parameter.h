@@ -24,8 +24,6 @@ public:
 	obj<ShaderReflection> getShaderReflection();
 	obj<ShaderStorage> getShaderStorage();
 
-	void bindCommandBuffer(ref<PipelineLayout> pipeline, ref<CommandBuffer> cmd) const;
-
 private:
 	obj<ShaderReflection> m_reflection;
 	obj<ShaderStorage>    m_storage;

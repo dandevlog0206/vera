@@ -1,6 +1,7 @@
 #include "../../include/vera/core/device.h"
 #include "../impl/context_impl.h"
 #include "../impl/device_impl.h"
+#include "../impl/command_buffer_impl.h"
 
 #include "../../include/vera/core/context.h"
 #include "../../include/vera/core/command_buffer.h"
@@ -45,44 +46,6 @@ static MemoryPropertyFlags to_memory_property_flags(vk::MemoryPropertyFlags flag
 	return result;
 }
 
-static void clean_device_cache(DeviceImpl& impl)
-{
-	for (auto it = impl.pipelineMap.begin(); it != impl.pipelineMap.end();) {
-		if (it->second.count() == 1)
-			it = impl.pipelineMap.erase(it);
-		else
-			++it;
-	}
-
-	for (auto it = impl.shaderMap.begin(); it != impl.shaderMap.end();) {
-		if (it->second.count() == 1)
-			it = impl.shaderMap.erase(it);
-		else
-			++it;
-	}
-
-	for (auto it = impl.samplerMap.begin(); it != impl.samplerMap.end();) {
-		if (it->second.count() == 1)
-			it = impl.samplerMap.erase(it);
-		else
-			++it;
-	}
-
-	for (auto it = impl.pipelineLayoutMap.begin(); it != impl.pipelineLayoutMap.end();) {
-		if (it->second.count() == 1)
-			it = impl.pipelineLayoutMap.erase(it);
-		else
-			++it;
-	}
-
-	for (auto it = impl.resourceLayoutMap.begin(); it != impl.resourceLayoutMap.end();) {
-		if (it->second.count() == 1)
-			it = impl.resourceLayoutMap.erase(it);
-		else
-			++it;
-	}
-}
-
 const vk::Device& get_vk_device(const_ref<Device> device)
 {
 	return CoreObject::getImpl(device).device;
@@ -115,6 +78,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	int32_t transfer_family  = -1;
 	float   queue_priorities = 1.f;
 
+	// Get Queue Family Indices
 	for (size_t i = 0; i < queue_families.size(); ++i) {
 		const auto& props = queue_families[i];
 		if ((props.queueFlags & vk::QueueFlagBits::eGraphics) && graphics_family == -1)
@@ -156,6 +120,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 		queue_create_infos.push_back(transfer_queue_info);
 	}
 
+	// Enable device layers and extensions
 	for (const auto& layer : info.deviceLayers)
 		device_layers.push_back(layer.data());
 	for (const auto& ext : info.deviceExtensions)
@@ -163,13 +128,33 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 
 	device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
-	device_extensions.push_back("VK_EXT_extended_dynamic_state3");
-
-	vk::PhysicalDeviceFeatures device_features;
-
+	device_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+	device_extensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);
+	
+	// Check physical device features
 	vk::PhysicalDeviceDynamicRenderingFeatures dynamic_rendering;
-	dynamic_rendering.dynamicRendering = true;
+	dynamic_rendering.pNext = nullptr;
+	vk::PhysicalDeviceDescriptorIndexingFeatures descriptor_indexing;
+	descriptor_indexing.pNext = &dynamic_rendering;
 
+	vk::PhysicalDeviceFeatures2 device_features;
+	device_features.pNext = &descriptor_indexing;
+
+	physical_device.getFeatures2(&device_features);
+
+	if (!dynamic_rendering.dynamicRendering)
+		throw Exception("dynamic rendering feature is not supported");
+	if (!descriptor_indexing.runtimeDescriptorArray ||
+		!descriptor_indexing.shaderSampledImageArrayNonUniformIndexing)
+		throw Exception("descriptor indexing feature is not supported");
+
+	// Get physical device properties
+	vk::PhysicalDeviceProperties2 device_props;
+	device_props.pNext = &impl.descriptorIndexingProperties;
+
+	physical_device.getFeatures2(&device_props);
+
+	// Create logical device
 	vk::DeviceCreateInfo device_info;
 	device_info.queueCreateInfoCount    = static_cast<uint32_t>(queue_create_infos.size());
 	device_info.pQueueCreateInfos       = queue_create_infos.data();
@@ -177,16 +162,16 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	device_info.ppEnabledLayerNames     = device_layers.data();
 	device_info.enabledExtensionCount   = static_cast<uint32_t>(device_extensions.size());
 	device_info.ppEnabledExtensionNames = device_extensions.data();
-	device_info.pEnabledFeatures        = &device_features;
-	device_info.pNext                   = &dynamic_rendering;
+	device_info.pEnabledFeatures        = nullptr;
+	device_info.pNext                   = &descriptor_indexing;
 
-	impl.physicalDeviceProperties = physical_device.getProperties();
-	impl.deviceMemoryProperties   = physical_device.getMemoryProperties();
-	impl.physicalDevice           = physical_device;
-	impl.device                   = physical_device.createDevice(device_info);
-	impl.graphicsQueue            = impl.device.getQueue(graphics_family, 0);
-	impl.computeQueue             = impl.device.getQueue(compute_family, 0);
-	impl.transferQueue            = impl.device.getQueue(transfer_family, 0);
+	impl.physicalDevice         = physical_device;
+	impl.deviceProperties       = physical_device.getProperties();
+	impl.deviceMemoryProperties = physical_device.getMemoryProperties();
+	impl.device                 = physical_device.createDevice(device_info);
+	impl.graphicsQueue          = impl.device.getQueue(graphics_family, 0);
+	impl.computeQueue           = impl.device.getQueue(compute_family, 0);
+	impl.transferQueue          = impl.device.getQueue(transfer_family, 0);
 
 	impl.sampleCount              = vk::SampleCountFlagBits::e1;
 	impl.colorFormat              = info.colorFormat == Format::Unknown ? Format::RGBA8Unorm : info.colorFormat;
@@ -261,17 +246,6 @@ obj<Context> Device::getContext()
 const std::vector<DeviceMemoryType>& Device::getMemoryTypes() const
 {
 	return getImpl(this).memoryTypes;
-}
-
-void Device::submitCommand(ref<CommandBuffer> command)
-{
-	auto& impl = getImpl(this);
-	
-	vk::SubmitInfo submit_info;
-	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers    = &get_vk_command_buffer(command);
-
-	impl.graphicsQueue.submit(submit_info, nullptr);
 }
 
 void Device::waitIdle() const

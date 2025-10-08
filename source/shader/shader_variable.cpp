@@ -209,76 +209,12 @@ ShaderVariable::ShaderVariable(ShaderStorageData* storage, ReflectionDesc* desc,
 
 ShaderVariable ShaderVariable::operator[](std::string_view name)
 {
-	switch (m_desc->type) {
-	case ReflectionType::Struct: {
-		auto& desc = *static_cast<ReflectionStructDesc*>(m_desc);
-		if (auto idx = find_member(desc, name.data()); idx != -1)
-			return ShaderVariable(m_storage, desc.members[idx], get_offset(*desc.members[idx]));
-	} break;
-	case ReflectionType::ResourceBlock: {
-		auto& desc = *static_cast<ReflectionResourceBlockDesc*>(m_desc);
-		if (auto idx = find_member(desc, name.data()); idx != -1)
-			return ShaderVariable(m_storage, desc.members[idx], get_offset(*desc.members[idx]));
-	} break;
-	case ReflectionType::PushConstant: {
-		auto& desc = *static_cast<ReflectionPushConstantDesc*>(m_desc);
-		if (auto idx = find_member(desc, name.data()); idx != -1)
-			return ShaderVariable(m_storage, desc.members[idx], get_offset(*desc.members[idx]));
-	} break;
-	default:
-		throw Exception("current variable cannot be accessed by name");
-	}
 
-	throw Exception("member named \"" + std::string(name) + "\" not found");
 }
 
 ShaderVariable ShaderVariable::operator[](size_t idx)
 {
-	switch (m_desc->type) {
-	case ReflectionType::Array: {
-		auto& storage = *static_cast<BlockStorage*>(m_storage);
-		auto& desc    = *static_cast<ReflectionArrayDesc*>(m_desc);
-		auto  offset  = m_offset + desc.stride * static_cast<uint32_t>(idx);
-		
-		if (desc.elementCount == UINT32_MAX && storage.blockStorage.size() <= idx) {
-			storage.blockStorage.resize(offset + desc.stride);
-		} else if (desc.elementCount <= idx) {
-			throw Exception("shader variable subscript out of range");
-		}
 
-		return ShaderVariable(m_storage, desc.element, offset);
-	}
-	case ReflectionType::ResourceArray: {
-		auto& storage = *static_cast<ResourceArrayStorage*>(m_storage);
-		auto& desc    = *static_cast<ReflectionResourceArrayDesc*>(m_desc);
-
-		if (desc.elementCount == UINT32_MAX && storage.elements.size() <= idx) {
-			auto old_size = static_cast<int32_t>(storage.elements.size());
-
-			storage.elements.reserve(idx + 1);
-
-			if (desc.type == ReflectionType::Resource) {
-				auto& resource_desc = *static_cast<ReflectionResourceDesc*>(desc.element);
-
-				for (int32_t i = old_size; i < static_cast<int32_t>(idx + 1); ++i)
-					storage.elements.push_back(create_resource_storage(resource_desc, i));
-			} else /* desc.type == ReflectionType::ResourceBlock */ {
-				VERA_ASSERT(desc.type == ReflectionType::ResourceBlock);
-
-				auto& block_desc = *static_cast<ReflectionResourceBlockDesc*>(desc.element);
-
-				for (int32_t i = old_size; i < static_cast<int32_t>(idx + 1); ++i)
-					storage.elements.push_back(create_resource_block_storage(block_desc, i));
-			}
-		} else if (desc.elementCount <= idx) {
-			throw Exception("shader variable subscript out of range");
-		}
-
-		return ShaderVariable(storage.elements[idx], desc.element, UINT32_MAX);
-	}
-	}
-
-	throw Exception("current variable cannot be accessed by index");
 }
 
 void ShaderVariable::operator=(obj<Sampler> obj)
@@ -608,153 +544,32 @@ void ShaderVariable::setValue(const double4x4& value)
 
 void ShaderVariable::setSampler(obj<Sampler> sampler)
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Sampler ||
-		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
-	auto& desc = *static_cast<ReflectionResourceDesc*>(m_desc);
-
-	switch (desc.resourceType) {
-	case ResourceType::Sampler: {
-		auto& storage = *static_cast<SamplerStorage*>(m_storage);
-		
-		if (storage.sampler.get() == sampler.get()) return;
-
-		auto vk_device = get_vk_device(CoreObject::getImpl(sampler).device);
-
-		vk::DescriptorImageInfo image_info;
-		image_info.sampler = get_vk_sampler(storage.sampler);
-
-		vk::WriteDescriptorSet write_info;
-		write_info.dstSet          = storage.descriptorSet;
-		write_info.dstBinding      = desc.binding;
-		write_info.dstArrayElement = std::max(storage.elementIndex, 0);
-		write_info.descriptorCount = 1;
-		write_info.descriptorType  = vk::DescriptorType::eSampler;
-		write_info.pImageInfo      = &image_info;
-
-		vk_device.updateDescriptorSets(write_info, {});
-
-		storage.sampler = std::move(sampler);
-	} break;
-	case ResourceType::CombinedImageSampler: {
-		auto& storage = *static_cast<CombinedImageSamplerStorage*>(m_storage);
-
-		if (storage.sampler.get() == sampler.get()) return;
-
-		if (storage.texture) {
-			auto vk_device = get_vk_device(CoreObject::getImpl(sampler).device);
-
-			vk::DescriptorImageInfo image_info;
-			image_info.sampler     = get_vk_sampler(sampler);
-			image_info.imageView   = get_vk_image_view(storage.texture->getTextureView());
-			image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-			vk::WriteDescriptorSet write_info;
-			write_info.dstSet          = storage.descriptorSet;
-			write_info.dstBinding      = desc.binding;
-			write_info.dstArrayElement = std::max(storage.elementIndex, 0);
-			write_info.descriptorCount = 1;
-			write_info.descriptorType  = vk::DescriptorType::eSampler;
-			write_info.pImageInfo      = &image_info;
-
-			vk_device.updateDescriptorSets(write_info, {});
-		}
-
-		storage.sampler = std::move(sampler);
-	} break;
-	}
 }
 
 obj<Sampler> ShaderVariable::getSampler()
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Sampler ||
-		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
-	return static_cast<SamplerStorage*>(m_storage)->sampler;
 }
 
 void ShaderVariable::setTexture(obj<Texture> texture)
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Texture ||
-		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
-	auto& desc = *static_cast<ReflectionResourceDesc*>(m_desc);
-
-	switch (m_storage->storageType) {
-	case ShaderStorageDataType::Texture: {
-		auto& storage = *static_cast<TextureStorage*>(m_storage);
-
-		if (storage.texture.get() == texture.get()) return;
-
-		auto vk_device = get_vk_device(CoreObject::getImpl(texture).device);
-
-		vk::DescriptorImageInfo image_info;
-		image_info.imageView   = get_vk_image_view(texture->getTextureView());
-		image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-		vk::WriteDescriptorSet write_info;
-		write_info.dstSet          = storage.descriptorSet;
-		write_info.dstBinding      = desc.binding;
-		write_info.dstArrayElement = std::max(storage.elementIndex, 0);
-		write_info.descriptorCount = 1;
-		write_info.descriptorType  = to_vk_descriptor_type(desc.resourceType);
-		write_info.pImageInfo      = &image_info;
-
-		vk_device.updateDescriptorSets(write_info, {});
-
-		storage.texture = std::move(texture);
-	} break;
-	case ShaderStorageDataType::CombinedImageSampler: {
-		auto& storage = *static_cast<CombinedImageSamplerStorage*>(m_storage);
-	
-		if (storage.texture.get() == texture.get()) return;
-
-		if (storage.sampler) {
-			auto vk_device = get_vk_device(CoreObject::getImpl(texture).device);
-
-			vk::DescriptorImageInfo image_info;
-			image_info.sampler     = get_vk_sampler(storage.sampler);
-			image_info.imageView   = get_vk_image_view(texture->getTextureView());
-			image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-			vk::WriteDescriptorSet write_info;
-			write_info.dstSet          = storage.descriptorSet;
-			write_info.dstBinding      = desc.binding;
-			write_info.dstArrayElement = std::max(storage.elementIndex, 0);
-			write_info.descriptorCount = 1;
-			write_info.descriptorType  = vk::DescriptorType::eCombinedImageSampler;
-			write_info.pImageInfo      = &image_info;
-
-			vk_device.updateDescriptorSets(write_info, {});
-		}
-
-		storage.texture = std::move(texture);
-	} break;
-	}
 }
 
 obj<Texture> ShaderVariable::getTexture()
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Texture ||
-		m_storage->storageType == ShaderStorageDataType::CombinedImageSampler));
 
-	return static_cast<TextureStorage*>(m_storage)->texture;
 }
 
 void ShaderVariable::setBuffer(obj<Buffer> buffer)
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Buffer ||
-		m_storage->storageType == ShaderStorageDataType::BufferBlock));
 
-	static_cast<BufferStorage*>(m_storage)->buffer = std::move(buffer);
 }
 
 obj<Buffer> ShaderVariable::getBuffer()
 {
-	VERA_ASSERT(m_storage && (m_storage->storageType == ShaderStorageDataType::Buffer ||
-		m_storage->storageType == ShaderStorageDataType::BufferBlock));
 
-	return static_cast<BufferStorage*>(m_storage)->buffer;
 }
 
 VERA_NAMESPACE_END

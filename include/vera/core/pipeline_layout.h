@@ -1,12 +1,19 @@
 #pragma once
 
 #include "shader.h"
+#include "../util/array_view.h"
 #include <vector>
 
 VERA_NAMESPACE_BEGIN
 
 class Device;
 class ResourceLayout;
+
+enum class PipelineBindPoint VERA_ENUM
+{
+	Graphics,
+	Compute
+};
 
 struct PushConstantRange
 {
@@ -19,6 +26,7 @@ struct PipelineLayoutCreateInfo
 {
 	std::vector<obj<ResourceLayout>> resourceLayouts;
 	std::vector<PushConstantRange>   pushConstantRanges;
+	PipelineBindPoint                pipelineBindPoint;
 };
 
 class PipelineLayout : protected CoreObject
@@ -30,8 +38,11 @@ public:
 
 	obj<Device> getDevice();
 
-	const std::vector<obj<ResourceLayout>>& getResourceLayouts() const;
-	const std::vector<PushConstantRange>& getPushConstantRanges() const;
+	uint32_t getResourceLayoutCount() const;
+	ref<ResourceLayout> getResourceLayout(uint32_t idx) const;
+	array_view<ref<ResourceLayout>> getResourceLayouts() const;
+
+	array_view<PushConstantRange> getPushConstantRanges() const;
 
 	size_t hash() const;
 };

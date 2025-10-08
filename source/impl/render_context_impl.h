@@ -1,6 +1,7 @@
 #pragma once
 
 #include "object_impl.h"
+#include "../../include/vera/core/render_frame.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -9,26 +10,23 @@ class Fence;
 class Semaphore;
 class Texture;
 
-struct RenderFrame
+struct RenderContextFrame : RenderFrame
 {
 	using FrameBuffers = std::vector<ref<FrameBuffer>>;
 
-	obj<CommandBuffer> renderCommand;
-	FrameBuffers       framebuffers;
-	obj<Semaphore>     renderCompleteSemaphore;
-	obj<Fence>         fence;
-	uint64_t           frameID;
+	FrameBuffers framebuffers;
 };
 
 struct RenderContextImpl
 {
-	using RenderFrames = std::vector<RenderFrame*>;
+	using RenderContextFrames = std::vector<RenderContextFrame*>;
 
-	obj<Device>  device;
+	obj<Device>         device;
 
-	RenderFrames renderFrames;
-	int32_t      frameIndex;
-	uint64_t     currentFrameID;
+	RenderContextFrames renderFrames;
+	int32_t             frameIndex;
+	uint64_t            currentFrameID;
+	bool                dynamicFrameCount;
 };
 
 VERA_NAMESPACE_END

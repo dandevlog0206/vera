@@ -5,29 +5,43 @@
 #include "../../include/vera/core/exception.h"
 #include "../../include/vera/graphics/format.h"
 #include "../../include/vera/util/rect.h"
+#include "../../include/vera/util/hash.h"
 
 VERA_NAMESPACE_BEGIN
 
-// list of core object
-class Buffer;
-class BufferView;
+// list of core object ordered by dependency and importance
 class Context;
-class Device;
-class DeviceMemory;
-class Fence;
-class FrameBuffer;
-class Pipeline;
-class PipelineLayout;
-class CommandBuffer;
-class RenderContext;
-class ResourceLayout;
-class Sampler;
-class Semaphore;
-class Shader;
-class ShaderReflection;
-class Swapchain;
-class Texture;
-class TextureView;
+	class Device;
+		// Pipeline
+		class Pipeline;
+		class PipelineLayout;
+		
+		// Shader
+		class Shader;
+		class ShaderReflection;
+		
+		// Resource Management
+		class ResourceLayout;
+		class ResourceBindingPool;
+		class ResourceBinding;
+
+		// Rendering
+		class RenderContext;
+		class CommandBuffer;
+		
+		// Syncronization
+		class Fence;
+		class Semaphore;
+
+		// Resources
+		class Swapchain;
+		class FrameBuffer;
+		class Sampler;
+		class DeviceMemory;
+		class Buffer;
+		class BufferView;
+		class Texture;
+		class TextureView;
 
 vk::Instance& get_vk_instance(ref<Context> context);
 const vk::Device& get_vk_device(const_ref<Device> device);
@@ -35,9 +49,13 @@ vk::Device& get_vk_device(ref<Device> device);
 vk::Fence& get_vk_fence(ref<Fence> fence);
 vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout);
 vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> render_command);
-vk::DescriptorSetLayout& get_descriptor_set_layout(ref<ResourceLayout> resource_layout);
+const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<ResourceLayout> resource_layout);
+vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<ResourceLayout> resource_layout);
 vk::Sampler& get_vk_sampler(ref<Sampler> sampler);
+const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore);
 vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore);
+vk::Buffer& get_vk_buffer(ref<Buffer> buffer);
+vk::BufferView& get_vk_buffer_view(ref<BufferView> buffer_view);
 vk::Image& get_vk_image(ref<Texture> texture);
 vk::ImageView& get_vk_image_view(ref<TextureView> texture_view);
 

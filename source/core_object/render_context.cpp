@@ -7,10 +7,10 @@
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/fence.h"
-#include "../../include/vera/core/frame_sync.h"
 #include "../../include/vera/core/framebuffer.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/semaphore.h"
+#include "../../include/vera/core/texture.h"
 #include "../../include/vera/graphics/graphics_state.h"
 #include "../../include/vera/shader/shader_parameter.h"
 #include "../../include/vera/util/static_vector.h"
@@ -19,25 +19,24 @@ VERA_NAMESPACE_BEGIN
 
 static void append_render_frame(RenderContextImpl& impl, uint32_t at, uint64_t id)
 {
-	auto* render_frame = *impl.renderFrames.emplace(impl.renderFrames.cbegin() + at, new RenderFrame);
+	auto* render_frame = *impl.renderFrames.emplace(impl.renderFrames.cbegin() + at, new RenderContextFrame);
 
-	render_frame->renderCommand           = CommandBuffer::create(impl.device);
-	render_frame->framebuffers            = {};
-	render_frame->renderCompleteSemaphore = Semaphore::create(impl.device);
-	render_frame->fence                   = Fence::create(impl.device);
-	render_frame->frameID                 = id;
+	render_frame->commandBuffer     = CommandBuffer::create(impl.device);
+	render_frame->framebuffers      = {};
+	render_frame->commandBufferSync = render_frame->commandBuffer->getSync();
+	render_frame->frameID           = id;
 
-	render_frame->renderCommand->begin();
+	render_frame->commandBuffer->begin();
 }
 
-static void reset_render_frame(RenderContextImpl& impl, RenderFrame& render_frame, uint64_t id)
+static void reset_render_frame(RenderContextImpl& impl, RenderContextFrame& render_frame, uint64_t id)
 {
-	render_frame.renderCommand->reset();
+	render_frame.commandBuffer->reset();
 	render_frame.framebuffers.clear();
-	render_frame.fence->reset();
-	render_frame.frameID = id;
+	render_frame.commandBufferSync = render_frame.commandBuffer->getSync();
+	render_frame.frameID           = id;
 
-	render_frame.renderCommand->begin();
+	render_frame.commandBuffer->begin();
 }
 
 static void render_context_next_frame(RenderContextImpl& impl)
@@ -47,30 +46,37 @@ static void render_context_next_frame(RenderContextImpl& impl)
 
 	impl.currentFrameID++;
 
-	if (next_frame.fence->signaled()) {
+	if (next_frame.commandBufferSync.isComplete()) {
 		reset_render_frame(impl, next_frame, impl.currentFrameID);
 		impl.frameIndex = next_idx;
-	} else {
+	} else if (impl.dynamicFrameCount) {
 		append_render_frame(impl, impl.frameIndex + 1, impl.currentFrameID);
 		impl.frameIndex = impl.frameIndex + 1;
+	} else {
+		next_frame.commandBufferSync.waitForComplete();
+
+		reset_render_frame(impl, next_frame, impl.currentFrameID);
+		impl.frameIndex = next_idx;
 	}
 }
 
-static RenderFrame& get_render_frame(RenderContextImpl& impl)
+static RenderContextFrame& get_current_frame(RenderContextImpl& impl)
 {
 	return *impl.renderFrames[impl.frameIndex];
 }
 
-obj<RenderContext> RenderContext::create(obj<Device> device)
+obj<RenderContext> RenderContext::create(obj<Device> device, const RenderContextCreateInfo& info)
 {
 	auto  obj  = createNewCoreObject<RenderContext>();
 	auto& impl = getImpl(obj);
 
-	impl.device         = std::move(device);
-	impl.frameIndex     = 0;
-	impl.currentFrameID = 0;
+	impl.device            = std::move(device);
+	impl.frameIndex        = 0;
+	impl.currentFrameID    = 0;
+	impl.dynamicFrameCount = info.dynamicFrameCount;
 
-	append_render_frame(impl, 0, 0);
+	for (uint32_t i = 0; i < info.frameCount; ++i)
+		append_render_frame(impl, i, i);
 
 	return obj;
 }
@@ -94,20 +100,37 @@ obj<CommandBuffer> RenderContext::getRenderCommand()
 {
 	auto& impl = getImpl(this);
 
-	return impl.renderFrames[impl.frameIndex]->renderCommand;
+	return impl.renderFrames[impl.frameIndex]->commandBuffer;
 }
 
-FrameSync RenderContext::getFrameSync() const
+uint32_t RenderContext::getCurrentFrameIndex() const
+{
+	return getImpl(this).frameIndex;
+}
+
+VERA_NODISCARD uint32_t RenderContext::getFrameCount() const
+{
+	return getImpl(this).renderFrames.size();
+}
+
+VERA_NODISCARD const RenderFrame& RenderContext::getCurrentFrame() const
 {
 	auto& impl = getImpl(this);
 
-	return FrameSync(*impl.renderFrames[impl.frameIndex], impl.currentFrameID);
+	return *impl.renderFrames[impl.frameIndex];
+}
+
+CommandBufferSync RenderContext::getCommandBufferSync() const
+{
+	auto& impl = getImpl(this);
+
+	return impl.renderFrames[impl.frameIndex]->commandBufferSync;
 }
 
 void RenderContext::transitionImageLayout(ref<Texture> texture, TextureLayout old_layout, TextureLayout new_layout)
 {
 	auto& impl     = getImpl(this);
-	auto& cmd      = get_render_frame(impl).renderCommand;
+	auto& cmd      = get_current_frame(impl).commandBuffer;
 	auto& cmd_impl = getImpl(cmd);
 
 	if (!cmd_impl.currentRenderingInfo.colorAttachments.empty())
@@ -139,7 +162,7 @@ void RenderContext::transitionImageLayout(ref<Texture> texture, TextureLayout ol
 void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32_t vtx_off)
 {
 	auto& impl     = getImpl(this);
-	auto& cmd      = get_render_frame(impl).renderCommand;
+	auto& cmd      = get_current_frame(impl).commandBuffer;
 
 
 	states.bindCommandBuffer(cmd);
@@ -154,7 +177,7 @@ void RenderContext::draw(
 	uint32_t               vtx_off
 ) {
 	auto& impl = getImpl(this);
-	auto& cmd  = get_render_frame(impl).renderCommand;
+	auto& cmd  = get_current_frame(impl).commandBuffer;
 
 	// TODO: verify image layout transition
 	for (auto& color : states.getRenderingInfo().colorAttachments) {
@@ -172,7 +195,7 @@ void RenderContext::draw(
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.frameSync = FrameSync(render_frame, impl.currentFrameID);
+				framebuffer_impl.commandBufferSync = render_frame.commandBufferSync;
 			}
 		}
 
@@ -200,7 +223,7 @@ void RenderContext::drawIndexed(
 	uint32_t               vtx_off
 ) {
 	auto& impl = getImpl(this);
-	auto& cmd  = get_render_frame(impl).renderCommand;
+	auto& cmd  = get_current_frame(impl).commandBuffer;
 
 	// TODO: verify image layout transition
 	for (auto& color : states.getRenderingInfo().colorAttachments) {
@@ -218,7 +241,7 @@ void RenderContext::drawIndexed(
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.frameSync = FrameSync(render_frame, impl.currentFrameID);
+				framebuffer_impl.commandBufferSync = render_frame.commandBufferSync;
 			}
 		}
 
@@ -240,13 +263,10 @@ void RenderContext::drawIndexed(
 
 void RenderContext::submit()
 {
-	static_vector<vk::Semaphore, 32>          semaphores;
-	static_vector<vk::PipelineStageFlags, 32> stage_masks;
-
 	auto& impl         = getImpl(this);
 	auto& device_impl  = getImpl(impl.device);
 	auto& render_frame = *impl.renderFrames[impl.frameIndex];
-	auto& command_impl = getImpl(render_frame.renderCommand);
+	auto& cmd_impl     = getImpl(render_frame.commandBuffer);
 
 	for (auto& framebuffer : render_frame.framebuffers)
 		transitionImageLayout(
@@ -254,13 +274,18 @@ void RenderContext::submit()
 			TextureLayout::ColorAttachmentOptimal,
 			TextureLayout::PresentSrc);
 
-	render_frame.renderCommand->end();
+	render_frame.commandBuffer->end();
+
+	cmd_impl.state = CommandBufferState::Submitted;
 
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount   = 1;
-	submit_info.pCommandBuffers      = &get_vk_command_buffer(render_frame.renderCommand);
+	submit_info.pCommandBuffers      = &cmd_impl.commandBuffer;
 	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores    = &get_vk_semaphore(render_frame.renderCompleteSemaphore);
+	submit_info.pSignalSemaphores    = &get_vk_semaphore(cmd_impl.semaphore);
+
+	static_vector<vk::Semaphore, 32>          semaphores;
+	static_vector<vk::PipelineStageFlags, 32> stage_masks;
 
 	if (!render_frame.framebuffers.empty()) {
 		for (auto& framebuffer : render_frame.framebuffers) {
@@ -277,7 +302,7 @@ void RenderContext::submit()
 		submit_info.pWaitDstStageMask  = stage_masks.data();
 	}
 
-	device_impl.graphicsQueue.submit(submit_info, get_vk_fence(render_frame.fence));
+	device_impl.graphicsQueue.submit(submit_info, get_vk_fence(cmd_impl.fence));
 
 	render_context_next_frame(impl);
 }

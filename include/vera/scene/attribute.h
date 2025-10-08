@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/smart_ptr.h"
+#include "../core/intrusive_ptr.h"
 
 VERA_NAMESPACE_BEGIN
 VERA_SCENE_NAMESPACE_BEGIN

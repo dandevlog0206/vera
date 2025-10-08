@@ -38,6 +38,11 @@ static bool wait_semaphores(vk::Device vk_device, std::span<obj<Semaphore>> sema
 	throw Exception("failed to wait semaphore");
 }
 
+const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore)
+{
+	return CoreObject::getImpl(semaphore).semaphore;
+}
+
 vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore)
 {
 	return CoreObject::getImpl(semaphore).semaphore;

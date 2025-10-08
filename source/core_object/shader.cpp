@@ -8,6 +8,8 @@
 #include <spirv_reflect.h>
 #include <fstream>
 
+#define UNSIZED_ARRAY_DESCRIPTOR_COUNT 4096
+
 VERA_NAMESPACE_BEGIN
 
 static ResourceType to_resource_type(SpvReflectDescriptorType type)
@@ -60,6 +62,11 @@ static ShaderStageFlagBits to_shader_stage(SpvReflectShaderStageFlagBits stage)
 
 	VERA_ASSERT_MSG(false, "invalid shader stage");
 	return {};
+}
+
+static bool is_unsized_array(const SpvReflectBindingArrayTraits& traits)
+{
+	return 0 < traits.dims_count && traits.dims[0] == 1;
 }
 
 static bool is_unsized_array(const SpvReflectArrayTraits& traits)
@@ -446,30 +453,41 @@ static void parse_shader(ShaderImpl& impl, const uint32_t* spirv_code, size_t si
 	impl.entryPointName   = parser.GetEntryPointName();
 	impl.shaderStageFlags = to_shader_stage(parser.GetShaderStage());
 
-	std::vector<ResourceLayoutBinding> bindings;
+	ResourceLayoutCreateInfo layout_info;
+
 	parser.EnumerateDescriptorSets(&desc_set_count, nullptr);
 	for (uint32_t i = 0; i < desc_set_count; ++i) {
 		auto& set         = *parser.GetDescriptorSet(i);
 		auto  refl_offset = impl.reflections.size();
 
-		bindings.clear();
-		bindings.reserve(set.binding_count);
+		layout_info.bindings.clear();
+		layout_info.bindings.reserve(set.binding_count);
 
 		for (uint32_t j = 0; j < set.binding_count; ++j) {
 			auto& binding = *set.bindings[j];
 
-			if (strlen(binding.name) == 0) continue;
-
-			auto& layout_binding = bindings.emplace_back();
+			auto& layout_binding = layout_info.bindings.emplace_back();
 			layout_binding.binding       = binding.binding;
 			layout_binding.resourceType  = to_resource_type(binding.descriptor_type);
 			layout_binding.resourceCount = binding.count;
 			layout_binding.stageFlags    = impl.shaderStageFlags;
 
+			if (is_unsized_array(binding.array)) {
+				// TODO: if unsized array is not last binding of layout, this will cause error
+
+				layout_binding.resourceCount = UNSIZED_ARRAY_DESCRIPTOR_COUNT;
+				layout_binding.flags         =
+					ResourceLayoutBindingFlagBits::UpdateAfterBind |
+					ResourceLayoutBindingFlagBits::VariableBindingCount |
+					ResourceLayoutBindingFlagBits::PartiallyBound;
+
+				layout_info.flags |= ResourceLayoutCreateFlagBits::UpdateAfterBindPool;
+			}
+
 			impl.reflections.push_back(reflect_resource(impl, binding));
 		}
 
-		auto resource_layout = ResourceLayout::create(impl.device, bindings);
+		auto resource_layout = ResourceLayout::create(impl.device, layout_info);
 
 		for (size_t i = refl_offset; i < impl.reflections.size(); ++i)
 			impl.reflections[i]->resourceLayout = resource_layout;
@@ -525,7 +543,7 @@ obj<Shader> Shader::create(obj<Device> device, const uint32_t* spirv_code, size_
 
 	if (auto it = device_impl.shaderMap.find(hash_value);
 		it != device_impl.shaderMap.end()) {
-		return it->second;
+		return unsafe_obj_cast<Shader>(it->second);
 	}
 
 	auto  obj  = createNewCoreObject<Shader>();
@@ -541,7 +559,9 @@ obj<Shader> Shader::create(obj<Device> device, const uint32_t* spirv_code, size_
 
 	parse_shader(impl, spirv_code, size_in_byte);
 
-	return device_impl.shaderMap[hash_value] = obj;
+	device_impl.shaderMap[hash_value] = obj;
+	
+	return obj;
 }
 
 Shader::~Shader()

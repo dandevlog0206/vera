@@ -4,6 +4,7 @@
 #include "../graphics/transform3d.h"
 #include <string_view>
 #include <vector>
+#include <string>
 #include <map>
 
 VERA_NAMESPACE_BEGIN

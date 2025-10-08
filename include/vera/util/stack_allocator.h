@@ -3,7 +3,6 @@
 #include <type_traits>
 #include <vector>
 #include <cstdlib>
-#include <bit>
 
 #ifdef _MSC_VER
 #define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
@@ -31,7 +30,7 @@ public:
 		m_page_size(page_size),
 		m_current_page(-1),
 		m_offset() {
-		VERA_ASSERT_MSG(std::popcount(page_size) && 8 <= page_size,
+		VERA_ASSERT_MSG(8 <= page_size && (page_size & (page_size - 1)) == 0,
 			"page size must be power of 2 greater or equal than 8");
 	}
 

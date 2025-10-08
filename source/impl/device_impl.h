@@ -17,41 +17,46 @@ class ResourceLayout;
 
 struct DeviceImpl
 {
-	using pipeline_map_type        = std::unordered_map<size_t, obj<Pipeline>>;
-	using shader_map_type          = std::unordered_map<size_t, obj<Shader>>;
-	using sampler_map_type         = std::unordered_map<size_t, obj<Sampler>>;
-	using pipeline_layout_map_type = std::unordered_map<size_t, obj<PipelineLayout>>;
-	using resource_layout_map_type = std::unordered_map<size_t, obj<ResourceLayout>>;
+	using pipeline_map_type        = std::unordered_map<hash_t, ref<Pipeline>>;
+	using shader_map_type          = std::unordered_map<hash_t, ref<Shader>>;
+	using sampler_map_type         = std::unordered_map<hash_t, ref<Sampler>>;
+	using pipeline_layout_map_type = std::unordered_map<hash_t, ref<PipelineLayout>>;
+	using resource_layout_map_type = std::unordered_map<hash_t, ref<ResourceLayout>>;
 
-	obj<Context>                        context;
+	using DeviceProperties             = vk::PhysicalDeviceProperties;
+	using DeviceMemoryProperties       = vk::PhysicalDeviceMemoryProperties;
+	using DescriptorIndexingProperties = vk::PhysicalDeviceDescriptorIndexingProperties;
 
-	vk::PhysicalDeviceProperties        physicalDeviceProperties;
-	vk::PhysicalDeviceMemoryProperties  deviceMemoryProperties;
-	vk::PhysicalDevice                  physicalDevice;
-	vk::Device                          device;
-	vk::Queue                           graphicsQueue;
-	vk::Queue                           computeQueue;
-	vk::Queue                           transferQueue;
-	vk::PipelineCache                   pipelineCache;
-	vk::SampleCountFlagBits             sampleCount;
+	using DeviceMemoryTypes = std::vector<DeviceMemoryType>;
+
+	obj<Context>                 context;
+
+	vk::PhysicalDevice           physicalDevice;
+	DeviceProperties             deviceProperties;
+	DeviceMemoryProperties       deviceMemoryProperties;
+	DescriptorIndexingProperties descriptorIndexingProperties;
+	vk::Device                   device;
+	vk::Queue                    graphicsQueue;
+	vk::Queue                    computeQueue;
+	vk::Queue                    transferQueue;
+	vk::PipelineCache            pipelineCache;
+	vk::SampleCountFlagBits      sampleCount;
 	
-	Format                              colorFormat;
-	Format                              depthFormat;
-	int32_t                             graphicsQueueFamilyIndex;
-	int32_t                             transferQueueFamilyIndex;
-	int32_t                             computeQueueFamilyIndex;
-	std::string                         pipelineCacheFilePath;
-	std::vector<DeviceMemoryType>       memoryTypes;
+	Format                       colorFormat;
+	Format                       depthFormat;
+	int32_t                      graphicsQueueFamilyIndex;
+	int32_t                      transferQueueFamilyIndex;
+	int32_t                      computeQueueFamilyIndex;
+	std::string                  pipelineCacheFilePath;
+	DeviceMemoryTypes            memoryTypes;
 
-	bool                                extDescriptorIndexing;
+	pipeline_map_type            pipelineMap;
+	shader_map_type              shaderMap;
+	sampler_map_type             samplerMap;
+	pipeline_layout_map_type     pipelineLayoutMap;
+	resource_layout_map_type     resourceLayoutMap;
 
-	pipeline_map_type                   pipelineMap;
-	shader_map_type                     shaderMap;
-	sampler_map_type                    samplerMap;
-	pipeline_layout_map_type            pipelineLayoutMap;
-	resource_layout_map_type            resourceLayoutMap;
-
-	obj<Sampler>                        defaultSampler;
+	obj<Sampler>                 defaultSampler;
 };
 
 static uint32_t find_memory_type_idx(const DeviceImpl& impl, MemoryPropertyFlags flags, std::bitset<32> type_mask)

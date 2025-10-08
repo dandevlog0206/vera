@@ -8,13 +8,43 @@ VERA_NAMESPACE_BEGIN
 
 struct ResourceLayoutImpl
 {
-	obj<Device>                        device;
+	using LayoutBindings = std::vector<ResourceLayoutBinding>;
 
-	vk::DescriptorSetLayout            layout;
+	obj<Device>             device;
 
-	size_t                             hashValue;
-	std::vector<ResourceLayoutBinding> bindings;
+	vk::DescriptorSetLayout descriptorSetLayout;
+
+	hash_t                  hashValue;
+	LayoutBindings          bindings;
 };
+
+static vk::DescriptorSetLayoutCreateFlags to_vk_descriptor_set_layout_create_flags(ResourceLayoutCreateFlags flags)
+{
+	vk::DescriptorSetLayoutCreateFlags result = {};
+
+	if (flags & ResourceLayoutCreateFlagBits::UpdateAfterBindPool)
+		result |= vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool;
+	if (flags & ResourceLayoutCreateFlagBits::PushBinding)
+		result |= vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+	
+	return result;
+}
+
+static vk::DescriptorBindingFlags to_vk_descriptor_binding_flags(ResourceLayoutBindingFlags flags)
+{
+	vk::DescriptorBindingFlags result = {};
+
+	if (flags & ResourceLayoutBindingFlagBits::UpdateAfterBind)
+		result |= vk::DescriptorBindingFlagBits::eUpdateAfterBind;
+	if (flags & ResourceLayoutBindingFlagBits::UpdateUnusedWhilePending)
+		result |= vk::DescriptorBindingFlagBits::eUpdateUnusedWhilePending;
+	if (flags & ResourceLayoutBindingFlagBits::PartiallyBound)
+		result |= vk::DescriptorBindingFlagBits::ePartiallyBound;
+	if (flags & ResourceLayoutBindingFlagBits::VariableBindingCount)
+		result |= vk::DescriptorBindingFlagBits::eVariableDescriptorCount;
+	
+	return result;
+}
 
 static vk::DescriptorType to_vk_descriptor_type(ResourceType type)
 {

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "logger.h"
+#include "coredefs.h"
 #include <exception>
-#include <sstream>
 #include <format>
 
 #define VERA_CHECK(expression) \
@@ -23,12 +22,12 @@ class Exception : public std::exception
 public:
 	VERA_INLINE Exception() {}
 
+	VERA_INLINE Exception(std::string_view msg) :
+		m_msg(msg) {}
+
 	template <class... Args>
 	VERA_INLINE Exception(const std::format_string<Args...> fmt, Args&&... params) :
 		m_msg(std::format(fmt, std::forward<Args>(params)...)) {}
-
-	VERA_INLINE Exception(std::string_view msg) :
-		m_msg(msg) {}
 
 	const char* what() const override
 	{
@@ -41,35 +40,16 @@ protected:
 
 VERA_PRIV_NAMESPACE_BEGIN
 
-static void __check_impl(
+extern void __check_impl(
 	const char* expression,
 	const char* message,
 	const char* file,
-	uint32_t    line
-) {
-	std::stringstream ss;
+	uint32_t    line);
 
-	ss << "checking follwing expression failed:" << expression;
-	ss << " message: " << message;
-	ss << " in file: " << file;
-	ss << " line: " << line;
-
-	throw ::vr::Exception(ss.str());
-}
-
-static void __error_impl(
+extern void __error_impl(
 	const char* message,
 	const char* file,
-	uint32_t    line
-) {
-	std::stringstream ss;
-
-	ss << " an error has been occured. message: " << message;
-	ss << " in file: " << file;
-	ss << " line: " << line;
-
-	throw ::vr::Exception(message);
-}
+	uint32_t    line);
 
 VERA_PRIV_NAMESPACE_END
 VERA_NAMESPACE_END

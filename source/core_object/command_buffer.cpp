@@ -1,12 +1,18 @@
 #include "../../include/vera/core/command_buffer.h"
+#include "../impl/device_impl.h"
 #include "../impl/buffer_impl.h"
 #include "../impl/command_buffer_impl.h"
 #include "../impl/pipeline_impl.h"
+#include "../impl/pipeline_layout_impl.h"
+#include "../impl/resource_binding_impl.h"
 #include "../impl/texture_impl.h"
 #include "../impl/device_memory_impl.h"
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/texture_view.h"
+#include "../../include/vera/core/semaphore.h"
+#include "../../include/vera/core/fence.h"
+#include "../../include/vera/core/resource_binding.h"
 #include "../../include/vera/util/static_vector.h"
 
 VERA_NAMESPACE_BEGIN
@@ -35,9 +41,20 @@ obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 	alloc_info.level              = vk::CommandBufferLevel::ePrimary;
 	alloc_info.commandBufferCount = 1;
 
-	impl.device        = std::move(device);
-	impl.commandPool   = alloc_info.commandPool;
-	impl.commandBuffer = vk_device.allocateCommandBuffers(alloc_info).front();
+	impl.device               = device;
+	impl.semaphore            = Semaphore::create(impl.device);
+	impl.fence                = Fence::create(impl.device);
+	impl.commandPool          = alloc_info.commandPool;
+	impl.commandBuffer        = vk_device.allocateCommandBuffers(alloc_info).front();
+	impl.submitID             = 0;
+	impl.submitQueueType      = SubmitQueueType::Transfer;
+	impl.state                = CommandBufferState::Initialized;
+	impl.currentViewport      = {};
+	impl.currentScissor       = {};
+	impl.currentVertexBuffer  = {};
+	impl.currentIndexBuffer   = {};
+	impl.currentRenderingInfo = {};
+	impl.currentPipeline      = {};
 
 	return obj;
 }
@@ -53,14 +70,44 @@ CommandBuffer::~CommandBuffer()
 	destroyObjectImpl(this);
 }
 
-obj<Device> CommandBuffer::getDevice()
+obj<Device> CommandBuffer::getDevice() VERA_NOEXCEPT
 {
 	return getImpl(this).device;
+}
+
+CommandBufferSync CommandBuffer::getSync() const VERA_NOEXCEPT
+{
+	auto& impl = getImpl(this);
+
+	return CommandBufferSync(&impl, impl.submitID);
+}
+
+void CommandBuffer::reset()
+{
+	auto& impl      = getImpl(this);
+	auto  vk_device = get_vk_device(impl.device);
+
+	if (impl.state == CommandBufferState::Submitted && !impl.fence->signaled())
+		throw Exception("cannot reset a submitted command buffer that is not completed");
+	
+	impl.submitID            += 1;
+	impl.submitQueueType      = SubmitQueueType::Transfer;
+	impl.state                = CommandBufferState::Initialized;
+	impl.currentViewport      = {};
+	impl.currentScissor       = {};
+	impl.currentVertexBuffer  = {};
+	impl.currentIndexBuffer   = {};
+	impl.currentRenderingInfo = {};
+	impl.currentPipeline      = {};
+
+	vk_device.resetCommandPool(impl.commandPool);
 }
 
 void CommandBuffer::begin()
 {
 	auto& impl = getImpl(this);
+
+	impl.state = CommandBufferState::Recording;
 
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
@@ -68,71 +115,39 @@ void CommandBuffer::begin()
 	impl.commandBuffer.begin(begin_info);
 }
 
-void CommandBuffer::setViewport(const Viewport& viewport)
-{
-	auto& impl = getImpl(this);
+void CommandBuffer::copyBufferToTexture(
+	ref<Texture> dst,
+	ref<Buffer>  src,
+	size_t       buffer_offset,
+	uint32_t     buffer_row_length,
+	uint32_t     buffer_image_height,
+	uint3        image_offset,
+	extent3d     image_extent
+) {
+	auto& impl         = getImpl(this);
+	auto& texture_impl = getImpl(dst);
+	auto& buffer_impl  = getImpl(src);
 
-	vk::Viewport vk_viewport;
-	vk_viewport.x        = viewport.posX;
-	vk_viewport.y        = viewport.height + viewport.posY;
-	vk_viewport.width    = viewport.width;
-	vk_viewport.height   = -viewport.height;
-	vk_viewport.minDepth = viewport.minDepth;
-	vk_viewport.maxDepth = viewport.maxDepth;
+	vk::BufferImageCopy copy_info;
+	copy_info.bufferOffset                    = buffer_offset;
+	copy_info.bufferRowLength                 = buffer_row_length;
+	copy_info.bufferImageHeight               = buffer_image_height;
+	copy_info.imageSubresource.aspectMask     = vk::ImageAspectFlagBits::eColor;
+	copy_info.imageSubresource.mipLevel       = 0;
+	copy_info.imageSubresource.baseArrayLayer = 0;
+	copy_info.imageSubresource.layerCount     = 1;
+	copy_info.imageOffset.x                   = image_offset.x;
+	copy_info.imageOffset.y                   = image_offset.y;
+	copy_info.imageOffset.z                   = image_offset.z;
+	copy_info.imageExtent.width               = image_extent.width;
+	copy_info.imageExtent.height              = image_extent.height;
+	copy_info.imageExtent.depth               = image_extent.depth;
 
-	impl.commandBuffer.setViewport(0, vk_viewport);
-	impl.currentViewport = viewport;
-}
-
-void CommandBuffer::setScissor(const Scissor& scissor)
-{
-	auto& impl = getImpl(this);
-
-	vk::Rect2D vk_rect;
-	vk_rect.offset.x      = scissor.minX;
-	vk_rect.offset.y      = scissor.minY;
-	vk_rect.extent.width  = scissor.maxX;
-	vk_rect.extent.height = scissor.maxY;
-
-	impl.commandBuffer.setScissor(0, vk_rect);
-	impl.currentScissor = scissor;
-}
-
-void CommandBuffer::setVertexBuffer(ref<Buffer> buffer)
-{
-	auto& impl        = getImpl(this);
-	auto& buffer_impl = getImpl(buffer);
-	auto  offset      = vk::DeviceSize{0};
-
-	if (!buffer_impl.usage.has(BufferUsageFlagBits::VertexBuffer))
-		throw Exception("buffer is not for vertex");
-
-	impl.commandBuffer.bindVertexBuffers(0, 1, &buffer_impl.buffer, &offset);
-	impl.currentVertexBuffer = buffer;
-}
-
-void CommandBuffer::setIndexBuffer(ref<Buffer> buffer)
-{
-	auto& impl        = getImpl(this);
-	auto& buffer_impl = getImpl(buffer);
-
-	if (!buffer_impl.usage.has(BufferUsageFlagBits::IndexBuffer))
-		throw Exception("buffer is not for index");
-
-	// consider unbinding index buffer
-	impl.commandBuffer.bindIndexBuffer(buffer_impl.buffer, 0, to_vk_index_type(buffer_impl.indexType));
-	impl.currentIndexBuffer = buffer;
-}
-
-void CommandBuffer::setPipeline(ref<Pipeline> pipeline)
-{
-	auto& impl          = getImpl(this);
-	auto& pipeline_impl = getImpl(pipeline);
-
-	impl.commandBuffer.bindPipeline(
-		pipeline_impl.pipelineBindPoint,
-		pipeline_impl.pipeline);
-	impl.currentPipeline = pipeline;
+	impl.commandBuffer.copyBufferToImage(
+		buffer_impl.buffer,
+		texture_impl.image,
+		vk::ImageLayout::eTransferDstOptimal,
+		copy_info);
 }
 
 void CommandBuffer::transitionImageLayout(
@@ -173,44 +188,78 @@ void CommandBuffer::transitionImageLayout(
 		&barrier);
 }
 
-void CommandBuffer::copyBufferToTexture(
-	ref<Texture> dst,
-	ref<Buffer>  src,
-	size_t       buffer_offset,
-	uint32_t     buffer_row_length,
-	uint32_t     buffer_image_height,
-	uint3        image_offset,
-	extent3d     image_extent
-) {
-	auto& impl         = getImpl(this);
-	auto& texture_impl = getImpl(dst);
-	auto& buffer_impl  = getImpl(src);
+void CommandBuffer::setViewport(const Viewport& viewport)
+{
+	auto& impl = getImpl(this);
 
-	vk::BufferImageCopy copy_info;
-	copy_info.bufferOffset                    = buffer_offset;
-	copy_info.bufferRowLength                 = buffer_row_length;
-	copy_info.bufferImageHeight               = buffer_image_height;
-	copy_info.imageSubresource.aspectMask     = vk::ImageAspectFlagBits::eColor;
-	copy_info.imageSubresource.mipLevel       = 0;
-	copy_info.imageSubresource.baseArrayLayer = 0;
-	copy_info.imageSubresource.layerCount     = 1;
-	copy_info.imageOffset.x                   = image_offset.x;
-	copy_info.imageOffset.y                   = image_offset.y;
-	copy_info.imageOffset.z                   = image_offset.z;
-	copy_info.imageExtent.width               = image_extent.width;
-	copy_info.imageExtent.height              = image_extent.height;
-	copy_info.imageExtent.depth               = image_extent.depth;
+	vk::Viewport vk_viewport;
+	vk_viewport.x        = viewport.posX;
+	vk_viewport.y        = viewport.height + viewport.posY;
+	vk_viewport.width    = viewport.width;
+	vk_viewport.height   = -viewport.height;
+	vk_viewport.minDepth = viewport.minDepth;
+	vk_viewport.maxDepth = viewport.maxDepth;
 
-	impl.commandBuffer.copyBufferToImage(
-		buffer_impl.buffer,
-		texture_impl.image,
-		vk::ImageLayout::eTransferDstOptimal,
-		copy_info);
+	impl.commandBuffer.setViewport(0, vk_viewport);
+	impl.currentViewport = viewport;
+}
+
+void CommandBuffer::setScissor(const Scissor& scissor)
+{
+	auto& impl = getImpl(this);
+
+	vk::Rect2D vk_rect;
+	vk_rect.offset.x      = scissor.minX;
+	vk_rect.offset.y      = scissor.minY;
+	vk_rect.extent.width  = scissor.maxX;
+	vk_rect.extent.height = scissor.maxY;
+
+	impl.commandBuffer.setScissor(0, vk_rect);
+	impl.currentScissor = scissor;
+}
+
+void CommandBuffer::bindVertexBuffer(ref<Buffer> buffer)
+{
+	auto& impl        = getImpl(this);
+	auto& buffer_impl = getImpl(buffer);
+	auto  offset      = vk::DeviceSize{0};
+
+	if (!buffer_impl.usage.has(BufferUsageFlagBits::VertexBuffer))
+		throw Exception("buffer is not for vertex");
+
+	impl.commandBuffer.bindVertexBuffers(0, 1, &buffer_impl.buffer, &offset);
+	impl.currentVertexBuffer = buffer;
+}
+
+void CommandBuffer::bindIndexBuffer(ref<Buffer> buffer)
+{
+	auto& impl        = getImpl(this);
+	auto& buffer_impl = getImpl(buffer);
+
+	if (!buffer_impl.usage.has(BufferUsageFlagBits::IndexBuffer))
+		throw Exception("buffer is not for index");
+
+	// consider unbinding index buffer
+	impl.commandBuffer.bindIndexBuffer(buffer_impl.buffer, 0, to_vk_index_type(buffer_impl.indexType));
+	impl.currentIndexBuffer = buffer;
+}
+
+void CommandBuffer::bindPipeline(ref<Pipeline> pipeline)
+{
+	auto& impl          = getImpl(this);
+	auto& pipeline_impl = getImpl(pipeline);
+
+	impl.commandBuffer.bindPipeline(
+		pipeline_impl.pipelineBindPoint,
+		pipeline_impl.pipeline);
+	impl.currentPipeline = pipeline;
 }
 
 void CommandBuffer::beginRendering(const RenderingInfo& info)
 {
 	auto& impl = getImpl(this);
+
+	impl.submitQueueType = SubmitQueueType::Graphics;
 
 	static_vector<vk::RenderingAttachmentInfo, 16> color_attachments;
 	for (const auto& color_info : info.colorAttachments) {
@@ -309,22 +358,37 @@ void CommandBuffer::end()
 {
 	auto& impl = getImpl(this);
 
+	impl.state = CommandBufferState::Executable;
+
 	impl.commandBuffer.end();
 }
 
-void CommandBuffer::reset()
+CommandBufferSync CommandBuffer::submit()
 {
-	auto& impl      = getImpl(this);
-	auto  vk_device = get_vk_device(impl.device);
-	
-	impl.currentViewport      = {};
-	impl.currentScissor       = {};
-	impl.currentVertexBuffer  = {};
-	impl.currentIndexBuffer   = {};
-	impl.currentRenderingInfo = {};
-	impl.currentPipeline      = {};
+	auto& impl        = getImpl(this);
+	auto& device_impl = getImpl(impl.device);
 
-	vk_device.resetCommandPool(impl.commandPool);
+	impl.state = CommandBufferState::Submitted;
+
+	vk::SubmitInfo submit_info;
+	submit_info.commandBufferCount   = 1;
+	submit_info.pCommandBuffers      = &impl.commandBuffer;
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores    = &get_vk_semaphore(impl.semaphore);
+
+	switch (impl.submitQueueType) {
+	case SubmitQueueType::Transfer:
+		device_impl.transferQueue.submit(submit_info, get_vk_fence(impl.fence));
+		break;
+	case SubmitQueueType::Compute:
+		device_impl.computeQueue.submit(submit_info, get_vk_fence(impl.fence));
+		break;
+	case SubmitQueueType::Graphics:
+		device_impl.graphicsQueue.submit(submit_info, get_vk_fence(impl.fence));
+		break;
+	}
+
+	return CommandBufferSync(&impl, impl.submitID);
 }
 
 VERA_NAMESPACE_END

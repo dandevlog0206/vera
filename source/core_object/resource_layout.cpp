@@ -4,67 +4,109 @@
 #include "../impl/shader_impl.h"
 
 #include "../../include/vera/core/device.h"
-#include "../../include/vera/util/hash.h"
+#include "../../include/vera/util/static_vector.h"
 
 VERA_NAMESPACE_BEGIN
 
-static size_t hash_resource_binding(const std::vector<ResourceLayoutBinding>& bindings)
+static bool check_contiguous(array_view<ResourceLayoutBinding> ordered_bindings)
 {
-	size_t seed = 0;
+	if (ordered_bindings.front().binding != 0)
+		return false;
 
-	hash_combine(seed, bindings.size());
-	for (const auto& binding : bindings) {
-		hash_combine(seed, binding.binding);
-		hash_combine(seed, binding.resourceType);
-		hash_combine(seed, binding.resourceCount);
-		hash_combine(seed, static_cast<size_t>(binding.stageFlags));
+	for (size_t i = 1; i < ordered_bindings.size(); ++i)
+		if (ordered_bindings[i].binding != ordered_bindings[i - 1].binding + 1)
+			return false;
+
+	return true;
+}
+
+static hash_t hash_resource_set_layout(const ResourceLayoutCreateInfo& info)
+{
+	hash_t seed = 0;
+
+	hash_combine(seed, info.flags);
+
+	hash_combine(seed, info.bindings.size());
+	for (const auto& binding : info.bindings) {
+		hash_t local_seed = 0;
+
+		hash_combine(local_seed, binding.flags);
+		hash_combine(local_seed, binding.binding);
+		hash_combine(local_seed, binding.resourceType);
+		hash_combine(local_seed, binding.resourceCount);
+		hash_combine(local_seed, binding.stageFlags);
+
+		hash_unordered(seed, local_seed);
 	}
 
 	return seed;
 }
 
-vk::DescriptorSetLayout& get_descriptor_set_layout(ref<ResourceLayout> resource_layout)
+const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<ResourceLayout> resource_layout)
 {
-	return CoreObject::getImpl(resource_layout).layout;
+	return CoreObject::getImpl(resource_layout).descriptorSetLayout;
 }
 
-obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const std::vector<ResourceLayoutBinding>& bindings)
+vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<ResourceLayout> resource_layout)
 {
+	return CoreObject::getImpl(resource_layout).descriptorSetLayout;
+}
+
+obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const ResourceLayoutCreateInfo& info)
+{
+	VERA_ASSERT_MSG(!info.bindings.empty(), "resource layout must have at least one binding");
+
 	auto&  device_impl = getImpl(device);
-	size_t hash_value  = hash_resource_binding(bindings);
+	hash_t hash_value  = hash_resource_set_layout(info);
 
 	if (auto it = device_impl.resourceLayoutMap.find(hash_value);
 		it != device_impl.resourceLayoutMap.end()) {
-		return it->second;
+		return unsafe_obj_cast<ResourceLayout>(it->second);
 	}
 
 	auto  obj  = createNewCoreObject<ResourceLayout>();
 	auto& impl = getImpl(obj);
 
-	std::vector<vk::DescriptorSetLayoutBinding> vk_bindings;
-	
-	vk_bindings.reserve(bindings.size());
-	for (const auto& binding : bindings) {
-		vk::DescriptorSetLayoutBinding vk_binding;
+	impl.bindings.assign(VERA_SPAN(info.bindings));
+
+	std::sort(VERA_SPAN(impl.bindings),
+		[](const auto& lhs, const auto& rhs) {
+			return lhs.binding < rhs.binding;
+		});
+
+	VERA_ASSERT_MSG(check_contiguous(impl.bindings), "resource layout bindings can not be sparse");
+
+	static_vector<vk::DescriptorSetLayoutBinding, 32> bindings;
+	static_vector<vk::DescriptorBindingFlags, 32>     binding_flags;
+
+	for (const auto& binding : impl.bindings) {
+		auto& vk_binding = bindings.emplace_back();
 		vk_binding.binding            = binding.binding;
 		vk_binding.descriptorType     = to_vk_descriptor_type(binding.resourceType);
 		vk_binding.descriptorCount    = binding.resourceCount;
 		vk_binding.stageFlags         = to_vk_shader_stage_flags(binding.stageFlags);
 		vk_binding.pImmutableSamplers = nullptr;
 
-		vk_bindings.push_back(vk_binding);
+		binding_flags.push_back(to_vk_descriptor_binding_flags(binding.flags));
 	}
 
+	vk::DescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info;
+	binding_flags_info.bindingCount  = static_cast<uint32_t>(binding_flags.size());
+	binding_flags_info.pBindingFlags = binding_flags.data();
+
 	vk::DescriptorSetLayoutCreateInfo desc_info;
-	desc_info.bindingCount = static_cast<uint32_t>(vk_bindings.size());
-	desc_info.pBindings    = vk_bindings.data();
+	desc_info.flags        = to_vk_descriptor_set_layout_create_flags(info.flags);
+	desc_info.bindingCount = static_cast<uint32_t>(bindings.size());
+	desc_info.pBindings    = bindings.data();
+	desc_info.pNext        = &binding_flags_info;
 	
-	impl.device    = std::move(device);
-	impl.layout    = device_impl.device.createDescriptorSetLayout(desc_info);
-	impl.hashValue = hash_value;
-	impl.bindings.assign(bindings.begin(), bindings.end());
+	impl.device              = std::move(device);
+	impl.descriptorSetLayout = device_impl.device.createDescriptorSetLayout(desc_info);
+	impl.hashValue           = hash_value;
 	
-	return device_impl.resourceLayoutMap[hash_value] = obj;
+	device_impl.resourceLayoutMap[hash_value] = obj;
+	
+	return obj;
 }
 
 ResourceLayout::~ResourceLayout()
@@ -72,7 +114,7 @@ ResourceLayout::~ResourceLayout()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 	
-	device_impl.device.destroy(impl.layout);
+	device_impl.device.destroy(impl.descriptorSetLayout);
 
 	destroyObjectImpl(this);
 }
@@ -87,7 +129,7 @@ const std::vector<ResourceLayoutBinding>& ResourceLayout::getBindings() const
 	return getImpl(this).bindings;
 }
 
-uint64_t ResourceLayout::hash() const
+hash_t ResourceLayout::hash() const
 {
 	return getImpl(this).hashValue;
 }

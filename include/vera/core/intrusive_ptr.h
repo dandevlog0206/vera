@@ -1,6 +1,8 @@
 #pragma once
 
 #include "assertion.h"
+#include <atomic>
+#include <utility>
 
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
@@ -11,13 +13,13 @@ typedef class WeakNodeLink* WeakNodeLinkPtr;
 class WeakNodeLink
 {
 public:
-	WeakNodePtr next;
+	mutable WeakNodePtr next;
 };
 
 class WeakNode : public WeakNodeLink
 {
 public:
-	VERA_INLINE void link(WeakNode& node) VERA_NOEXCEPT
+	VERA_INLINE void link(WeakNode& node) const VERA_NOEXCEPT
 	{
 		if (!ptr) return;
 
@@ -29,7 +31,7 @@ public:
 		}
 
 		next      = &node;
-		node.prev = this;
+		node.prev = const_cast<WeakNode*>(this);
 		node.ptr  = ptr;
 	}
 
@@ -65,8 +67,8 @@ public:
 		ptr  = nullptr;
 	}
 
-	WeakNodeLinkPtr prev;
-	void*           ptr;
+	mutable WeakNodeLinkPtr prev;
+	void*                   ptr;
 };
 
 VERA_PRIV_NAMESPACE_END
@@ -77,17 +79,21 @@ obj<Object>:
 	count when copied and decreases it when destroyed. When the count reaches zero, the object is deleted and all
 	associated weak references are invalidated.
 
-weak_ref<Object>:
+weak_obj<Object>:
 	Provides a non-owning reference to an object managed by obj<>. It does not affect the reference count. If the
 	object is destroyed, the weak reference is automatically invalidated (set to null), preventing dangling pointers.
 
 ref<Object>:
-	A lightweight, non-owning pointer wrapper. It can be constructed from obj<> or weak_ref<>, but does not manage
+	A lightweight, non-owning pointer wrapper. It can be constructed from obj<> or weak_obj<>, but does not manage
 	lifetime or reference counting. It simply provides convenient access to the underlying object.
 */
 
 template <class Object>
 class obj;
+template <class Object>
+class weak_obj;
+template <class Object>
+class const_ref;
 template <class Object>
 class ref;
 
@@ -95,6 +101,10 @@ class ManangedObject abstract
 {
 	template <class Object>
 	friend class obj;
+	template <class Object>
+	friend class weak_obj;
+	template <class Object>
+	friend class const_ref;
 	template <class Object>
 	friend class ref;
 
@@ -111,8 +121,9 @@ private:
 template <class Object>
 class obj
 {
-	template <class Obj>
-	friend class obj;
+	template <class Target, class T>
+	friend VERA_CONSTEXPR obj<Target> obj_cast(obj<T>) VERA_NOEXCEPT;
+
 public:
 	VERA_INLINE obj() VERA_NOEXCEPT :
 		m_ptr(nullptr) {}
@@ -132,22 +143,8 @@ public:
 		increase();
 	}
 
-	template <class T>
-	VERA_INLINE obj(obj<T>& rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<Object*>(rhs.m_ptr))
-	{
-		increase();
-	}
-
 	VERA_INLINE obj(obj&& rhs) VERA_NOEXCEPT :
 		m_ptr(std::exchange(rhs.m_ptr, nullptr)) {}
-
-	template <class T>
-	VERA_INLINE obj(obj<T>&& rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<Object*>(rhs.m_ptr))
-	{
-		rhs.m_ptr = nullptr;
-	}
 
 	VERA_INLINE ~obj() VERA_NOEXCEPT
 	{
@@ -200,11 +197,6 @@ public:
 		return *reinterpret_cast<Object*>(m_ptr);
 	}
 
-	VERA_INLINE void reset() VERA_NOEXCEPT
-	{
-		decrease();
-	}
-
 	VERA_NODISCARD VERA_INLINE Object* operator*() VERA_NOEXCEPT
 	{
 		return m_ptr;
@@ -240,16 +232,31 @@ public:
 		return static_cast<bool>(m_ptr);
 	}
 
+	VERA_NODISCARD VERA_INLINE operator const_ref<Object>() const VERA_NOEXCEPT
+	{
+		return const_ref<Object>(m_ptr);
+	}
+
+	VERA_NODISCARD VERA_INLINE operator ref<Object>() VERA_NOEXCEPT
+	{
+		return ref<Object>(m_ptr);
+	}
+
+	VERA_INLINE void reset() VERA_NOEXCEPT
+	{
+		decrease();
+	}
+
 private:
 	VERA_INLINE void increase() VERA_NOEXCEPT
 	{
 		if (m_ptr)
-			m_ptr->m_atomic.fetch_add(1);
+			m_ptr->m_atomic.fetch_add(1, std::memory_order_relaxed);
 	}
 
 	VERA_INLINE void decrease() VERA_NOEXCEPT
 	{
-		if (m_ptr && m_ptr->m_atomic.fetch_sub(1) == 1) {
+		if (m_ptr && m_ptr->m_atomic.fetch_sub(1, std::memory_order_acq_rel) == 1) {
 			invalidate_all_weak();
 			delete m_ptr;
 		}
@@ -275,17 +282,17 @@ private:
 };
 
 template <class Object>
-class weak_ref
+class weak_obj
 {
-	template <class Obj>
-	friend class obj;
+	template <class Target, class T>
+	friend VERA_CONSTEXPR weak_obj<Target> weak_cast(weak_obj<T>) VERA_NOEXCEPT;
 public:
-	VERA_INLINE weak_ref() VERA_NOEXCEPT = default;
+	VERA_INLINE weak_obj() VERA_NOEXCEPT = default;
 	
-	VERA_INLINE weak_ref(std::nullptr_t) VERA_NOEXCEPT :
+	VERA_INLINE weak_obj(std::nullptr_t) VERA_NOEXCEPT :
 		m_node() {}
 
-	VERA_INLINE weak_ref(obj<Object>& rhs) VERA_NOEXCEPT
+	VERA_INLINE weak_obj(obj<Object>& rhs) VERA_NOEXCEPT
 	{
 		auto* obj_ptr = rhs.get();
 
@@ -294,34 +301,22 @@ public:
 		m_node.ptr  = obj_ptr;
 	}
 
-	VERA_INLINE weak_ref(const weak_ref& rhs) VERA_NOEXCEPT
+	VERA_INLINE weak_obj(const weak_obj& rhs) VERA_NOEXCEPT
 	{
 		rhs.m_node.link(m_node);
 	}
 
-	template <class T>
-	VERA_INLINE weak_ref(const weak_ref<T>& rhs) VERA_NOEXCEPT
-	{
-		rhs.m_node.link(m_node);
-	}
-
-	VERA_INLINE weak_ref(weak_ref&& rhs)  VERA_NOEXCEPT
+	VERA_INLINE weak_obj(weak_obj&& rhs)  VERA_NOEXCEPT
 	{
 		rhs.m_node.exchange(m_node);
 	}
 
-	template <class T>
-	VERA_INLINE weak_ref(weak_ref<T>&& rhs)  VERA_NOEXCEPT
-	{
-		rhs.m_node.exchange(m_node);
-	}
-
-	VERA_INLINE ~weak_ref() VERA_NOEXCEPT
+	VERA_INLINE ~weak_obj() VERA_NOEXCEPT
 	{
 		m_node.invalidate();
 	}
 
-	VERA_INLINE weak_ref& operator=(const weak_ref& rhs) VERA_NOEXCEPT
+	VERA_INLINE weak_obj& operator=(const weak_obj& rhs) VERA_NOEXCEPT
 	{
 		if (std::addressof(rhs) == this) return *this;
 
@@ -331,7 +326,7 @@ public:
 		return *this;
 	}
 
-	VERA_INLINE weak_ref& operator=(weak_ref&& rhs)  VERA_NOEXCEPT
+	VERA_INLINE weak_obj& operator=(weak_obj&& rhs)  VERA_NOEXCEPT
 	{
 		if (std::addressof(rhs) == this) return *this;
 	
@@ -343,12 +338,12 @@ public:
 
 	VERA_NODISCARD VERA_INLINE const Object* get() const VERA_NOEXCEPT
 	{
-		return m_node.ptr;
+		return reinterpret_cast<const Object*>(m_node.ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* get() VERA_NOEXCEPT
 	{
-		return m_node.ptr;
+		return reinterpret_cast<Object*>(m_node.ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE const Object& unwrap() const VERA_NOEXCEPT
@@ -359,11 +354,6 @@ public:
 	VERA_NODISCARD VERA_INLINE Object& unwrap() VERA_NOEXCEPT
 	{
 		return *reinterpret_cast<Object*>(m_node.ptr);
-	}
-
-	VERA_INLINE void reset() VERA_NOEXCEPT
-	{
-		m_node.invalidate();
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* operator*() VERA_NOEXCEPT
@@ -386,12 +376,12 @@ public:
 		return m_node.ptr;
 	}
 
-	VERA_NODISCARD VERA_INLINE bool operator==(const weak_ref& rhs) const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE bool operator==(const weak_obj& rhs) const VERA_NOEXCEPT
 	{
 		return m_node.ptr == rhs.m_node.ptr;
 	}
 
-	VERA_NODISCARD VERA_INLINE bool operator!=(const weak_ref& rhs) const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE bool operator!=(const weak_obj& rhs) const VERA_NOEXCEPT
 	{
 		return m_node.ptr != rhs.m_node.ptr;
 	}
@@ -399,6 +389,21 @@ public:
 	VERA_NODISCARD VERA_INLINE operator bool() const VERA_NOEXCEPT
 	{
 		return static_cast<bool>(m_node.ptr);
+	}
+
+	VERA_NODISCARD VERA_INLINE operator const_ref<Object>() const VERA_NOEXCEPT
+	{
+		return const_ref<Object>(m_node.ptr);
+	}
+
+	VERA_NODISCARD VERA_INLINE operator ref<Object>() VERA_NOEXCEPT
+	{
+		return ref<Object>(reinterpret_cast<Object*>(m_node.ptr));
+	}
+
+	VERA_INLINE void reset() VERA_NOEXCEPT
+	{
+		m_node.invalidate();
 	}
 
 private:
@@ -409,46 +414,32 @@ template <class Object>
 class const_ref
 {
 public:
-	VERA_INLINE	explicit const_ref() VERA_NOEXCEPT :
+	VERA_INLINE	const_ref() VERA_NOEXCEPT :
 		m_ptr(nullptr) {}
 	
-	VERA_INLINE explicit const_ref(std::nullptr_t) VERA_NOEXCEPT :
+	VERA_INLINE const_ref(std::nullptr_t) VERA_NOEXCEPT :
 		m_ptr(nullptr) {}
 
-	VERA_INLINE	explicit const_ref(const Object* ptr) VERA_NOEXCEPT :
+	VERA_INLINE	const_ref(const Object* ptr) VERA_NOEXCEPT :
 		m_ptr(ptr) {}
 
-	VERA_INLINE	explicit const_ref(const obj<Object> obj) VERA_NOEXCEPT :
-		m_ptr(obj.get()) {}
+	template <class T>
+	VERA_INLINE const_ref(ref<T> rhs) VERA_NOEXCEPT :
+		m_ptr(static_cast<const T*>(rhs.m_ptr)) {}
 
-	VERA_INLINE explicit const_ref(const weak_ref<Object> wref) VERA_NOEXCEPT :
-		m_ptr(wref.get()) {}
+	template <class T>
+	VERA_INLINE const_ref(const_ref<T> rhs) VERA_NOEXCEPT :
+		m_ptr(static_cast<const T*>(rhs.m_ptr)) {}
 
 	VERA_INLINE	const_ref(const const_ref& rhs) VERA_NOEXCEPT :
 		m_ptr(rhs.m_ptr) {}
 
-	template <class T>
-	VERA_INLINE	const_ref(const const_ref<T>& rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<const Object*>(rhs.m_ptr)) {}
-
 	VERA_INLINE	const_ref(const_ref&& rhs) VERA_NOEXCEPT :
 		m_ptr(std::exchange(rhs.m_ptr, nullptr)) {}
-
-	template <class T>
-	VERA_INLINE	const_ref(const_ref<T>&& rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<const Object*>(std::exchange(rhs.m_ptr, nullptr))) {}
 
 	VERA_INLINE const_ref& operator=(const const_ref& rhs) VERA_NOEXCEPT
 	{
 		this->m_ptr = rhs.m_ptr;
-
-		return *this;
-	}
-
-	template <class T>
-	VERA_INLINE const_ref& operator=(const const_ref<T>& rhs) VERA_NOEXCEPT
-	{
-		this->m_ptr = static_cast<const Object*>(rhs.m_ptr);
 
 		return *this;
 	}
@@ -460,13 +451,6 @@ public:
 		return *this;
 	}
 
-	template <class T>
-	VERA_INLINE const_ref& operator=(const_ref<T>&& rhs) VERA_NOEXCEPT
-	{
-		this->m_ptr = static_cast<const Object*>(std::exchange(rhs.m_ptr, nullptr));
-		return *this;
-	}
-
 	VERA_NODISCARD VERA_INLINE const Object* get() const VERA_NOEXCEPT
 	{
 		return m_ptr;
@@ -475,11 +459,6 @@ public:
 	VERA_NODISCARD VERA_INLINE const Object& unwrap() const VERA_NOEXCEPT
 	{
 		return *reinterpret_cast<const Object*>(m_ptr);
-	}
-
-	void reset() VERA_NOEXCEPT
-	{
-		m_ptr = nullptr;
 	}
 
 	VERA_NODISCARD VERA_INLINE const Object* operator*() const VERA_NOEXCEPT
@@ -507,6 +486,11 @@ public:
 		return static_cast<bool>(m_ptr);
 	}
 
+	void reset() VERA_NOEXCEPT
+	{
+		m_ptr = nullptr;
+	}
+
 protected:
 	const Object* m_ptr;
 };
@@ -528,38 +512,20 @@ public:
 	VERA_INLINE	ref(Object* ptr) VERA_NOEXCEPT :
 		my_base(ptr) {}
 
-	VERA_INLINE	ref(obj<Object> obj) VERA_NOEXCEPT :
-		my_base(obj.get()) {}
-
-	VERA_INLINE	ref(weak_ref<Object> wref) VERA_NOEXCEPT :
-		my_base(wref.get()) {}
+	template <class T>
+	VERA_INLINE ref(ref<T> rhs) VERA_NOEXCEPT :
+		my_base(static_cast<T*>(rhs.m_ptr)) {}
 
 	VERA_INLINE ref(const ref& rhs) VERA_NOEXCEPT :
 		my_base(rhs.m_ptr) {}
 
-	template <class T>
-	VERA_INLINE ref(const ref<T>& rhs) VERA_NOEXCEPT :
-		my_base(static_cast<const Object*>(rhs.m_ptr)) {}
-
 	VERA_INLINE ref(ref&& rhs) VERA_NOEXCEPT :
 		my_base(std::exchange(rhs.m_ptr, nullptr)) {}
-
-	template <class T>
-	VERA_INLINE ref(ref<T>&& rhs) VERA_NOEXCEPT :
-		my_base(static_cast<const Object*>(std::exchange(rhs.m_ptr, nullptr))) { }
 
 	VERA_INLINE ref& operator=(const ref& rhs) VERA_NOEXCEPT
 	{
 		this->m_ptr = rhs.m_ptr;
 
-		return *this;
-	}
-
-	template <class T>
-	VERA_INLINE ref& operator=(const ref<T>& rhs) VERA_NOEXCEPT
-	{
-		this->m_ptr = static_cast<const Object*>(rhs.m_ptr);
-	
 		return *this;
 	}
 
@@ -570,11 +536,9 @@ public:
 		return *this;
 	}
 
-	template <class T>
-	VERA_INLINE ref& operator=(ref<T>&& rhs) VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE const Object* get() const VERA_NOEXCEPT
 	{
-		this->m_ptr = static_cast<const Object*>(std::exchange(rhs.m_ptr, nullptr));
-		return *this;
+		return this->m_ptr;
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* get() VERA_NOEXCEPT
@@ -582,14 +546,29 @@ public:
 		return const_cast<Object*>(this->m_ptr);
 	}
 
+	VERA_NODISCARD VERA_INLINE const Object& unwrap() const VERA_NOEXCEPT
+	{
+		return *this->m_ptr;
+	}
+
 	VERA_NODISCARD VERA_INLINE Object& unwrap() VERA_NOEXCEPT
 	{
 		return *const_cast<Object*>(this->m_ptr);
 	}
 
+	VERA_NODISCARD VERA_INLINE const Object* operator*() const VERA_NOEXCEPT
+	{
+		return this->m_ptr;
+	}
+
 	VERA_NODISCARD VERA_INLINE Object* operator*() VERA_NOEXCEPT
 	{
 		return const_cast<Object*>(this->m_ptr);
+	}
+
+	VERA_NODISCARD VERA_INLINE const Object* operator->() const VERA_NOEXCEPT
+	{
+		return this->m_ptr;
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* operator->() VERA_NOEXCEPT
@@ -607,27 +586,41 @@ VERA_NODISCARD VERA_CONSTEXPR obj<T> make_obj(Args&&... params)
 }
 
 template <class Target, class T>
-VERA_NODISCARD VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR obj<Target> obj_cast(obj<T>& source) VERA_NOEXCEPT
 {
-	return std::move(source);
+	static_assert(std::is_base_of_v<ManangedObject, Target> || std::is_base_of_v<ManangedObject, T>);
+
+	return static_cast<Target*>(source.m_ptr);
 }
 
 template <class Target, class T>
-VERA_NODISCARD VERA_CONSTEXPR weak_ref<Target> weak_cast(weak_ref<T> source) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR weak_obj<Target> weak_cast(weak_obj<T>& source) VERA_NOEXCEPT
 {
-	return std::move(source);
+	static_assert(std::is_base_of_v<ManangedObject, Target> || std::is_base_of_v<ManangedObject, T>);
+
+	if (!source.m_node.ptr) return nullptr;
+
+	weak_obj<Target> result;
+
+	if (source.m_node.next) {
+		source.m_node.next->prev = &result.m_node;
+		result.m_node.next       = source.m_node.next;
+	}
+
+	source.m_node.next = &result.m_node;
+	result.m_node.prev = &source.m_node;
+	result.m_node.ptr  = static_cast<Target*>(reinterpret_cast<T*>(source.m_node.ptr));
+
+	return result;
 }
 
+// Unsafe version of obj_cast, does not perform any type checking.
+// DO NOT USE UNLESS YOU ARE ABSOLUTELY SURE THAT THE CAST IS SAFE.
 template <class Target, class T>
-VERA_NODISCARD VERA_CONSTEXPR ref<Target> ref_cast(ref<T> ref) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR obj<Target> unsafe_obj_cast(ref<T> source) VERA_NOEXCEPT
 {
-	return static_cast<Target*>(ref.get());
-}
-
-template <class Target, class T>
-VERA_NODISCARD VERA_CONSTEXPR const_ref<Target> ref_cast(const_ref<T> ref) VERA_NOEXCEPT
-{
-	return static_cast<const Target*>(ref.get());
+	// unsafe cast, object pointed by source might be already destroyed
+	return obj<Target>(source.get());
 }
 
 VERA_NAMESPACE_END

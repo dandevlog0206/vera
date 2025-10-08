@@ -160,10 +160,13 @@
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
     <ClInclude Include="include\vera\core\framebuffer.h" />
-    <ClInclude Include="include\vera\core\frame_sync.h" />
+    <ClInclude Include="include\vera\core\render_frame.h" />
+    <ClInclude Include="include\vera\core\resource_binding.h" />
+    <ClInclude Include="include\vera\core\resource_binding_pool.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_storage.h" />
-    <ClInclude Include="include\vera\core\smart_ptr.h" />
+    <ClInclude Include="include\vera\core\intrusive_ptr.h" />
+    <ClInclude Include="include\vera\core\command_buffer_sync.h" />
     <ClInclude Include="include\vera\math\constant.h" />
     <ClInclude Include="include\vera\math\detail\config.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x2.h" />
@@ -201,19 +204,24 @@
     <ClInclude Include="include\vera\shader\shader_variable.h" />
     <ClInclude Include="include\vera\graphics\colormap.h" />
     <ClInclude Include="include\vera\asset\asset_loader.h" />
+    <ClInclude Include="include\vera\util\array_view.h" />
     <ClInclude Include="include\vera\util\camera.h" />
     <ClInclude Include="include\vera\util\direction.h" />
     <ClInclude Include="include\vera\util\flycam.h" />
     <ClInclude Include="include\vera\math\radian.h" />
+    <ClInclude Include="include\vera\util\index_map.h" />
     <ClInclude Include="include\vera\util\result_message.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
+    <ClInclude Include="source\core_object\detail\resource_binding_desc.h" />
     <ClInclude Include="source\graphics\pixel.h" />
     <ClInclude Include="source\impl\buffer_impl.h" />
     <ClInclude Include="source\impl\device_memory_impl.h" />
     <ClInclude Include="source\impl\framebuffer_impl.h" />
+    <ClInclude Include="source\impl\resource_binding_impl.h" />
+    <ClInclude Include="source\impl\resource_binding_pool_impl.h" />
     <ClInclude Include="source\impl\sampler_impl.h" />
     <ClInclude Include="source\impl\semaphore_impl.h" />
     <ClInclude Include="source\impl\context_impl.h" />
@@ -280,9 +288,12 @@
     <ClInclude Include="source\internal\include_vulkan.h" />
     <ClInclude Include="source\internal\format.h" />
     <ClInclude Include="source\impl\window_impl.h" />
+    <ClCompile Include="source\core\command_buffer_sync.cpp" />
+    <ClCompile Include="source\core\exception.cpp" />
+    <ClCompile Include="source\core_object\resource_binding_pool.cpp" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
     <ClCompile Include="source\core_object\framebuffer.cpp" />
-    <ClCompile Include="source\core_object\frame_sync.cpp" />
+    <ClCompile Include="source\core_object\resource_binding.cpp" />
     <ClCompile Include="source\core_object\shader_storage.cpp" />
     <ClCompile Include="source\core_object\texture_view.cpp" />
     <ClCompile Include="source\core_object\buffer.cpp" />
@@ -328,6 +339,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="include\vera\scene\sample_scene.txt" />
+    <Text Include="vera.natjmc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

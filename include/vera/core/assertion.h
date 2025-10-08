@@ -1,7 +1,7 @@
 #pragma once
 
-#include "logger.h"
-#include <sstream>
+#include "coredefs.h"
+#include <cstdint>
 
 #ifdef _DEBUG
 #	define VERA_ASSERT(expression) \
@@ -19,25 +19,12 @@
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
 
-static void __assert_impl(
+// implemented in source/core/exception.cpp
+extern void __assert_impl(
 	const char* expression,
 	const char* message,
 	const char* file,
-	uint32_t    line
-) {
-	std::stringstream ss;
-	ss << "Assertion failed: " << expression << ", ";
-	if (message)
-		ss << "message: " << message << ", ";
-	ss << "file: " << file << ", ";
-	ss << "line: " << line;
-
-	Logger::assertion(ss.str());
-
-#	ifdef _MSC_VER
-	__debugbreak();
-#	endif
-}
+	uint32_t    line);
 
 VERA_PRIV_NAMESPACE_END
 VERA_NAMESPACE_END

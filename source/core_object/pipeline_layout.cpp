@@ -24,12 +24,14 @@ static size_t hash_pipeline_layout(const PipelineLayoutCreateInfo& info)
 		hash_combine(seed, static_cast<size_t>(range.stageFlags));
 	}
 
+	hash_combine(seed, static_cast<size_t>(info.pipelineBindPoint));
+
 	return seed;
 }
 
 vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout)
 {
-	return CoreObject::getImpl(pipeline_layout).layout;
+	return CoreObject::getImpl(pipeline_layout).pipelineLayout;
 }
 
 obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLayoutCreateInfo& info)
@@ -39,14 +41,14 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLay
 
 	if (auto it = device_impl.pipelineLayoutMap.find(hash_value);
 		it != device_impl.pipelineLayoutMap.end()) {
-		return it->second;
+		return unsafe_obj_cast<PipelineLayout>(it->second);
 	}
 
 	auto  obj  = createNewCoreObject<PipelineLayout>();
 	auto& impl = getImpl(obj);
 
-	static_vector<vk::DescriptorSetLayout, 20> vk_layouts;
-	static_vector<vk::PushConstantRange, 20>   vk_constants;
+	static_vector<vk::DescriptorSetLayout, 32> vk_layouts;
+	static_vector<vk::PushConstantRange, 32>   vk_constants;
 
 	for (const auto& layout : info.resourceLayouts)
 		vk_layouts.push_back(getImpl(layout).layout);
@@ -59,13 +61,16 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLay
 	pipeline_layout_info.pushConstantRangeCount = static_cast<uint32_t>(vk_constants.size());
 	pipeline_layout_info.pPushConstantRanges    = vk_constants.data();
 
-	impl.device    = std::move(device);
-	impl.layout    = device_impl.device.createPipelineLayout(pipeline_layout_info);
-	impl.hashValue = hash_value;
+	impl.device            = std::move(device);
+	impl.pipelineLayout    = device_impl.device.createPipelineLayout(pipeline_layout_info);
+	impl.hashValue         = hash_value;
 	impl.resourceLayout.assign(info.resourceLayouts.begin(), info.resourceLayouts.end());
 	impl.pushConstantRanges.assign(info.pushConstantRanges.begin(), info.pushConstantRanges.end());
+	impl.pipelineBindPoint = info.pipelineBindPoint;
 
-	return device_impl.pipelineLayoutMap[hash_value] = obj;
+	device_impl.pipelineLayoutMap[hash_value] = obj;
+
+	return obj;
 }
 
 PipelineLayout::~PipelineLayout()
@@ -73,7 +78,8 @@ PipelineLayout::~PipelineLayout()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
-	device_impl.device.destroy(impl.layout);
+	device_impl.pipelineLayoutMap.erase(impl.hashValue);
+	device_impl.device.destroy(impl.pipelineLayout);
 
 	destroyObjectImpl(this);
 }
@@ -83,12 +89,27 @@ obj<Device> PipelineLayout::getDevice()
 	return getImpl(this).device;
 }
 
-const std::vector<obj<ResourceLayout>>& PipelineLayout::getResourceLayouts() const
+array_view<ref<ResourceLayout>> PipelineLayout::getResourceLayouts() const
 {
-	return getImpl(this).resourceLayout;
+	auto& impl = getImpl(this);
+
+	return { 
+		reinterpret_cast<const ref<ResourceLayout>*>(impl.resourceLayout.data()),
+		impl.resourceLayout.size()
+	};
 }
 
-const std::vector<PushConstantRange>& PipelineLayout::getPushConstantRanges() const
+uint32_t PipelineLayout::getResourceLayoutCount() const
+{
+	return  getImpl(this).resourceLayout.size();
+}
+
+ref<ResourceLayout> PipelineLayout::getResourceLayout(uint32_t set) const
+{
+	return getImpl(this).resourceLayout[set];
+}
+
+array_view<PushConstantRange> PipelineLayout::getPushConstantRanges() const
 {
 	return getImpl(this).pushConstantRanges;
 }

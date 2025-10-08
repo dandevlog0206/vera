@@ -1,6 +1,7 @@
 #pragma once
 
-#include "smart_ptr.h"
+#include "intrusive_ptr.h"
+#include "../util/hash.h"
 #include <type_traits>
 #include <utility>
 #include <memory>
@@ -49,7 +50,7 @@ public:
 	}
 
 	template <class Object>
-	VERA_NODISCARD VERA_INLINE static typename Object::impl_type& getImpl(weak_ref<Object>& obj) VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE static typename Object::impl_type& getImpl(weak_obj<Object>& obj) VERA_NOEXCEPT
 	{
 		static_assert(std::is_base_of_v<CoreObject, Object>);
 
@@ -57,7 +58,7 @@ public:
 	}
 
 	template <class Object>
-	VERA_NODISCARD VERA_INLINE static const typename Object::impl_type& getImpl(const weak_ref<Object>& obj) VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE static const typename Object::impl_type& getImpl(const weak_obj<Object>& obj) VERA_NOEXCEPT
 	{
 		static_assert(std::is_base_of_v<CoreObject, Object>);
 

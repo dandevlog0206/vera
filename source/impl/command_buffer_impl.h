@@ -2,23 +2,41 @@
 
 #include "object_impl.h"
 
+#include "../../include/vera/core/command_buffer_sync.h"
 #include "../../include/vera/graphics/graphics_state.h"
 
 VERA_NAMESPACE_BEGIN
 
+enum class SubmitQueueType VERA_ENUM
+{
+	Transfer,
+	Compute,
+	Graphics
+};
+
+struct ResourceSetBindingState
+{
+
+};
+
 struct CommandBufferImpl
 {
-	obj<Device>       device;
+	obj<Device>        device;
+	obj<Semaphore>     semaphore;
+	obj<Fence>         fence;
 
-	vk::CommandPool   commandPool;
-	vk::CommandBuffer commandBuffer;
+	vk::CommandPool    commandPool;
+	vk::CommandBuffer  commandBuffer;
 
-	Viewport          currentViewport;
-	Scissor           currentScissor;
-	ref<Buffer>       currentVertexBuffer;
-	ref<Buffer>       currentIndexBuffer;
-	RenderingInfo     currentRenderingInfo;
-	ref<Pipeline>     currentPipeline;
+	uint64_t           submitID;
+	SubmitQueueType    submitQueueType;
+	CommandBufferState state;
+	Viewport           currentViewport;
+	Scissor            currentScissor;
+	ref<Buffer>        currentVertexBuffer;
+	ref<Buffer>        currentIndexBuffer;
+	RenderingInfo      currentRenderingInfo;
+	ref<Pipeline>      currentPipeline;
 };
 
 static vk::ResolveModeFlagBits to_vk_resolve_mode(ResolveMode mode)

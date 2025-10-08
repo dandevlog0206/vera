@@ -6,6 +6,11 @@
 
 VERA_NAMESPACE_BEGIN
 
+vk::BufferView& get_vk_buffer_view(ref<BufferView> buffer_view)
+{
+	return CoreObject::getImpl(buffer_view).bufferView;
+}
+
 obj<BufferView> BufferView::create(obj<Buffer> buffer, const BufferViewCreateInfo& info)
 {
 	auto obj          = createNewCoreObject<BufferView>();

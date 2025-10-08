@@ -1,29 +1,42 @@
 #pragma once
 
-#include "texture.h"
-#include "frame_sync.h"
+#include "core_object.h"
+#include "render_frame.h"
 
 VERA_NAMESPACE_BEGIN
+
+enum class TextureLayout VERA_ENUM;
 
 class Device;
 class CommandBuffer;
 class GraphicsState;
 class ShaderParameter;
+class Texture;
+
+struct RenderContextCreateInfo
+{
+	uint32_t frameCount        = 3;
+	bool     dynamicFrameCount = true;
+};
 
 class RenderContext : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(RenderContext)
 public:
-	static obj<RenderContext> create(obj<Device> device);
+	static obj<RenderContext> create(obj<Device> device, const RenderContextCreateInfo& info);
 	~RenderContext();
 
 	obj<Device> getDevice();
 	obj<CommandBuffer> getRenderCommand();
 
-	FrameSync getFrameSync() const;
+	VERA_NODISCARD uint32_t getCurrentFrameIndex() const;
+	VERA_NODISCARD uint32_t getFrameCount() const;
+	VERA_NODISCARD const RenderFrame& getCurrentFrame() const;
+
+	VERA_NODISCARD CommandBufferSync getCommandBufferSync() const;
 
 	void transitionImageLayout(
-		ref<Texture> texture,
+		ref<Texture>   texture,
 		TextureLayout  old_layout,
 		TextureLayout  new_layout);
 
