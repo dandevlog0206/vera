@@ -5,36 +5,33 @@
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/resource_layout.h"
-#include "../../include/vera/core/shader.h"
+#include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/util/static_vector.h"
-#include "../../include/vera/util/hash.h"
+
+#define VERA_MAX_SHADER_COUNT 8
 
 VERA_NAMESPACE_BEGIN
 
-static void append_shader_layout_info(PipelineLayoutCreateInfo& layout_info, obj<Shader> shader)
-{
-	if (!shader) return;
-
-	auto& shader_impl = CoreObject::getImpl(shader);
-
-	for (const auto& layout : shader_impl.resourceLayouts)
-		layout_info.resourceLayouts.push_back(layout);
-	for (const auto& pc : shader_impl.pushConstantRanges)
-		layout_info.pushConstantRanges.push_back(pc);
-}
-
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
-	PipelineLayoutCreateInfo layout_info;
+	static_vector<const_ref<Shader>, VERA_MAX_SHADER_COUNT> shaders;
 
-	append_shader_layout_info(layout_info, info.vertexShader);
-	append_shader_layout_info(layout_info, info.geometryShader);
-	append_shader_layout_info(layout_info, info.fragmentShader);
+	VERA_ASSERT_MSG(info.vertexShader, "vertex shader must be specified");
+	VERA_ASSERT_MSG(info.fragmentShader, "fragment shader must be specified");
+	
+	shaders.push_back(info.vertexShader);
+	
+	if (info.tessellationControlShader)
+		shaders.push_back(info.tessellationControlShader);
+	if (info.tessellationEvaluationShader)
+		shaders.push_back(info.tessellationEvaluationShader);
+	if (info.geometryShader)
+		shaders.push_back(info.geometryShader);
 
-	layout_info.pipelineBindPoint = PipelineBindPoint::Graphics;
+	shaders.push_back(info.fragmentShader);
 
-	return PipelineLayout::create(device, layout_info);
+	return PipelineLayout::create(device, shaders);
 }
 
 static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShaderStageCreateInfo, 10>& shader_infos, const GraphicsPipelineCreateInfo& info)
@@ -46,7 +43,7 @@ static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShade
 
 		shader_info.stage               = vk::ShaderStageFlagBits::eVertex;
 		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.c_str();
+		shader_info.pName               = shader_impl.entryPointName.data();
 		shader_info.pSpecializationInfo = nullptr;
 
 		shader_infos.push_back(shader_info);
@@ -58,7 +55,7 @@ static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShade
 
 		shader_info.stage               = vk::ShaderStageFlagBits::eGeometry;
 		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.c_str();
+		shader_info.pName               = shader_impl.entryPointName.data();
 		shader_info.pSpecializationInfo = nullptr;
 
 		shader_infos.push_back(shader_info);
@@ -70,7 +67,7 @@ static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShade
 
 		shader_info.stage               = vk::ShaderStageFlagBits::eFragment;
 		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.c_str();
+		shader_info.pName               = shader_impl.entryPointName.data();
 		shader_info.pSpecializationInfo = nullptr;
 
 		shader_infos.push_back(shader_info);
@@ -200,7 +197,7 @@ static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, con
 		states.push_back(vk::DynamicState::eLineWidth);
 	}
 
-	if (!info.tesselationPatchControlPoints)
+	if (!info.tessellationPatchControlPoints)
 		states.push_back(vk::DynamicState::ePatchControlPointsEXT);
 
 	if (!info.depthStencilInfo) {
@@ -232,8 +229,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_graphics_pipeline(info);
 
-	if (auto it = device_impl.pipelineMap.find(hash_value);
-		it != device_impl.pipelineMap.end()) {
+	if (auto it = device_impl.pipelineCacheMap.find(hash_value);
+		it != device_impl.pipelineCacheMap.end()) {
 		return obj<Pipeline>(it->second.get());
 	}
 
@@ -301,8 +298,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	}
 
 	vk::PipelineTessellationStateCreateInfo ts_info;
-	if (info.tesselationPatchControlPoints)
-		ts_info.patchControlPoints = *info.tesselationPatchControlPoints;
+	if (info.tessellationPatchControlPoints)
+		ts_info.patchControlPoints = *info.tessellationPatchControlPoints;
 
 	vk::Viewport temp_viewport;
 	temp_viewport.width  = 1080.f;
@@ -401,7 +398,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	pipeline_info.pStages             = shader_infos.data();
 	pipeline_info.pVertexInputState   = &vi_info;
 	pipeline_info.pInputAssemblyState = info.primitiveInfo ? &ia_info : nullptr;
-	pipeline_info.pTessellationState  = info.tesselationPatchControlPoints ? &ts_info : nullptr;
+	pipeline_info.pTessellationState  = info.tessellationPatchControlPoints ? &ts_info : nullptr;
 	pipeline_info.pViewportState      = &vp_info;
 	pipeline_info.pRasterizationState = info.rasterizationInfo ? &rs_info : nullptr;
 	pipeline_info.pMultisampleState   = &ms_info;
@@ -424,7 +421,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	impl.pipeline          = result.value;
 	impl.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 
-	device_impl.pipelineMap[hash_value] = obj;
+	device_impl.pipelineCacheMap.insert({ hash_value, obj });
 
 	return obj;
 }

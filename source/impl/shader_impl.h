@@ -1,27 +1,31 @@
 #pragma once
 
-#include "shader_reflection_impl.h"
-
+#include "object_impl.h"
+#include "detail/shader_reflection.h"
 #include "../../include/vera/core/shader.h"
-#include "../../include/vera/core/pipeline_layout.h"
-#include <unordered_set>
+#include "../../../include/vera/util/string_pool.h"
 
 VERA_NAMESPACE_BEGIN
 
+enum class PipelineBindPoint VERA_ENUM;
+
+struct PushConstantRange;
+
 struct ShaderImpl
 {
-	obj<Device>                      device;
+	using PushConstantRanges = std::vector<PushConstantRange>;
 
-	vk::ShaderModule                 shader;
+	obj<Device>        device;
 
-	std::vector<ReflectionDesc*>     reflections;
-	std::unordered_set<std::string>  namePool;
+	vk::ShaderModule   shader;
 
-	std::vector<obj<ResourceLayout>> resourceLayouts;
-	std::vector<PushConstantRange>   pushConstantRanges;
-	std::string                      entryPointName;
-	ShaderStageFlags                 shaderStageFlags;
-	size_t                           hashValue;
+	ShaderReflection   reflection;
+	PushConstantRanges pushConstantRanges;
+	PipelineBindPoint  pipelineBindPoint;
+	ShaderStageFlags   stageFlags;
+	std::string_view   entryPointName;
+	string_pool        namePool;
+	size_t             hashValue;
 };
 
 static vk::ShaderStageFlagBits to_vk_shader_stage(ShaderStageFlagBits flags)

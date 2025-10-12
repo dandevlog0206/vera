@@ -44,6 +44,8 @@ public:
 	static obj<Buffer> createVertex(obj<DeviceMemory> memory, size_t offset, size_t size);
 	static obj<Buffer> createIndex(obj<Device> device, IndexType type, size_t count);
 	static obj<Buffer> createIndex(obj<DeviceMemory> memory, size_t offset, IndexType type, size_t count);
+	static obj<Buffer> createUniform(obj<Device> device, size_t size);
+	static obj<Buffer> createStorage(obj<Device> device, size_t size);
 	static obj<Buffer> createStaging(obj<Device> device, size_t size);
 	static obj<Buffer> create(obj<Device> device, const BufferCreateInfo& info);
 	static obj<Buffer> create(obj<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info);

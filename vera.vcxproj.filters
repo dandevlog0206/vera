@@ -219,12 +219,6 @@
     <ClInclude Include="include\vera\core\texture_view.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\shader_reflection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\impl\shader_reflection_impl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\vera\util\stack_allocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -390,7 +384,7 @@
     <ClInclude Include="source\impl\resource_binding_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\core_object\detail\resource_binding_desc.h">
+    <ClInclude Include="source\impl\detail\resource_binding_desc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\command_buffer_sync.h">
@@ -409,6 +403,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\ring_vector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\impl\detail\shader_reflection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\string_pool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -468,9 +468,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\buffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\core_object\shader_reflection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\graphics\shader_parameter.cpp">
@@ -545,9 +542,15 @@
     <ClCompile Include="source\core_object\resource_binding.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\impl\detail\shader_reflection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="include\vera\scene\sample_scene.txt" />
     <Text Include="vera.natjmc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="vera.natvis" />
   </ItemGroup>
 </Project>

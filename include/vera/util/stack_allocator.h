@@ -21,7 +21,7 @@ public:
 
 	VERA_INLINE StackAllocator() VERA_NOEXCEPT :
 		m_pages(),
-		m_page_size(4096),
+		m_page_size(512),
 		m_current_page(-1),
 		m_offset() {}
 

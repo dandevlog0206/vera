@@ -1,7 +1,6 @@
 #include "../../include/vera/graphics/shader_parameter.h"
 #include "../impl/shader_storage_impl.h"
 
-#include "../../include/vera/core/shader_reflection.h"
 #include "../../include/vera/core/shader_storage.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/command_buffer.h"
@@ -11,12 +10,25 @@
 
 VERA_NAMESPACE_BEGIN
 
-ShaderParameter::ShaderParameter(obj<ShaderReflection> reflection) :
-	m_reflection(reflection),
-	m_storage(ShaderStorage::create(std::move(reflection))) {}
+ShaderParameter::ShaderParameter()
+{
+}
+
+ShaderParameter::ShaderParameter(obj<PipelineLayout> layout)
+{
+	init(layout);
+}
 
 ShaderParameter::~ShaderParameter()
 {
+}
+
+void ShaderParameter::init(obj<PipelineLayout> layout)
+{
+	if (!layout->hasReflection()) return;
+
+	m_pipeline_layout = std::move(layout);
+	m_storage         = ShaderStorage::create(m_pipeline_layout);
 }
 
 ShaderVariable ShaderParameter::operator[](std::string_view name)
@@ -26,12 +38,12 @@ ShaderVariable ShaderParameter::operator[](std::string_view name)
 
 obj<Device> ShaderParameter::getDevice() VERA_NOEXCEPT
 {
-	return m_reflection->getDevice();
+	return m_pipeline_layout->getDevice();
 }
 
-obj<ShaderReflection> ShaderParameter::getShaderReflection() VERA_NOEXCEPT
+obj<PipelineLayout> ShaderParameter::getPipelineLayout() VERA_NOEXCEPT
 {
-	return m_reflection;
+	return m_pipeline_layout;
 }
 
 obj<ShaderStorage> ShaderParameter::getShaderStorage() VERA_NOEXCEPT
@@ -41,9 +53,7 @@ obj<ShaderStorage> ShaderParameter::getShaderStorage() VERA_NOEXCEPT
 
 bool ShaderParameter::empty() const VERA_NOEXCEPT
 {
-	auto& impl = CoreObject::getImpl(m_storage);
-
-	return impl.storageDatas.empty();
+	return !m_storage;
 }
 
 VERA_NAMESPACE_END

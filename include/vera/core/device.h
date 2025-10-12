@@ -9,6 +9,11 @@
 VERA_NAMESPACE_BEGIN
 
 class Context;
+class Sampler;
+class Texture;
+class TextureView;
+class Buffer;
+class BufferView;
 class CommandBuffer;
 
 enum class MemoryHeapFlagBits VERA_FLAG_BITS
@@ -57,6 +62,12 @@ public:
 	~Device();
 
 	obj<Context> getContext();
+
+	VERA_NODISCARD obj<Sampler> getDefaultSampler() VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Texture> getDefaultTexture() VERA_NOEXCEPT;
+	VERA_NODISCARD obj<TextureView> getDefaultTextureView() VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Buffer> getDefaultBuffer() VERA_NOEXCEPT;
+	VERA_NODISCARD obj<BufferView> getDefaultBufferView() VERA_NOEXCEPT;
 
 	const std::vector<DeviceMemoryType>& getMemoryTypes() const;
 

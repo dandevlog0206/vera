@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_object.h"
+#include "shader.h"
 #include "../math/vector_types.h"
 #include "../math/matrix_types.h"
 #include <string_view>
@@ -10,7 +10,7 @@ VERA_NAMESPACE_BEGIN
 enum class TextureLayout VERA_ENUM;
 
 class Device;
-class ShaderReflection;
+class PipelineLayout;
 class Sampler;
 class TextureView;
 class Buffer;
@@ -21,10 +21,11 @@ struct ReflectionDesc;
 class ShaderVariable
 {
 	friend class ShaderStorage;
+	ShaderVariable() = default;
 	ShaderVariable(
 		ref<ShaderStorage> storage,
 		ShaderStorageData* data,
-		ReflectionDesc* desc,
+		ReflectionDesc*    desc,
 		uint32_t           offset);
 public:
 	VERA_NODISCARD ShaderVariable operator[](std::string_view name) VERA_NOEXCEPT;
@@ -56,11 +57,11 @@ class ShaderStorage : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ShaderStorage)
 public:
-	static obj<ShaderStorage> create(obj<ShaderReflection> reflection);
+	static obj<ShaderStorage> create(obj<PipelineLayout> pipeline_layout);
 	~ShaderStorage();
 
 	obj<Device> getDevice() VERA_NOEXCEPT;
-	obj<ShaderReflection> getShaderReflection() VERA_NOEXCEPT;
+	obj<PipelineLayout> getPipelineLayout() VERA_NOEXCEPT;
 
 	VERA_NODISCARD ShaderVariable accessVariable(std::string_view name);
 
@@ -150,8 +151,6 @@ public:
 	void setPrimitive(const ShaderVariable& variable, const double4x2& value);
 	void setPrimitive(const ShaderVariable& variable, const double4x3& value);
 	void setPrimitive(const ShaderVariable& variable, const double4x4& value);
-
-	void tryWrite();
 };
 
 template <class T>

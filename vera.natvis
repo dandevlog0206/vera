@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="::vr::static_vector&lt;*&gt;">
+		<DisplayString>{{ size={m_size} }}</DisplayString>
+		<Expand>
+			<Item Name="[size]" ExcludeView="simple">m_size</Item>
+			<Item Name="[capacity]" ExcludeView="simple">$T2</Item>
+			<ArrayItems>
+				<Size>m_size</Size>
+				<ValuePointer>m_storage.elem</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="::vr::string_pool">
+		<Expand>
+			<LinkedListItems>
+				<HeadPointer>m_first</HeadPointer>
+				<NextPointer>m_next</NextPointer>
+				<ValueNode>m_string,s</ValueNode>
+			</LinkedListItems>
+		</Expand>
+	</Type>
+
+	<Type Name="::vr::ShaderReflection">
+		<Expand>
+			<Synthetic Name="[reflections]">
+				<DisplayString>{{ count={reflectionCount} }}</DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>reflectionCount</Size>
+						<ValuePointer>reflections</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+			<Synthetic Name="[name maps]">
+				<DisplayString>{{ count={nameMapCount} }}</DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>nameMapCount</Size>
+						<ValuePointer>nameMaps</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+			<Item Name="resource count" ExcludeView="simple">resourceCount</Item>
+			<Item Name="push constant count" ExcludeView="simple">pushConstantCount</Item>
+			<Item Name="max set count" ExcludeView="simple">maxSetCount</Item>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionNameMap">
+		<DisplayString>{{ name={name,s}, stageFlags={stageFlags.m_mask,en}, index={index} }}</DisplayString>
+		<Expand>
+			<Item Name="name" ExcludeView="simple">name,s</Item>
+			<Item Name="stage flags" ExcludeView="simple">stageFlags.m_mask,en</Item>
+			<Item Name="index" ExcludeView="simple">index</Item>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionDesc">
+		<Expand>
+			<Item Name="[type]">type</Item>
+			<Item Name="[primitive]" Condition="type == (::vr::ReflectionType)1">*(::vr::ReflectionPrimitiveDesc*)this</Item>
+			<Item Name="[array]" Condition="type == (::vr::ReflectionType)2">*(::vr::ReflectionArrayDesc*)this</Item>
+			<Item Name="[struct]" Condition="type == (::vr::ReflectionType)3">*(::vr::ReflectionStructDesc*)this</Item>
+			<Item Name="[resource]" Condition="type == (::vr::ReflectionType)4">*(::vr::ReflectionResourceDesc*)this</Item>
+			<Item Name="[resource block]" Condition="type == (::vr::ReflectionType)5">*(::vr::ReflectionResourceBlockDesc*)this</Item>
+			<Item Name="[resource array]" Condition="type == (::vr::ReflectionType)6">*(::vr::ReflectionResourceArrayDesc*)this</Item>
+			<Item Name="[push constant]" Condition="type == (::vr::ReflectionType)7">*(::vr::ReflectionPushConstantDesc*)this</Item>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionPrimitiveDesc">
+		<DisplayString>{{ type={primitiveType}, offset={offset} }}</DisplayString>
+		<Expand>
+			<Item Name="type">type</Item>
+			<Item Name="offset">offset</Item>
+			<Item Name="primitive type">primitiveType</Item>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionArrayDesc">
+		<DisplayString>{{ count={elementCount}, stride={stride}, offset={offset} }}</DisplayString>
+		<Expand>
+			<Item Name="type">type</Item>
+			<Item Name="offset">offset</Item>
+			<Item Name="stride">stride</Item>
+			<Item Name="element count">elementCount</Item>
+			<Item Name="element">element</Item>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionStructDesc">
+		<DisplayString>{{ members={memberCount}, offset={offset} }}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>memberCount</Size>
+				<ValuePointer>members</ValuePointer>
+			</ArrayItems>
+			<Synthetic Name="[name maps]" Condition="nameMapCount > 0">
+				<DisplayString>{nameMapCount} name maps</DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>nameMapCount</Size>
+						<ValuePointer>nameMaps</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionResourceDesc">
+		<DisplayString>{{ type={resourceType}, set={set}, binding={binding} }}</DisplayString>
+	</Type>
+	<Type Name="::vr::ReflectionResourceBlockDesc">
+		<DisplayString>{{ type={resourceType}, set={set}, binding={binding}, size={sizeInByte} }}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>memberCount</Size>
+				<ValuePointer>members</ValuePointer>
+			</ArrayItems>
+			<Synthetic Name="[name maps]" Condition="nameMapCount > 0">
+				<DisplayString>{nameMapCount} name maps</DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>nameMapCount</Size>
+						<ValuePointer>nameMaps</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionResourceArrayDesc">
+		<DisplayString>{{ type={resourceType}, set={set}, binding={binding}, count={elementCount} }}</DisplayString>
+		<Expand>
+			<Item Name="[element]">element</Item>
+		</Expand>
+	</Type>
+	<Type Name="::vr::ReflectionPushConstantDesc">
+		<DisplayString>{{ size={sizeInByte}, members={memberCount} }}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>memberCount</Size>
+				<ValuePointer>members</ValuePointer>
+			</ArrayItems>
+			<Synthetic Name="[name maps]" Condition="nameMapCount > 0">
+				<DisplayString>{nameMapCount} name maps</DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>nameMapCount</Size>
+						<ValuePointer>nameMaps</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+		</Expand>
+	</Type>
+</AutoVisualizer>

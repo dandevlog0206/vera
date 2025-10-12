@@ -20,7 +20,6 @@
 #include "core/sampler.h"
 #include "core/semaphore.h"
 #include "core/shader.h"
-#include "core/shader_reflection.h"
 #include "core/swapchain.h"
 #include "core/texture.h"
 #include "core/texture_view.h"

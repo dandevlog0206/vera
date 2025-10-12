@@ -132,6 +132,38 @@ obj<Buffer> Buffer::createIndex(obj<DeviceMemory> memory, size_t offset, IndexTy
 	return obj;
 }
 
+obj<Buffer> Buffer::createUniform(obj<Device> device, size_t size)
+{
+	BufferCreateInfo info;
+	info.size         = size;
+	info.usage        =
+		BufferUsageFlagBits::UniformBuffer |
+		BufferUsageFlagBits::TransferDst |
+		BufferUsageFlagBits::TransferSrc;
+	info.propetyFlags = 
+		MemoryPropertyFlagBits::DeviceLocal |
+		MemoryPropertyFlagBits::HostVisible |
+		MemoryPropertyFlagBits::HostCoherent;
+
+	return create(device, info);
+}
+
+obj<Buffer> Buffer::createStorage(obj<Device> device, size_t size)
+{
+	BufferCreateInfo info;
+	info.size         = size;
+	info.usage        =
+		BufferUsageFlagBits::StorageBuffer |
+		BufferUsageFlagBits::TransferDst |
+		BufferUsageFlagBits::TransferSrc;
+	info.propetyFlags = 
+		MemoryPropertyFlagBits::DeviceLocal |
+		MemoryPropertyFlagBits::HostVisible |
+		MemoryPropertyFlagBits::HostCoherent;
+
+	return create(device, info);
+}
+
 obj<Buffer> Buffer::createStaging(obj<Device> device, size_t size)
 {
 	BufferCreateInfo info;

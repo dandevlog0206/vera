@@ -8,9 +8,11 @@ VERA_NAMESPACE_BEGIN
 
 class Device;
 class ResourceLayout;
+class Shader;
 
 enum class PipelineBindPoint VERA_ENUM
 {
+	Unknown,
 	Graphics,
 	Compute
 };
@@ -33,16 +35,26 @@ class PipelineLayout : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(PipelineLayout)
 public:
+	static obj<PipelineLayout> create(obj<Device> device, array_view<const_ref<Shader>> shaders);
 	static obj<PipelineLayout> create(obj<Device> device, const PipelineLayoutCreateInfo& info);
 	~PipelineLayout();
 
-	obj<Device> getDevice();
+	VERA_NODISCARD obj<Device> getDevice();
 
-	uint32_t getResourceLayoutCount() const;
-	const_ref<ResourceLayout> getResourceLayout(uint32_t idx) const;
-	array_view<ref<ResourceLayout>> getResourceLayouts() const;
+	VERA_NODISCARD uint32_t getResourceLayoutCount() const;
+	VERA_NODISCARD const_ref<ResourceLayout> getResourceLayout(uint32_t set) const;
+	VERA_NODISCARD array_view<ref<ResourceLayout>> getResourceLayouts() const;
 
-	array_view<PushConstantRange> getPushConstantRanges() const;
+	VERA_NODISCARD array_view<PushConstantRange> getPushConstantRanges() const;
+
+	VERA_NODISCARD PipelineBindPoint getPipelineBindPoint() const;
+	VERA_NODISCARD ShaderStageFlags getShaderStageFlags() const;
+
+	VERA_NODISCARD bool hasReflection() const VERA_NOEXCEPT;
+
+	VERA_NODISCARD bool isCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
+	VERA_NODISCARD bool isResourceCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
+	VERA_NODISCARD bool isPushConstantCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
 
 	size_t hash() const;
 };

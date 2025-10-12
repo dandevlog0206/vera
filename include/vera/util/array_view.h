@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/assertion.h"
+#include <initializer_list>
 #include <type_traits>
 
 VERA_NAMESPACE_BEGIN
@@ -32,6 +33,10 @@ public:
 	VERA_CONSTEXPR array_view(T(&ptr)[C]) VERA_NOEXCEPT :
 		m_ptr(ptr),
 		m_size(C) {}
+
+	VERA_CONSTEXPR array_view(std::initializer_list<T> ilist) VERA_NOEXCEPT :
+		m_ptr(ilist.begin()),
+		m_size(ilist.size()) {}
 
 	template <std::size_t C>
 	array_view(T(&& ptr)[C]) = delete;
@@ -86,7 +91,7 @@ public:
 		return !m_ptr;
 	}
 
-	VERA_NODISCARD VERA_CONSTEXPR uint32_t size() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_CONSTEXPR size_t size() const VERA_NOEXCEPT
 	{
 		return m_size;
 	}

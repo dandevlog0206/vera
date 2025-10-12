@@ -54,8 +54,8 @@ obj<Sampler> Sampler::create(obj<Device> device, const SamplerCreateInfo& info)
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_sampler(info);
 
-	if (auto it = device_impl.samplerMap.find(hash_value);
-		it != device_impl.samplerMap.end()) {
+	if (auto it = device_impl.samplerCacheMap.find(hash_value);
+		it != device_impl.samplerCacheMap.end()) {
 		return unsafe_obj_cast<Sampler>(it->second);
 	}
 
@@ -98,7 +98,7 @@ obj<Sampler> Sampler::create(obj<Device> device, const SamplerCreateInfo& info)
 	impl.hashValue = hash_value;
 	impl.info      = info;
 
-	device_impl.samplerMap[hash_value] = obj;
+	device_impl.samplerCacheMap.insert({ hash_value, obj });
 	
 	return obj;
 }

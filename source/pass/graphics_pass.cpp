@@ -1,8 +1,8 @@
 #include "../../include/vera/pass/graphics_pass.h"
 
 #include "../../include/vera/core/device.h"
+#include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/texture_view.h"
-#include "../../include/vera/core/shader_reflection.h"
 
 #include <random>
 
@@ -10,21 +10,20 @@ VERA_NAMESPACE_BEGIN
 
 GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& info) :
 	m_device(device),
-	m_parameter(ShaderReflection::create({ info.vertexShader, info.fragmentShader })),
 	m_depth_format(info.depthFormat),
 	m_vertex_count(info.vertexCount),
 	m_index_count(info.indexCount)
 {
 	GraphicsPipelineCreateInfo pipeline_info = {
-		.vertexShader                  = info.vertexShader,
-		.fragmentShader                = info.fragmentShader,
-		.primitiveInfo                 = PrimitiveInfo{
+		.vertexShader                   = info.vertexShader,
+		.fragmentShader                 = info.fragmentShader,
+		.primitiveInfo                  = PrimitiveInfo{
 			.enableRestart = false,
 			.topology      = PrimitiveTopology::TriangleList
 		},
-		.rasterizationInfo             = RasterizationInfo{},
-		.tesselationPatchControlPoints = 0,
-		.colorBlendInfo                = ColorBlendInfo{}
+		.rasterizationInfo              = RasterizationInfo{},
+		.tessellationPatchControlPoints = 0,
+		.colorBlendInfo                 = ColorBlendInfo{}
 	};
 
 	if (!info.vertexInput.vertexInputDescriptor.empty()) {
@@ -50,6 +49,7 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 	}
 
 	m_pipeline = Pipeline::create(device, pipeline_info);
+	m_parameter.init(m_pipeline->getPipelineLayout());
 	m_states.setPipeline(m_pipeline);
 }
 

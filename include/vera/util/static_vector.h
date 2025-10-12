@@ -317,7 +317,9 @@ public:
 
 	iterator erase(const_iterator first, const_iterator last)
 	{
-		VERA_ASSERT_MSG(cbegin() <= first && first < last && last <= cend(), "invalid static_vector position");
+		VERA_ASSERT_MSG(cbegin() <= first && first <= last && last <= cend(), "invalid static_vector position");
+
+		if (first == last) return const_cast<iterator>(first);
 
 		size_t pos1 = std::distance(cbegin(), first);
 		size_t pos2 = std::distance(cbegin(), last);

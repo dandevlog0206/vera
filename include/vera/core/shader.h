@@ -28,7 +28,6 @@ public:
 	~Shader();
 
 	obj<Device> getDevice();
-	obj<ResourceLayout> getResourceLayout(uint32_t set);
 	
 	ShaderStageFlags getShaderStageFlags() const;
 

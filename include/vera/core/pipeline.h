@@ -176,13 +176,15 @@ struct ColorBlendInfo
 struct GraphicsPipelineCreateInfo
 {
 	obj<Shader>                      vertexShader;
+	obj<Shader>                      tessellationControlShader;
+	obj<Shader>                      tessellationEvaluationShader;
 	obj<Shader>                      geometryShader;
 	obj<Shader>                      fragmentShader;
 
 	std::optional<VertexInputInfo>   vertexInputInfo;
 	std::optional<PrimitiveInfo>     primitiveInfo;
 	std::optional<RasterizationInfo> rasterizationInfo;
-	std::optional<uint32_t>          tesselationPatchControlPoints;
+	std::optional<uint32_t>          tessellationPatchControlPoints;
 	std::optional<DepthStencilInfo>  depthStencilInfo;
 	std::optional<ColorBlendInfo>    colorBlendInfo;
 };

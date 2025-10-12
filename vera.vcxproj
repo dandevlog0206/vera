@@ -163,7 +163,6 @@
     <ClInclude Include="include\vera\core\render_frame.h" />
     <ClInclude Include="include\vera\core\resource_binding.h" />
     <ClInclude Include="include\vera\core\resource_binding_pool.h" />
-    <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_storage.h" />
     <ClInclude Include="include\vera\core\intrusive_ptr.h" />
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
@@ -212,10 +211,12 @@
     <ClInclude Include="include\vera\util\result_message.h" />
     <ClInclude Include="include\vera\util\ring_vector.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
+    <ClInclude Include="include\vera\util\string_pool.h" />
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
-    <ClInclude Include="source\core_object\detail\resource_binding_desc.h" />
+    <ClInclude Include="source\impl\detail\resource_binding_desc.h" />
+    <ClInclude Include="source\impl\detail\shader_reflection.h" />
     <ClInclude Include="source\graphics\pixel.h" />
     <ClInclude Include="source\impl\buffer_impl.h" />
     <ClInclude Include="source\impl\device_memory_impl.h" />
@@ -290,6 +291,7 @@
     <ClInclude Include="source\impl\window_impl.h" />
     <ClCompile Include="source\core\command_buffer_sync.cpp" />
     <ClCompile Include="source\core\exception.cpp" />
+    <ClCompile Include="source\impl\detail\shader_reflection.cpp" />
     <ClCompile Include="source\core_object\resource_binding_pool.cpp" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
     <ClCompile Include="source\core_object\framebuffer.cpp" />
@@ -299,7 +301,6 @@
     <ClCompile Include="source\core_object\buffer.cpp" />
     <ClCompile Include="source\colormap.cpp" />
     <ClCompile Include="source\core_object\device_memory.cpp" />
-    <ClInclude Include="source\impl\shader_reflection_impl.h" />
     <ClCompile Include="source\graphics\format_traits.cpp" />
     <ClCompile Include="source\graphics\image_edit.cpp" />
     <ClCompile Include="source\graphics\image.cpp" />
@@ -328,7 +329,6 @@
     <ClCompile Include="source\scene\scene.cpp" />
     <ClCompile Include="source\scene\scene_node.cpp" />
     <ClCompile Include="source\graphics\shader_parameter.cpp" />
-    <ClCompile Include="source\core_object\shader_reflection.cpp" />
     <ClCompile Include="source\core_object\swapchain.cpp" />
     <ClCompile Include="source\core_object\texture.cpp" />
     <ClCompile Include="source\util\arcball.cpp" />
@@ -339,6 +339,9 @@
   <ItemGroup>
     <Text Include="include\vera\scene\sample_scene.txt" />
     <Text Include="vera.natjmc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="vera.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

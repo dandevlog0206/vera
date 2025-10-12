@@ -4,6 +4,7 @@
 #include "../impl/shader_impl.h"
 
 #include "../../include/vera/core/device.h"
+#include "../../include/vera/util/array_view.h"
 #include "../../include/vera/util/static_vector.h"
 
 VERA_NAMESPACE_BEGIN
@@ -54,13 +55,14 @@ vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<ResourceLayout> resour
 
 obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const ResourceLayoutCreateInfo& info)
 {
+	VERA_ASSERT_MSG(device, "device is null");
 	VERA_ASSERT_MSG(!info.bindings.empty(), "resource layout must have at least one binding");
 
 	auto&  device_impl = getImpl(device);
 	hash_t hash_value  = hash_resource_set_layout(info);
 
-	if (auto it = device_impl.resourceLayoutMap.find(hash_value);
-		it != device_impl.resourceLayoutMap.end()) {
+	if (auto it = device_impl.resourceLayoutCacheMap.find(hash_value);
+		it != device_impl.resourceLayoutCacheMap.end()) {
 		return unsafe_obj_cast<ResourceLayout>(it->second);
 	}
 
@@ -104,7 +106,7 @@ obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const ResourceLay
 	impl.descriptorSetLayout = device_impl.device.createDescriptorSetLayout(desc_info);
 	impl.hashValue           = hash_value;
 	
-	device_impl.resourceLayoutMap[hash_value] = obj;
+	device_impl.resourceLayoutCacheMap.insert({ hash_value, obj });
 	
 	return obj;
 }

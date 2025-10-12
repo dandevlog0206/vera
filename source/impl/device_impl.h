@@ -17,11 +17,12 @@ class ResourceLayout;
 
 struct DeviceImpl
 {
-	using pipeline_map_type        = std::unordered_map<hash_t, ref<Pipeline>>;
-	using shader_map_type          = std::unordered_map<hash_t, ref<Shader>>;
-	using sampler_map_type         = std::unordered_map<hash_t, ref<Sampler>>;
-	using pipeline_layout_map_type = std::unordered_map<hash_t, ref<PipelineLayout>>;
-	using resource_layout_map_type = std::unordered_map<hash_t, ref<ResourceLayout>>;
+	using PipelineCacheType        = std::unordered_map<hash_t, ref<Pipeline>>;
+	using ShaderCacheType          = std::unordered_map<hash_t, ref<Shader>>;
+	using SamplerCacheType         = std::unordered_map<hash_t, ref<Sampler>>;
+	using PipelineLayoutCacheType  = std::unordered_map<hash_t, ref<PipelineLayout>>;
+	using PipelineLayoutCacheType2 = std::unordered_map<hash_t, ref<PipelineLayout>>;
+	using ResourceLayoutCacheType  = std::unordered_map<hash_t, ref<ResourceLayout>>;
 
 	using DeviceProperties             = vk::PhysicalDeviceProperties;
 	using DeviceMemoryProperties       = vk::PhysicalDeviceMemoryProperties;
@@ -50,13 +51,15 @@ struct DeviceImpl
 	std::string                  pipelineCacheFilePath;
 	DeviceMemoryTypes            memoryTypes;
 
-	pipeline_map_type            pipelineMap;
-	shader_map_type              shaderMap;
-	sampler_map_type             samplerMap;
-	pipeline_layout_map_type     pipelineLayoutMap;
-	resource_layout_map_type     resourceLayoutMap;
+	PipelineCacheType            pipelineCacheMap;
+	ShaderCacheType              shaderCacheMap;
+	SamplerCacheType             samplerCacheMap;
+	PipelineLayoutCacheType      pipelineLayoutCacheMap;         // hash with layout itself
+	PipelineLayoutCacheType2     pipelineLayoutCacheMapByShader; // hash with shaders
+	ResourceLayoutCacheType      resourceLayoutCacheMap;
 
 	obj<Sampler>                 defaultSampler;
+	obj<Texture>                 defaultTexture;
 };
 
 static uint32_t find_memory_type_idx(const DeviceImpl& impl, MemoryPropertyFlags flags, std::bitset<32> type_mask)

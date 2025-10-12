@@ -1,8 +1,9 @@
 #pragma once
 
 #include "shader_impl.h"
-
+#include "detail/shader_reflection.h"
 #include "../../include/vera/core/pipeline_layout.h"
+#include "../../../include/vera/util/string_pool.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -12,13 +13,17 @@ struct PipelineLayoutImpl
 
 	vk::PipelineLayout               pipelineLayout;
 
-	size_t                           hashValue;
-	std::vector<obj<ResourceLayout>> resourceLayout;
+	ShaderReflection                 reflection;
+	std::vector<obj<ResourceLayout>> resourceLayouts;
 	std::vector<PushConstantRange>   pushConstantRanges;
 	PipelineBindPoint                pipelineBindPoint;
+	ShaderStageFlags                 stageFlags;
+	string_pool                      namePool;
+	hash_t                           hashValue;
+	hash_t                           shaderHashValue;
 };
 
-static vk::PushConstantRange get_push_constant_range(const PushConstantRange& range)
+static vk::PushConstantRange get_vk_push_constant_range(const PushConstantRange& range)
 {
 	vk::PushConstantRange result;
 	result.offset     = range.offset;

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../core/coredefs.h"
+#include <type_traits>
+#include <bit>
 
 #define VERA_ENUM_FLAGS(bit_type, flag_type) ;                                           \
 	typedef Flags<bit_type> flag_type;                                                   \
@@ -45,6 +47,11 @@ public:
 	VERA_CONSTEXPR bool has(const Flags<BitType>& rhs) const VERA_NOEXCEPT
 	{
 		return (m_mask & rhs.m_mask) == rhs.m_mask;
+	}
+
+	VERA_CONSTEXPR VERA_NODISCARD uint32_t count() const VERA_NOEXCEPT
+	{
+		return static_cast<uint32_t>(std::popcount(m_mask));
 	}
 
 	VERA_CONSTEXPR bool operator<(const Flags<BitType>& rhs) const VERA_NOEXCEPT

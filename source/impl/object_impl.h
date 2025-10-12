@@ -18,7 +18,6 @@ class Context;
 		
 		// Shader
 		class Shader;
-		class ShaderReflection;
 		
 		// Resource Management
 		class ResourceLayout;

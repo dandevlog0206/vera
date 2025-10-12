@@ -59,6 +59,7 @@
 #define VERA_NOMOVE(cls) cls(cls&&) = delete;
 
 #define VERA_SPAN(cont) cont.begin(), cont.end()
+#define VERA_SPAN_ARRAY(ptr, size) (ptr), (ptr + size)
 
 #define VERA_MAKE_VERSION(major, minor, patch) \
     ((((uint32_t)(major)) << 22U) | (((uint32_t)(minor)) << 12U) | ((uint32_t)(patch)))

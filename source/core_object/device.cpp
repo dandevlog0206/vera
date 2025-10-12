@@ -8,6 +8,10 @@
 #include "../../include/vera/core/pipeline.h"
 #include "../../include/vera/core/shader.h"
 #include "../../include/vera/core/sampler.h"
+#include "../../include/vera/core/buffer.h"
+#include "../../include/vera/core/buffer_view.h"
+#include "../../include/vera/core/texture.h"
+#include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/resource_layout.h"
 #include <fstream>
@@ -241,6 +245,31 @@ Device::~Device()
 obj<Context> Device::getContext()
 {
 	return getImpl(this).context;
+}
+
+obj<Sampler> Device::getDefaultSampler() VERA_NOEXCEPT
+{
+	return getImpl(this).defaultSampler;
+}
+
+obj<Texture> Device::getDefaultTexture() VERA_NOEXCEPT
+{
+	// TODO: add default texture
+	return nullptr;
+}
+
+obj<TextureView> Device::getDefaultTextureView() VERA_NOEXCEPT
+{
+	return nullptr;
+}
+
+obj<Buffer> Device::getDefaultBuffer() VERA_NOEXCEPT
+{
+	return nullptr;
+}
+obj<BufferView> Device::getDefaultBufferView() VERA_NOEXCEPT
+{
+	return nullptr;
 }
 
 const std::vector<DeviceMemoryType>& Device::getMemoryTypes() const
