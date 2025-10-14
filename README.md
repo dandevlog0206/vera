@@ -63,8 +63,6 @@ int main()
 	while (!window.needClose()) {
 		window.handleEvent();
 
-		if (swapchain->isOccluded()) continue;
-		
 		pass.execute(ctx, swapchain->acquireNextImage());
 
 		ctx->submit();

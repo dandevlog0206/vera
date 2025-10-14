@@ -55,7 +55,7 @@ ShaderStorageImpl
 	¦¢   ¦¢   ¦¦ frames : ring_vector<ShaderStorageData*> // this is example of uniform buffer. buffer datas per frame in flight.
 	¦¢   ¦¢       ¦§ ShaderStorageBlockData
 	¦¢   ¦¢       ¦§ ShaderStorageBlockData
-	¦¢   ¦¢       ¦§ ShaderStorageBlockData
+	¦¢   ¦¢       ¦¦ ShaderStorageBlockData
 	¦¢   ¦¢
 	¦¢   ¦§ ShaderStorageResourceData
 	¦¢   ¦¢   ¦¦ frames : ring_vector<ShaderStorageData*>  // this is example of combined image sampler.
@@ -86,7 +86,6 @@ ShaderStorageImpl
 		¦¦ obj<ResourceBindingPool>
 
 
-
 */
 
 class ShaderStorageData
@@ -99,11 +98,6 @@ class ShaderStorageBlockData : public ShaderStorageData
 {
 public:
 	std::vector<uint8_t> block;
-};
-
-class ShaderStoragePushConstantData : public ShaderStorageBlockData
-{
-
 };
 
 class ShaderStorageSamplerData : public ShaderStorageData
@@ -123,6 +117,7 @@ class ShaderStorageTextureData : public ShaderStorageData
 {
 public:
 	obj<TextureView> textureView;
+	TextureLayout    textureLayout;
 };
 
 class ShaderStorageTexelBufferData : public ShaderStorageData
@@ -145,16 +140,20 @@ public:
 	obj<Buffer> buffer;
 };
 
+class ShaderStoragePushConstantData : public ShaderStorageBlockData
+{
+
+};
+
 class ShaderStorageRootData : public ShaderStorageData
 {
-public:
-	virtual ~ShaderStorageRootData() {};
 };
 
 class ShaderStorageResourceData : public ShaderStorageRootData
 {
 public:
 	ring_vector<ShaderStorageData*> frames;
+	uint32_t                        resourceID;
 };
 
 class ShaderStorageResourceArrayData : public ShaderStorageRootData
@@ -163,35 +162,52 @@ public:
 	std::vector<ShaderStorageResourceData> elements;
 };
 
-struct ShaderStorageResource
+struct ShaderStorageBinding
 {
 	obj<ResourceBinding> resourceBinding;
-	uint32_t             poolIndex;
+	uint32_t             set;
+	uint64_t             lastUpdateFrame; // frameID when last updated
+};
+
+struct ShaderStorageResource
+{
+	ref<ResourceBinding> resourceBinding;
+	uint32_t             set;
+	uint32_t             binding;
+	int32_t              arrayIndex; // -1 if not array
+	uint32_t             resourceID;
+	uint64_t             lastUpdateFrame; // frameID when last updated
 };
 
 struct ShaderStorageFrame
 {
-	using StorageResources = std::vector<ShaderStorageResource*>;
+	using StorageResources   = std::vector<ShaderStorageResource>;
+	using StorageSetBindings = std::vector<ShaderStorageBinding>;
 
-	StorageResources  storageResources;
-	uint64_t          frameID;
-	CommandBufferSync commandSync;
+	StorageResources   storageResources;
+	StorageSetBindings storageSetBindings;
+	uint64_t           frameID;
+	CommandBufferSync  commandSync;
+	uint64_t           lastUpdateFrame;
 };
 
 struct ShaderStorageImpl
 {
-	using ShaderStorageFrames  = std::vector<ShaderStorageFrame>;
-	using ShaderStorageDatas   = std::vector<ShaderStorageRootData*>;
-	using ResourceBindingPools = std::vector<obj<ResourceBindingPool>>;
+	using ShaderStorageFrames = std::vector<ShaderStorageFrame>;
+	using ShaderStorageDatas  = std::vector<ShaderStorageRootData*>;
+	using BindingSetPool      = std::vector<std::vector<obj<ResourceBinding>>>;
 
-	obj<Device>          device;
-	obj<PipelineLayout>  pipelineLayout;
+	obj<Device>              device;
+	obj<PipelineLayout>      pipelineLayout;
+	obj<ResourceBindingPool> bindingPool;
 
-	ShaderStorageFrames  storageFrames;
-	ShaderStorageDatas   storageDatas;
-	ResourceBindingPools resourcePools;
-	uint32_t             frameIndex;
-	uint64_t             frameId;
+	ShaderStorageFrames      storageFrames;
+	ShaderStorageDatas       storageDatas;
+	BindingSetPool           bindingSetPool;
+	uint32_t                 frameIndex;
+	uint64_t                 completeFrameID;
+	uint64_t                 confirmedFrameID; // you can write on this frame
+	uint64_t                 frameID;
 };
 
 VERA_NAMESPACE_END

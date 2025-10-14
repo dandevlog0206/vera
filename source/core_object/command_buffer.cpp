@@ -372,13 +372,12 @@ void CommandBuffer::bindResource(
 		dynamic_offsets.data());
 }
 
-void CommandBuffer::bindShaderParameter(const_ref<PipelineLayout> pipeline_layout, const ShaderParameter& shader_parameter)
+void CommandBuffer::bindShaderParameter(const ShaderParameter& shader_param)
 {
-	VERA_ASSERT_MSG(pipeline_layout, "pipeline layout is null");
+	auto& impl         = getImpl(this);
+	auto& storage_impl = getImpl(shader_param.m_storage);
 
-	if (shader_parameter.empty()) return;
-
-	VERA_ASSERT_MSG(false, "not implemented");
+	 
 }
 
 void CommandBuffer::beginRendering(const RenderingInfo& info)

@@ -9,10 +9,10 @@ VERA_NAMESPACE_BEGIN
 class Device;
 class ShaderStorage;
 class PipelineLayout;
-class CommandBuffer;
 
 class ShaderParameter
 {
+	friend class CommandBuffer;
 public:
 	ShaderParameter();
 	ShaderParameter(obj<PipelineLayout> layout);

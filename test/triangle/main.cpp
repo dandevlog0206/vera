@@ -4,17 +4,6 @@
 
 using namespace std;
 
-static float elapsed_s()
-{
-	using namespace std::chrono;
-	
-	using clock_t = high_resolution_clock;
-
-	static auto s_clock_begin = clock_t::now();
-
-	return duration_cast<microseconds>(clock_t::now() - s_clock_begin).count() / 1e6f;
-}
-
 class MyApp
 {
 public:
@@ -77,9 +66,7 @@ public:
 
 	void drawFrame()
 	{
-		if (m_swapchain->isOccluded()) return;
-
-		float time   = elapsed_s();
+		float time   = m_timer.elapsed();
 		auto& params = m_pass->getShaderParameter();
 		params["pc"]["scale"]     = std::abs(sinf(time) + 2) / 2;
 		params["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
@@ -100,6 +87,7 @@ private:
 	std::unique_ptr<vr::GraphicsPass> m_pass;
 
 	vr::os::Window                    m_window;
+	vr::Timer                         m_timer;
 
 	bool                              m_exit;
 };

@@ -334,10 +334,13 @@ static ReflectionPrimitiveType reflect_primitive_type(const SpvReflectTypeDescri
 	throw Exception("invalid type flags");
 }
 
-static ReflectionBlockDesc* reflect_block_variable(ShaderImpl& impl, const SpvReflectBlockVariable& block, uint32_t array_dim = 0)
-{
+static ReflectionBlockDesc* reflect_block_variable(
+	ShaderImpl&                    impl,
+	const SpvReflectBlockVariable& block,
+	uint32_t                       array_dim = 0
+) {
 	if (block.array.dims_count != array_dim) {
-		auto* result = new ReflectionArrayDesc{};
+		auto* result = new ReflectionArrayDesc;
 		result->type          = ReflectionType::Array;
 		result->offset        = block.offset;
 		result->stride        = get_array_stride(block.array, array_dim);
@@ -348,7 +351,7 @@ static ReflectionBlockDesc* reflect_block_variable(ShaderImpl& impl, const SpvRe
 	}
 
 	if (block.member_count) {
-		auto* result = new ReflectionStructDesc{};
+		auto* result = new ReflectionStructDesc;
 		result->type         = ReflectionType::Struct;
 		result->offset       = block.offset;
 		result->memberCount  = block.member_count;
@@ -370,7 +373,7 @@ static ReflectionBlockDesc* reflect_block_variable(ShaderImpl& impl, const SpvRe
 		return result;
 	}
 
-	auto* result = new ReflectionPrimitiveDesc{};
+	auto* result = new ReflectionPrimitiveDesc;
 	result->type          = ReflectionType::Primitive;
 	result->offset        = block.offset;
 	result->primitiveType = reflect_primitive_type(*block.type_description);
@@ -388,7 +391,7 @@ static ReflectionRootMemberDesc* reflect_resource(
 		throw Exception("dimension of resource array must be less than 2");
 
 	if (binding.array.dims_count != array_dim) {
-		auto* result  = new ReflectionResourceArrayDesc{};
+		auto* result  = new ReflectionResourceArrayDesc;
 		auto* element = reflect_resource(impl, binding, reflection_idx, array_dim + 1);
 
 		result->type            = ReflectionType::ResourceArray;
@@ -405,7 +408,7 @@ static ReflectionRootMemberDesc* reflect_resource(
 	}
 
 	if (binding.block.name) {
-		auto* result = new ReflectionResourceBlockDesc{};
+		auto* result = new ReflectionResourceBlockDesc;
 
 		result->type            = ReflectionType::ResourceBlock;
 		result->stageFlags      = impl.stageFlags;
@@ -437,7 +440,7 @@ static ReflectionRootMemberDesc* reflect_resource(
 		return result;
 	}
 
-	auto* result = new ReflectionResourceDesc{};
+	auto* result = new ReflectionResourceDesc;
 
 	result->type            = ReflectionType::Resource;
 	result->stageFlags      = impl.stageFlags;

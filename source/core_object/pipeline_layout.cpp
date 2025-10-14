@@ -677,7 +677,7 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 		// TODO: optimize, skip checking if already pushed
 		for (size_t j = i + 1; j < shader_count; ++j) {
 			const auto& cmp_reflection = *shader_reflections[j];
-			const auto* cmp_desc       = find_pc_reflection(target_reflection);
+			const auto* cmp_desc       = find_pc_reflection(cmp_reflection);
 
 			if (cmp_desc != nullptr && check_compatible_reflection(target_desc, cmp_desc)) {
 				const char* name = find_pc_name(cmp_reflection);

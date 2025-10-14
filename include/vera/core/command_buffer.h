@@ -139,9 +139,7 @@ public:
 		ref<ResourceBinding>      binding,
 		array_view<uint32_t>      dynamic_offsets);
 
-	void bindShaderParameter(
-		const_ref<PipelineLayout> pipeline_layout,
-		const ShaderParameter&    shader_parameter);
+	void bindShaderParameter(const ShaderParameter& shader_param);
 
 	void beginRendering(const RenderingInfo& info);
 
