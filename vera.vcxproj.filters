@@ -135,7 +135,7 @@
     <ClInclude Include="include\vera\util\static_vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\resource_layout.h">
+    <ClInclude Include="include\vera\core\descriptor_set_layout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\sampler.h">
@@ -183,7 +183,7 @@
     <ClInclude Include="source\impl\shader_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\impl\resource_layout_impl.h">
+    <ClInclude Include="source\impl\descriptor_set_layout_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\impl\pipeline_layout_impl.h">
@@ -375,13 +375,13 @@
     <ClInclude Include="include\vera\scene\attribute.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\resource_binding_pool.h">
+    <ClInclude Include="include\vera\core\descriptor_pool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\impl\resource_binding_pool_impl.h">
+    <ClInclude Include="source\impl\descriptor_pool_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\impl\resource_binding_impl.h">
+    <ClInclude Include="source\impl\descriptor_set_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\impl\detail\resource_binding_desc.h">
@@ -396,7 +396,7 @@
     <ClInclude Include="include\vera\util\index_map.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\resource_binding.h">
+    <ClInclude Include="include\vera\core\descriptor_set.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\render_frame.h">
@@ -409,6 +409,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\string_pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\range.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\ranged_set.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\plane.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\frustum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -452,7 +464,7 @@
     <ClCompile Include="source\core_object\shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core_object\resource_layout.cpp">
+    <ClCompile Include="source\core_object\descriptor_set_layout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\sampler.cpp">
@@ -530,7 +542,7 @@
     <ClCompile Include="source\scene\mesh_attribute.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core_object\resource_binding_pool.cpp">
+    <ClCompile Include="source\core_object\descriptor_pool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core\command_buffer_sync.cpp">
@@ -539,7 +551,7 @@
     <ClCompile Include="source\core\exception.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core_object\resource_binding.cpp">
+    <ClCompile Include="source\core_object\decriptor_set.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\impl\detail\shader_reflection.cpp">

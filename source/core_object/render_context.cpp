@@ -210,7 +210,7 @@ void RenderContext::draw(
 	}
 
 	cmd->bindGraphicsState(states);
-	cmd->bindShaderParameter(states.getPipeline()->getPipelineLayout(), params);
+	cmd->bindShaderParameter(params);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }
@@ -256,7 +256,7 @@ void RenderContext::drawIndexed(
 	}
 
 	cmd->bindGraphicsState(states);
-	cmd->bindShaderParameter(states.getPipeline()->getPipelineLayout(), params);
+	cmd->bindShaderParameter(params);
 
 	cmd->drawIndexed(idx_count, 1, idx_off, vtx_off, 0);
 }

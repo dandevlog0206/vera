@@ -4,43 +4,43 @@
 
 VERA_NAMESPACE_BEGIN
 
-enum class ResourceType VERA_ENUM;
+enum class DescriptorType VERA_ENUM;
 
-struct ResourceBindingNode;
-struct ResourceBindingDesc;
+struct DescriptorBindingNode;
+struct DescriptorBindingDesc;
 
-typedef ResourceBindingNode* ResourceBindingNodePtr;
+typedef DescriptorBindingNode* DescriptorBindingNodePtr;
 
-struct ResourceBindingLink
+struct DescriptorBindingLink
 {
-	ResourceBindingNodePtr next;
+	DescriptorBindingNodePtr next;
 };
 
-struct ResourceBindingNode : ResourceBindingLink
+struct DescriptorBindingNode : DescriptorBindingLink
 {
-	ResourceBindingNodePtr prev;
-	ResourceBindingDesc*   descPtr;
+	DescriptorBindingNodePtr prev;
+	DescriptorBindingDesc*   descPtr;
 };
 
-struct ResourceBindingDesc
+struct DescriptorBindingDesc
 {
-	ref<ResourcePool>   resourcePool;
+	ref<DescriptorPool>      descriptorPool;
 
-	ref<ResourceLayout> resourceLayout;
-	ref<Sampler>        sampler;
-	ref<TextureView>    textureView;
-	ref<Buffer>         buffer;
+	ref<DescriptorSetLayout> descriptorSetLayout;
+	ref<Sampler>             sampler;
+	ref<TextureView>         textureView;
+	ref<Buffer>              buffer;
 
-	vk::DescriptorSet   descriptorSet;
+	vk::DescriptorSet        descriptorSet;
 
-	size_t              hashValue;
-	ResourceType        type;
-	uint32_t            binding;
-	uint32_t            arrayElement;
-	bool                needUpdate;
-	bool                needDestroy;
+	size_t                   hashValue;
+	DescriptorType           type;
+	uint32_t                 binding;
+	uint32_t                 arrayElement;
+	bool                     needUpdate;
+	bool                     needDestroy;
 
-	ResourceBindingLink rootLink;
+	DescriptorBindingLink    rootLink;
 };
 
 VERA_NAMESPACE_END

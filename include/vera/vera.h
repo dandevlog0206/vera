@@ -4,9 +4,13 @@
 #include "asset/asset_loader.h"
 
 // core
+#include "core/command_buffer.h"
 #include "core/context.h"
 #include "core/core_object.h"
 #include "core/coredefs.h"
+#include "core/descriptor_pool.h"
+#include "core/descriptor_set.h"
+#include "core/descriptor_set_layout.h"
 #include "core/device.h"
 #include "core/device_memory.h"
 #include "core/exception.h"
@@ -14,9 +18,7 @@
 #include "core/logger.h"
 #include "core/pipeline.h"
 #include "core/pipeline_layout.h"
-#include "core/command_buffer.h"
 #include "core/render_context.h"
-#include "core/resource_layout.h"
 #include "core/sampler.h"
 #include "core/semaphore.h"
 #include "core/shader.h"

@@ -32,17 +32,6 @@ static vr::float4 get_random_color()
 	return { color_dist(rnd), color_dist(rnd), color_dist(rnd), 1.f };
 }
 
-static float elapsed_s()
-{
-	using namespace std::chrono;
-
-	using clock_t = high_resolution_clock;
-
-	static auto s_clock_begin = clock_t::now();
-
-	return duration_cast<microseconds>(clock_t::now() - s_clock_begin).count() / 1e6f;
-}
-
 class MyApp
 {
 public:
@@ -178,7 +167,7 @@ public:
 		if (m_swapchain->isOccluded()) return;
 
 		auto  image = m_swapchain->acquireNextImage();
-		float time  = elapsed_s();
+		float time  = m_timer.elapsed();
 
 		auto mat = vr::Transform2D().translate(1080 / 2, 720 / 2).rotate(time).translate(-250, -250).getMatrix();
 		//auto mat = vr::Transform2D().translate(sinf(time), sinf(time)).getMatrix();
@@ -207,6 +196,7 @@ private:
 	std::unique_ptr<vr::GraphicsPass> m_pass;
 
 	vr::os::Window                    m_window;
+	vr::Timer                         m_timer;
 
 	bool                              m_exit;
 };

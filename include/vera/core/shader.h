@@ -7,7 +7,6 @@
 VERA_NAMESPACE_BEGIN
 
 class Device;
-class ResourceLayout;
 
 enum class ShaderStageFlagBits VERA_FLAG_BITS
 {

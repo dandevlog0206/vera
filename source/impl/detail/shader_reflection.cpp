@@ -58,6 +58,7 @@ void destroy_shader_reflection(ShaderReflection& reflection)
 		destroy_impl(reflection.reflections[i]);
 	delete[] reflection.reflections;
 	delete[] reflection.nameMaps;
+	delete[] reflection.setRanges;
 }
 
 VERA_NAMESPACE_END

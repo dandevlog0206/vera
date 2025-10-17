@@ -12,10 +12,11 @@ enum class TextureLayout VERA_ENUM;
 class Device;
 class PipelineLayout;
 class Sampler;
+class Texture;
 class TextureView;
 class Buffer;
 class BufferView;
-class ShaderStorageData;
+class ShaderStorageResource;
 struct ReflectionDesc;
 
 class ShaderVariable
@@ -23,10 +24,10 @@ class ShaderVariable
 	friend class ShaderStorage;
 	ShaderVariable() = default;
 	ShaderVariable(
-		ref<ShaderStorage> storage,
-		ShaderStorageData* data,
-		ReflectionDesc*    desc,
-		uint32_t           offset);
+		ref<ShaderStorage>     storage,
+		ShaderStorageResource* resource,
+		ReflectionDesc*        desc,
+		uint32_t               offset);
 public:
 	VERA_NODISCARD ShaderVariable operator[](std::string_view name) VERA_NOEXCEPT;
 	VERA_NODISCARD ShaderVariable operator[](uint32_t idx) VERA_NOEXCEPT;
@@ -36,21 +37,25 @@ public:
 
 	template <class T>
 	void operator=(const T& value);
-	void operator=(obj<Sampler> obj);
-	void operator=(obj<TextureView> obj);
-	void operator=(obj<BufferView> obj);
-	void operator=(obj<Buffer> obj);
+	void operator=(obj<Sampler> sampler);
+	void operator=(obj<Texture> texture);
+	void operator=(obj<TextureView> texture_view);
+	void operator=(obj<BufferView> buffer_view);
+	void operator=(obj<Buffer> buffer);
 
 	void setSampler(obj<Sampler> sampler);
+	void setTextureView(obj<Texture> texture);
+	void setTextureView(obj<Texture> texture, TextureLayout texture_layout);
 	void setTextureView(obj<TextureView> texture_view);
+	void setTextureView(obj<TextureView> texture_view, TextureLayout texture_layout);
 	void setBufferView(obj<BufferView> buffer_view);
 	void setBuffer(obj<Buffer> buffer);
 
 private:
-	ref<ShaderStorage> m_storage;
-	ShaderStorageData* m_data;
-	ReflectionDesc*    m_desc;
-	uint32_t           m_offset;
+	ref<ShaderStorage>     m_storage;
+	ShaderStorageResource* m_resource;
+	ReflectionDesc*        m_desc;
+	uint32_t               m_offset;
 };
 
 class ShaderStorage : protected CoreObject
@@ -66,14 +71,45 @@ public:
 	VERA_NODISCARD ShaderVariable accessVariable(std::string_view name);
 
 	void setSampler(
+		uint32_t     set,
+		uint32_t     binding,
+		uint32_t     array_idx,
+		obj<Sampler> sampler);
+
+	void setTextureView(
+		uint32_t         set,
+		uint32_t         binding,
+		uint32_t         array_idx,
+		obj<TextureView> texture_view,
+		TextureLayout    texture_layout);
+
+	void setBufferView(
+		uint32_t        set,
+		uint32_t        binding,
+		uint32_t        array_idx,
+		obj<BufferView> buffer_view);
+
+	void setBuffer(
+		uint32_t    set,
+		uint32_t    binding,
+		uint32_t    array_idx,
+		obj<Buffer> buffer,
+		size_t      offset = 0,
+		size_t      range  = 0);
+
+	void setSampler(
 		const ShaderVariable& variable,
 		obj<Sampler>          sampler);
 
 	void setTextureView(
 		const ShaderVariable& variable,
+		obj<TextureView>      texture_view);
+
+	void setTextureView(
+		const ShaderVariable& variable,
 		obj<TextureView>      texture_view,
-		TextureLayout         texture_layout); // how to deal with invalidation?
-	
+		TextureLayout         texture_layout);
+
 	void setBufferView(
 		const ShaderVariable& variable,
 		obj<BufferView>       buffer_view);
@@ -82,7 +118,7 @@ public:
 		const ShaderVariable& variable,
 		obj<Buffer>           buffer,
 		size_t                offset = 0,
-		size_t                range  = 0);
+		size_t                range  = UINT64_MAX);
 
 	// primitive types
 	void setPrimitive(const ShaderVariable& variable, const bool value);

@@ -1,11 +1,11 @@
-#include "../../include/vera/core/resource_binding_pool.h"
-#include "../impl/resource_binding_pool_impl.h"
-#include "../impl/resource_binding_impl.h"
-#include "../impl/resource_layout_impl.h"
+#include "../../include/vera/core/descriptor_pool.h"
+#include "../impl/descriptor_pool_impl.h"
+#include "../impl/descriptor_set_impl.h"
+#include "../impl/descriptor_set_layout_impl.h"
 
 #include "../../include/vera/core/device.h"
-#include "../../include/vera/core/resource_layout.h"
-#include "../../include/vera/core/resource_binding.h"
+#include "../../include/vera/core/descriptor_set_layout.h"
+#include "../../include/vera/core/descriptor_set.h"
 #include "../../include/vera/core/sampler.h"
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/core/buffer.h"
@@ -13,7 +13,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static hash_t hash_request(const_ref<ResourceLayout> layout, array_view<ResourceBindingInfo> binding_infos)
+static hash_t hash_request(const_ref<DescriptorSetLayout> layout, array_view<DescriptorBindingInfo> binding_infos)
 {
 	hash_t hash_value = 0;
 
@@ -27,41 +27,41 @@ static hash_t hash_request(const_ref<ResourceLayout> layout, array_view<Resource
 }
 
 static void fill_binding_states(
-	ResourceBindingImpl&      binding_impl,
-	const ResourceLayoutImpl& layout_impl,
-	uint32_t                  variable_binding_count
+	DescriptorSetImpl&             desc_set_impl,
+	const DescriptorSetLayoutImpl& layout_impl,
+	uint32_t                       variable_binding_count
 ) {
-	binding_impl.bindingStates.resize(layout_impl.bindings.size());
+	desc_set_impl.bindingStates.resize(layout_impl.bindings.size());
 
 	for (const auto& layout_binding : layout_impl.bindings) {
-		auto& array_desc = binding_impl.bindingStates[layout_binding.binding];
+		auto& array_desc = desc_set_impl.bindingStates[layout_binding.binding];
 
-		if (layout_binding.flags.has(ResourceLayoutBindingFlagBits::VariableBindingCount)) {
+		if (layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount)) {
 			array_desc.bindingDescs.resize(variable_binding_count);
 			break;
 		}
 
-		array_desc.bindingDescs.resize(layout_binding.resourceCount);
+		array_desc.bindingDescs.resize(layout_binding.descriptorCount);
 	}
 }
 
 static void fill_binding_states_from_infos(
-	ResourceBindingImpl&            binding_impl,
-	const ResourceLayoutImpl&       layout_impl,
-	array_view<ResourceBindingInfo> binding_infos
+	DescriptorSetImpl&                desc_set_impl,
+	const DescriptorSetLayoutImpl&    layout_impl,
+	array_view<DescriptorBindingInfo> binding_infos
 ) {
 	hash_t hash_value = 0;
 	size_t n          = 0;
 
-	binding_impl.bindingStates.resize(layout_impl.bindings.size());
+	desc_set_impl.bindingStates.resize(layout_impl.bindings.size());
 
 	for (const auto& layout_binding : layout_impl.bindings) {
-		auto& array_desc = binding_impl.bindingStates[layout_binding.binding];
-		
-		if (layout_binding.flags.has(ResourceLayoutBindingFlagBits::VariableBindingCount)) {
-			binding_impl.arrayElementCount = static_cast<uint32_t>(binding_infos.size() - n);
+		auto& array_desc = desc_set_impl.bindingStates[layout_binding.binding];
 
-			array_desc.bindingDescs.resize(binding_impl.arrayElementCount);
+		if (layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount)) {
+			desc_set_impl.arrayElementCount = static_cast<uint32_t>(binding_infos.size() - n);
+
+			array_desc.bindingDescs.resize(desc_set_impl.arrayElementCount);
 
 			for (auto& desc : array_desc.bindingDescs) {
 				desc.bindingInfo = binding_infos[n++];
@@ -71,7 +71,7 @@ static void fill_binding_states_from_infos(
 			break;
 		}
 
-		array_desc.bindingDescs.resize(layout_binding.resourceCount);
+		array_desc.bindingDescs.resize(layout_binding.descriptorCount);
 		for (auto& desc : array_desc.bindingDescs) {
 			desc.bindingInfo = binding_infos[n++];
 			desc.hashValue   = desc.bindingInfo.hash();
@@ -79,7 +79,7 @@ static void fill_binding_states_from_infos(
 	}
 }
 
-static bool check_layout_compatible(const_ref<ResourceLayout> layout, array_view<ResourceBindingInfo> binding_infos)
+static bool check_layout_compatible(const_ref<DescriptorSetLayout> layout, array_view<DescriptorBindingInfo> binding_infos)
 {
 	auto& layout_impl = CoreObject::getImpl(layout);
 
@@ -90,7 +90,7 @@ static bool check_layout_compatible(const_ref<ResourceLayout> layout, array_view
 	for (; binding_id < binding_count - 1; ++binding_id) {
 		const auto& layout_binding = layout_impl.bindings[binding_id];
 
-		for (size_t i = 0; i < layout_binding.resourceCount; ++i) {
+		for (size_t i = 0; i < layout_binding.descriptorCount; ++i) {
 			if (binding_infos.size() <= n)
 				return false;
 			
@@ -98,7 +98,7 @@ static bool check_layout_compatible(const_ref<ResourceLayout> layout, array_view
 
 			if (binding_info.dstBinding != binding_id)
 				return false;
-			if (binding_info.resourceType != layout_binding.resourceType)
+			if (binding_info.descriptorType != layout_binding.descriptorType)
 				return false;
 		}
 	}
@@ -111,20 +111,20 @@ static bool check_layout_compatible(const_ref<ResourceLayout> layout, array_view
 
 		if (binding_info.dstBinding != binding_id)
 			return false;
-		if (binding_info.resourceType != last_layout_binding.resourceType)
+		if (binding_info.descriptorType != last_layout_binding.descriptorType)
 			return false;
 	}
 
-	if (last_layout_binding.resourceCount != last_binding_count)
-		if (!last_layout_binding.flags.has(ResourceLayoutBindingFlagBits::VariableBindingCount))
+	if (last_layout_binding.descriptorCount != last_binding_count)
+		if (!last_layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount))
 			return false;
 
 	return true;
 }
 
-obj<ResourceBindingPool> ResourceBindingPool::create(obj<Device> device)
+obj<DescriptorPool> DescriptorPool::create(obj<Device> device)
 {
-	auto  obj       = createNewCoreObject<ResourceBindingPool>();
+	auto  obj       = createNewCoreObject<DescriptorPool>();
 	auto& impl      = getImpl(obj);
 	auto  vk_device = get_vk_device(device);
 
@@ -153,17 +153,17 @@ obj<ResourceBindingPool> ResourceBindingPool::create(obj<Device> device)
 	return obj;
 }
 
-ResourceBindingPool::~ResourceBindingPool()
+DescriptorPool::~DescriptorPool()
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	for (auto& binding : impl.bindingMap) {
+	for (auto& binding : impl.descriptorSetMap) {
 		auto& binding_impl = getImpl(binding.second);
 
-		binding_impl.resourceBindingPool = nullptr;
+		binding_impl.descriptorPool      = nullptr;
 		binding_impl.device              = nullptr;
-		binding_impl.resourceLayout      = nullptr;
+		binding_impl.descriptorSetLayout = nullptr;
 		binding_impl.descriptorSet       = nullptr;
 		binding_impl.hashValue           = 0;
 		binding_impl.bindingStates.clear();
@@ -174,18 +174,18 @@ ResourceBindingPool::~ResourceBindingPool()
 	destroyObjectImpl(this);
 }
 
-obj<Device> ResourceBindingPool::getDevice() VERA_NOEXCEPT
+obj<Device> DescriptorPool::getDevice() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 	return impl.device;
 }
 
-obj<ResourceBinding> ResourceBindingPool::allocateBinding(
-	const_ref<ResourceLayout> layout
+obj<DescriptorSet> DescriptorPool::allocateDescriptorSet(
+	const_ref<DescriptorSetLayout> layout
 ) {
 	VERA_ASSERT(layout, "empty resource layout");
 
-	auto  obj          = createNewCoreObject<ResourceBinding>();
+	auto  obj          = createNewCoreObject<DescriptorSet>();
 	auto& impl         = getImpl(this);
 	auto& layout_impl  = getImpl(layout);
 	auto& binding_impl = getImpl(obj);
@@ -200,11 +200,11 @@ obj<ResourceBinding> ResourceBindingPool::allocateBinding(
 		throw Exception("failed to allocate descriptor set");
 
 	binding_impl.device              = impl.device;
-	binding_impl.resourceBindingPool = this;
-	binding_impl.resourceLayout      = layout;
+	binding_impl.descriptorPool      = this;
+	binding_impl.descriptorSetLayout = layout;
 	binding_impl.hashValue           = 0;
 	binding_impl.bindingStates       = {};
-	binding_impl.arrayElementCount   = layout_impl.bindings.back().resourceCount;
+	binding_impl.arrayElementCount   = layout_impl.bindings.back().descriptorCount;
 	binding_impl.isCached            = false;
 
 	fill_binding_states(binding_impl, layout_impl, binding_impl.arrayElementCount);
@@ -213,30 +213,33 @@ obj<ResourceBinding> ResourceBindingPool::allocateBinding(
 	hash_combine(binding_impl.hashValue, obj.get());
 
 	// TODO: check hash collison
-	impl.bindingMap[binding_impl.hashValue] = obj;
+	impl.descriptorSetMap[binding_impl.hashValue] = obj;
 
 	return obj;
 }
 
-obj<ResourceBinding> ResourceBindingPool::allocateBinding(
-	const_ref<ResourceLayout> layout,
-	uint32_t                  variable_binding_count
+obj<DescriptorSet> DescriptorPool::allocateDescriptorSet(
+	const_ref<DescriptorSetLayout> layout,
+	uint32_t                       variable_descriptor_count
 ) {
+	if (variable_descriptor_count == 1)
+		return allocateDescriptorSet(layout);
+
 	VERA_ASSERT(layout, "empty resource layout");
 
-	auto  obj          = createNewCoreObject<ResourceBinding>();
+	auto  obj          = createNewCoreObject<DescriptorSet>();
 	auto& impl         = getImpl(this);
 	auto& layout_impl  = getImpl(layout);
 	auto& binding_impl = getImpl(obj);
 	auto  vk_device    = get_vk_device(impl.device);
 
 	// TODO: consider using assert
-	if (!layout_impl.bindings.back().flags.has(ResourceLayoutBindingFlagBits::VariableBindingCount))
+	if (!layout_impl.bindings.back().flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount))
 		throw Exception("last binding of layout is not variable count");
 
 	vk::DescriptorSetVariableDescriptorCountAllocateInfo var_count_info;
 	var_count_info.descriptorSetCount = 1;
-	var_count_info.pDescriptorCounts  = &variable_binding_count;
+	var_count_info.pDescriptorCounts  = &variable_descriptor_count;
 
 	vk::DescriptorSetAllocateInfo alloc_info;
 	alloc_info.descriptorPool     = impl.descriptorPool;
@@ -248,46 +251,46 @@ obj<ResourceBinding> ResourceBindingPool::allocateBinding(
 		throw Exception("failed to allocate descriptor set");
 
 	binding_impl.device              = impl.device;
-	binding_impl.resourceBindingPool = this;
-	binding_impl.resourceLayout      = layout;
+	binding_impl.descriptorPool      = this;
+	binding_impl.descriptorSetLayout = layout;
 	binding_impl.hashValue           = 0;
 	binding_impl.bindingStates       = {};
-	binding_impl.arrayElementCount   = variable_binding_count;
+	binding_impl.arrayElementCount   = variable_descriptor_count;
 	binding_impl.isCached            = false;
 
-	fill_binding_states(binding_impl, layout_impl, variable_binding_count);
+	fill_binding_states(binding_impl, layout_impl, variable_descriptor_count);
 
 	// resource binding with empty infos, make unique hash from it's address
 	hash_combine(binding_impl.hashValue, obj.get());
 
 	// TODO: check hash collison
-	impl.bindingMap[binding_impl.hashValue] = obj;
+	impl.descriptorSetMap[binding_impl.hashValue] = obj;
 
 	return obj;
 }
 
-obj<ResourceBinding> ResourceBindingPool::requestBinding(
-	const_ref<ResourceLayout>       layout,
-	array_view<ResourceBindingInfo> binding_infos
+obj<DescriptorSet> DescriptorPool::requestDescriptorSet(
+	const_ref<DescriptorSetLayout>    layout,
+	array_view<DescriptorBindingInfo> binding_infos
 ) {
 	auto& impl = getImpl(this);
 
 	hash_t hash_value = hash_request(layout, binding_infos);
 
-	if (auto it = impl.bindingMap.find(hash_value); it != impl.bindingMap.cend())
-		return unsafe_obj_cast<ResourceBinding>(it->second);
+	if (auto it = impl.descriptorSetMap.find(hash_value); it != impl.descriptorSetMap.cend())
+		return unsafe_obj_cast<DescriptorSet>(it->second);
 
-	std::vector<ResourceBindingInfo> ordered_infos(VERA_SPAN(binding_infos));
+	std::vector<DescriptorBindingInfo> ordered_infos(VERA_SPAN(binding_infos));
 	std::sort(VERA_SPAN(ordered_infos));
 
 	VERA_ASSERT_MSG(check_layout_compatible(layout, ordered_infos), "layout and binding info mismatch");
 
-	auto  obj          = createNewCoreObject<ResourceBinding>();
+	auto  obj          = createNewCoreObject<DescriptorSet>();
 	auto& binding_impl = getImpl(obj);
 
 	binding_impl.device              = impl.device;
-	binding_impl.resourceBindingPool = this;
-	binding_impl.resourceLayout      = layout;
+	binding_impl.descriptorPool      = this;
+	binding_impl.descriptorSetLayout = layout;
 	binding_impl.hashValue           = hash_value;
 	binding_impl.bindingStates       = {};
 	binding_impl.arrayElementCount   = 0;
@@ -297,18 +300,18 @@ obj<ResourceBinding> ResourceBindingPool::requestBinding(
 
 	obj->update();
 
-	impl.bindingMap[binding_impl.hashValue] = obj;
+	impl.descriptorSetMap[binding_impl.hashValue] = obj;
 
 	return obj;
 }
 
-void ResourceBindingPool::reset()
+void DescriptorPool::reset()
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
 	// invalidate all existing bindings
-	for (auto& binding : impl.bindingMap) {
+	for (auto& binding : impl.descriptorSetMap) {
 		auto& binding_impl = getImpl(binding.second);
 
 		binding_impl.descriptorSet  = nullptr;

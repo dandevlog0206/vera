@@ -21,9 +21,9 @@ class CommandBufferSync
 {
 	friend class CommandBuffer;
 
-	CommandBufferSync(const CommandBufferImpl* impl, uint64_t id);
+	CommandBufferSync(const CommandBufferImpl* impl, uint64_t id) VERA_NOEXCEPT;
 public:
-	CommandBufferSync() = default;
+	CommandBufferSync() VERA_NOEXCEPT;
 	CommandBufferSync(const CommandBufferSync&) = default;
 
 	VERA_NODISCARD CommandBufferState getState() const VERA_NOEXCEPT;

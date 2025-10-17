@@ -7,7 +7,7 @@
 VERA_NAMESPACE_BEGIN
 
 class Device;
-class ResourceLayout;
+class DescriptorSetLayout;
 class Shader;
 
 enum class PipelineBindPoint VERA_ENUM
@@ -26,9 +26,9 @@ struct PushConstantRange
 
 struct PipelineLayoutCreateInfo
 {
-	std::vector<obj<ResourceLayout>> resourceLayouts;
-	std::vector<PushConstantRange>   pushConstantRanges;
-	PipelineBindPoint                pipelineBindPoint;
+	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts;
+	std::vector<PushConstantRange>        pushConstantRanges;
+	PipelineBindPoint                     pipelineBindPoint;
 };
 
 class PipelineLayout : protected CoreObject
@@ -42,8 +42,8 @@ public:
 	VERA_NODISCARD obj<Device> getDevice();
 
 	VERA_NODISCARD uint32_t getResourceLayoutCount() const;
-	VERA_NODISCARD const_ref<ResourceLayout> getResourceLayout(uint32_t set) const;
-	VERA_NODISCARD array_view<ref<ResourceLayout>> getResourceLayouts() const;
+	VERA_NODISCARD const_ref<DescriptorSetLayout> getDescriptorSetLayout(uint32_t set) const;
+	VERA_NODISCARD array_view<ref<DescriptorSetLayout>> getDescriptorSetLayouts() const;
 
 	VERA_NODISCARD array_view<PushConstantRange> getPushConstantRanges() const;
 

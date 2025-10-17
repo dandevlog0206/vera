@@ -293,7 +293,12 @@ ref<TextureView> Texture::getTextureView()
 	return impl.textureView;
 }
 
-TextureUsageFlags Texture::getUsageFlags()
+Format Texture::getFormat() const
+{
+	return getImpl(this).textureFormat;
+}
+
+TextureUsageFlags Texture::getUsageFlags() const
 {
 	return getImpl(this).textureUsage;
 }

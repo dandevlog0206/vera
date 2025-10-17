@@ -6,9 +6,13 @@
 
 VERA_NAMESPACE_BEGIN
 
-CommandBufferSync::CommandBufferSync(const CommandBufferImpl* impl, uint64_t id) :
+CommandBufferSync::CommandBufferSync(const CommandBufferImpl* impl, uint64_t id) VERA_NOEXCEPT :
 	m_impl(impl),
 	m_submit_id(id) {}
+
+CommandBufferSync::CommandBufferSync() VERA_NOEXCEPT :
+	m_impl(nullptr),
+	m_submit_id(0) {}
 
 CommandBufferState CommandBufferSync::getState() const VERA_NOEXCEPT
 {

@@ -1,15 +1,15 @@
-#include "../../include/vera/core/resource_binding.h"
-#include "../impl/resource_binding_impl.h"
-#include "../impl/resource_layout_impl.h"
-#include "../impl/resource_binding_pool_impl.h"
+#include "../../include/vera/core/descriptor_set.h"
+#include "../impl/descriptor_set_impl.h"
+#include "../impl/descriptor_pool_impl.h"
+#include "../impl/descriptor_set_layout_impl.h"
 #include "../impl/texture_impl.h"
 
-#include "../../include/vera/core/resource_layout.h"
-#include "../../include/vera/core/resource_binding_pool.h"
+#include "../../include/vera/core/descriptor_set_layout.h"
+#include "../../include/vera/core/descriptor_pool.h"
 
 VERA_NAMESPACE_BEGIN
 
-static size_t count_total_bindings(ResourceBindingImpl& impl)
+static size_t count_total_bindings(DescriptorSetImpl& impl)
 {
 	size_t count = 0;
 
@@ -20,7 +20,7 @@ static size_t count_total_bindings(ResourceBindingImpl& impl)
 	return count;
 }
 
-static bool check_empty(ResourceBindingImpl& impl)
+static bool check_empty(DescriptorSetImpl& impl)
 {
 	for (const auto& array_desc : impl.bindingStates)
 		for (const auto& binding_desc : array_desc.bindingDescs)
@@ -29,7 +29,7 @@ static bool check_empty(ResourceBindingImpl& impl)
 	return true;
 }
 
-static size_t skip_empty(const ResourceArrayBindingDesc& array_desc, size_t i)
+static size_t skip_empty(const DescriptorArrayBindingDesc& array_desc, size_t i)
 {
 	const size_t array_size = array_desc.bindingDescs.size();
 
@@ -40,7 +40,7 @@ static size_t skip_empty(const ResourceArrayBindingDesc& array_desc, size_t i)
 	return array_size;
 }
 
-static void rewrite_binding_info_cached(ResourceBindingImpl& impl, const ResourceBindingInfo& info)
+static void rewrite_binding_info_cached(DescriptorSetImpl& impl, const DescriptorBindingInfo& info)
 {
 	auto& array_desc   = impl.bindingStates[info.dstBinding];
 	auto& binding_desc = array_desc.bindingDescs[info.dstArrayElement];
@@ -53,7 +53,7 @@ static void rewrite_binding_info_cached(ResourceBindingImpl& impl, const Resourc
 	hash_unordered(impl.hashValue, binding_desc.hashValue);
 }
 
-static void rewrite_binding_info(ResourceBindingImpl& impl, const ResourceBindingInfo& info)
+static void rewrite_binding_info(DescriptorSetImpl& impl, const DescriptorBindingInfo& info)
 {
 	auto& array_desc   = impl.bindingStates[info.dstBinding];
 	auto& binding_desc = array_desc.bindingDescs[info.dstArrayElement];
@@ -61,23 +61,23 @@ static void rewrite_binding_info(ResourceBindingImpl& impl, const ResourceBindin
 	binding_desc.bindingInfo = info;
 }
 
-static void reallocate_resource_binding(ResourceBindingImpl& impl)
+static void reallocate_descriptor_binding(DescriptorSetImpl& impl)
 {
-	VERA_ASSERT_MSG(!impl.resourceBindingPool, "binding pool destroyed");
+	VERA_ASSERT_MSG(!impl.descriptorPool, "descriptor pool destroyed");
 	VERA_ASSERT_MSG(!impl.descriptorSet, "descriptor set already allocated");
 
-	auto& pool_impl   = CoreObject::getImpl(impl.resourceBindingPool);
-	auto& layout_impl = CoreObject::getImpl(impl.resourceLayout);
+	auto& pool_impl   = CoreObject::getImpl(impl.descriptorPool);
+	auto& layout_impl = CoreObject::getImpl(impl.descriptorSetLayout);
 	auto  vk_device   = get_vk_device(impl.device);
 
 	vk::DescriptorSetAllocateInfo alloc_info;
 	alloc_info.descriptorPool     = pool_impl.descriptorPool;
 	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts        = &get_vk_descriptor_set_layout(impl.resourceLayout);
+	alloc_info.pSetLayouts        = &get_vk_descriptor_set_layout(impl.descriptorSetLayout);
 
 	vk::DescriptorSetVariableDescriptorCountAllocateInfo var_count_info;
-	
-	if (layout_impl.bindings.back().flags.has(ResourceLayoutBindingFlagBits::VariableBindingCount)) {
+
+	if (layout_impl.bindings.back().flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount)) {
 		var_count_info.descriptorSetCount = 1;
 		var_count_info.pDescriptorCounts  = &impl.arrayElementCount;
 		alloc_info.pNext                  = &var_count_info;
@@ -87,7 +87,7 @@ static void reallocate_resource_binding(ResourceBindingImpl& impl)
 		throw Exception("failed to allocate descriptor set");
 }
 
-static void update_descriptor_set_single_info(ResourceBindingImpl& impl, const ResourceBindingInfo& info)
+static void update_descriptor_set_single_info(DescriptorSetImpl& impl, const DescriptorBindingInfo& info)
 {
 	auto vk_device = get_vk_device(impl.device);
 
@@ -100,42 +100,42 @@ static void update_descriptor_set_single_info(ResourceBindingImpl& impl, const R
 	vk::DescriptorBufferInfo buffer_info;
 	vk::DescriptorImageInfo  image_info;
 
-	switch (info.resourceType) {
-	case ResourceType::Sampler:
+	switch (info.descriptorType) {
+	case DescriptorType::Sampler:
 		image_info.sampler        = get_vk_sampler(info.sampler.sampler);
 		write_desc.descriptorType = vk::DescriptorType::eSampler;
 		write_desc.pImageInfo     = &image_info;
 		break;
-	case ResourceType::CombinedImageSampler:
+	case DescriptorType::CombinedImageSampler:
 		image_info.sampler        = get_vk_sampler(info.combinedImageSampler.sampler);
 		image_info.imageView      = get_vk_image_view(info.combinedImageSampler.textureView);
 		image_info.imageLayout    = to_vk_image_layout(info.combinedImageSampler.textureLayout);
 		write_desc.descriptorType = vk::DescriptorType::eCombinedImageSampler;
 		write_desc.pImageInfo     = &image_info;
 		break;
-	case ResourceType::SampledImage:
-	case ResourceType::StorageImage:
+	case DescriptorType::SampledImage:
+	case DescriptorType::StorageImage:
 		image_info.imageView      = get_vk_image_view(info.sampledImage.textureView);
 		image_info.imageLayout    = to_vk_image_layout(info.sampledImage.textureLayout);
-		write_desc.descriptorType = to_vk_descriptor_type(info.resourceType);
+		write_desc.descriptorType = to_vk_descriptor_type(info.descriptorType);
 		write_desc.pImageInfo     = &image_info;
 		break;
-	case ResourceType::UniformTexelBuffer:
-	case ResourceType::StorageTexelBuffer:
-		write_desc.descriptorType   = to_vk_descriptor_type(info.resourceType);
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::StorageTexelBuffer:
+		write_desc.descriptorType   = to_vk_descriptor_type(info.descriptorType);
 		write_desc.pTexelBufferView = &get_vk_buffer_view(info.uniformTexelBuffer.bufferView);
 		break;
-	case ResourceType::UniformBuffer:
-	case ResourceType::StorageBuffer:
-	case ResourceType::UniformBufferDynamic:
-	case ResourceType::StorageBufferDynamic:
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBufferDynamic:
 		buffer_info.buffer        = get_vk_buffer(info.uniformBuffer.buffer);
 		buffer_info.offset        = info.uniformBuffer.offset;
 		buffer_info.range         = info.uniformBuffer.range;
-		write_desc.descriptorType = to_vk_descriptor_type(info.resourceType);
+		write_desc.descriptorType = to_vk_descriptor_type(info.descriptorType);
 		write_desc.pBufferInfo    = &buffer_info;
 		break;
-	case ResourceType::InputAttachment:
+	case DescriptorType::InputAttachment:
 		image_info.imageView      = get_vk_image_view(info.sampledImage.textureView);
 		image_info.imageLayout    = to_vk_image_layout(info.sampledImage.textureLayout);
 		write_desc.descriptorType = vk::DescriptorType::eInputAttachment;
@@ -150,7 +150,7 @@ static void update_descriptor_image_info(
 	vk::Device                            vk_device,
 	vk::DescriptorSet                     vk_descriptor_set,
 	std::vector<vk::DescriptorImageInfo>& image_infos,
-	const ResourceArrayBindingDesc&       array_desc
+	const DescriptorArrayBindingDesc&     array_desc
 ) {
 	vk::WriteDescriptorSet write_desc;
 	write_desc.dstSet         = vk_descriptor_set;
@@ -173,20 +173,20 @@ static void update_descriptor_image_info(
 		}
 		
 		switch (array_desc.resourceType) {
-		case ResourceType::Sampler: {
+		case DescriptorType::Sampler: {
 			auto& image_info = image_infos.emplace_back();
 			image_info.sampler        = get_vk_sampler(binding_info.sampler.sampler);
 			write_desc.descriptorType = vk::DescriptorType::eSampler;
 		} break;
-		case ResourceType::CombinedImageSampler: {
+		case DescriptorType::CombinedImageSampler: {
 			auto& image_info = image_infos.emplace_back();
 			image_info.sampler     = get_vk_sampler(binding_info.combinedImageSampler.sampler);
 			image_info.imageView   = get_vk_image_view(binding_info.combinedImageSampler.textureView);
 			image_info.imageLayout = to_vk_image_layout(binding_info.combinedImageSampler.textureLayout);
 		} break;
-		case ResourceType::SampledImage:
-		case ResourceType::StorageImage:
-		case ResourceType::InputAttachment: {
+		case DescriptorType::SampledImage:
+		case DescriptorType::StorageImage:
+		case DescriptorType::InputAttachment: {
 			auto& image_info = image_infos.emplace_back();
 			image_info.imageView   = get_vk_image_view(binding_info.sampledImage.textureView);
 			image_info.imageLayout = to_vk_image_layout(binding_info.sampledImage.textureLayout);
@@ -200,10 +200,10 @@ static void update_descriptor_image_info(
 }
 
 static void update_descriptor_texel_buffer_info(
-	vk::Device                      vk_device,
-	vk::DescriptorSet               vk_descriptor_set,
-	std::vector<vk::BufferView>&    buffer_views,
-	const ResourceArrayBindingDesc& array_desc
+	vk::Device                        vk_device,
+	vk::DescriptorSet                 vk_descriptor_set,
+	std::vector<vk::BufferView>&      buffer_views,
+	const DescriptorArrayBindingDesc& array_desc
 ) {
 	vk::WriteDescriptorSet write_desc;
 	write_desc.dstSet         = vk_descriptor_set;
@@ -235,7 +235,7 @@ static void update_descriptor_buffer_info(
 	vk::Device                             vk_device,
 	vk::DescriptorSet                      vk_descriptor_set,
 	std::vector<vk::DescriptorBufferInfo>& buffer_infos,
-	const ResourceArrayBindingDesc&        array_desc
+	const DescriptorArrayBindingDesc&      array_desc
 ) {
 	vk::WriteDescriptorSet write_desc;
 	write_desc.dstSet         = vk_descriptor_set;
@@ -266,39 +266,39 @@ static void update_descriptor_buffer_info(
 	}
 }
 
-const vk::DescriptorSet& get_vk_descriptor_set(const_ref<ResourceBinding> resource_binding)
+const vk::DescriptorSet& get_vk_descriptor_set(const_ref<DescriptorSet> descriptor_set)
 {
-	return CoreObject::getImpl(resource_binding).descriptorSet;
+	return CoreObject::getImpl(descriptor_set).descriptorSet;
 }
 
-vk::DescriptorSet& get_vk_descriptor_set(ref<ResourceBinding> resource_binding)
+vk::DescriptorSet& get_vk_descriptor_set(ref<DescriptorSet> descriptor_set)
 {
-	return CoreObject::getImpl(resource_binding).descriptorSet;
+	return CoreObject::getImpl(descriptor_set).descriptorSet;
 }
 
-ResourceBindingInfo::ResourceBindingInfo() VERA_NOEXCEPT :
-	resourceType(ResourceType::Unknown),
+DescriptorBindingInfo::DescriptorBindingInfo() VERA_NOEXCEPT :
+	descriptorType(DescriptorType::Unknown),
 	dstBinding(0),
 	dstArrayElement(0) {}
 
-ResourceBindingInfo::ResourceBindingInfo(const ResourceBindingInfo& rhs) VERA_NOEXCEPT
+DescriptorBindingInfo::DescriptorBindingInfo(const DescriptorBindingInfo& rhs) VERA_NOEXCEPT
 {
-	memcpy(this, &rhs, sizeof(ResourceBindingInfo));
+	memcpy(this, &rhs, sizeof(DescriptorBindingInfo));
 }
 
-ResourceBindingInfo::~ResourceBindingInfo()
+DescriptorBindingInfo::~DescriptorBindingInfo()
 {
 }
 
-ResourceBindingInfo& ResourceBindingInfo::operator=(const ResourceBindingInfo& rhs) VERA_NOEXCEPT
+DescriptorBindingInfo& DescriptorBindingInfo::operator=(const DescriptorBindingInfo& rhs) VERA_NOEXCEPT
 {
 	if (this != &rhs)
-		memcpy(this, &rhs, sizeof(ResourceBindingInfo));
+		memcpy(this, &rhs, sizeof(DescriptorBindingInfo));
 	
 	return *this;
 }
 
-bool ResourceBindingInfo::operator<(const ResourceBindingInfo& rhs) const VERA_NOEXCEPT
+bool DescriptorBindingInfo::operator<(const DescriptorBindingInfo& rhs) const VERA_NOEXCEPT
 {
 	if (dstBinding != rhs.dstBinding)
 		return dstBinding < rhs.dstBinding;
@@ -306,46 +306,46 @@ bool ResourceBindingInfo::operator<(const ResourceBindingInfo& rhs) const VERA_N
 	return dstArrayElement < rhs.dstArrayElement;
 }
 
-bool ResourceBindingInfo::empty() const VERA_NOEXCEPT
+bool DescriptorBindingInfo::empty() const VERA_NOEXCEPT
 {
-	return resourceType == ResourceType::Unknown;
+	return descriptorType == DescriptorType::Unknown;
 }
 
-hash_t ResourceBindingInfo::hash() const VERA_NOEXCEPT
+hash_t DescriptorBindingInfo::hash() const VERA_NOEXCEPT
 {
 	hash_t seed = 0;
 	
-	hash_combine(seed, static_cast<uint32_t>(resourceType));
+	hash_combine(seed, static_cast<uint32_t>(descriptorType));
 	hash_combine(seed, dstBinding);
 	hash_combine(seed, dstArrayElement);
 
-	switch (resourceType) {
-	case ResourceType::Sampler:
+	switch (descriptorType) {
+	case DescriptorType::Sampler:
 		hash_combine(seed, sampler.sampler.get());
 		break;
-	case ResourceType::CombinedImageSampler:
+	case DescriptorType::CombinedImageSampler:
 		hash_combine(seed, combinedImageSampler.sampler.get());
 		hash_combine(seed, combinedImageSampler.textureView.get());
 		hash_combine(seed, static_cast<uint32_t>(combinedImageSampler.textureLayout));
 		break;
-	case ResourceType::SampledImage:
-	case ResourceType::StorageImage:
+	case DescriptorType::SampledImage:
+	case DescriptorType::StorageImage:
 		hash_combine(seed, sampledImage.textureView.get());
 		hash_combine(seed, static_cast<uint32_t>(sampledImage.textureLayout));
 		break;
-	case ResourceType::UniformTexelBuffer:
-	case ResourceType::StorageTexelBuffer:
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::StorageTexelBuffer:
 		hash_combine(seed, uniformTexelBuffer.bufferView.get());
 		break;
-	case ResourceType::UniformBuffer:
-	case ResourceType::StorageBuffer:
-	case ResourceType::UniformBufferDynamic:
-	case ResourceType::StorageBufferDynamic:
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBufferDynamic:
 		hash_combine(seed, uniformBuffer.buffer.get());
 		hash_combine(seed, uniformBuffer.offset);
 		hash_combine(seed, uniformBuffer.range);
 		break;
-	case ResourceType::InputAttachment:
+	case DescriptorType::InputAttachment:
 		hash_combine(seed, sampledImage.textureView.get());
 		hash_combine(seed, static_cast<uint32_t>(sampledImage.textureLayout));
 		break;
@@ -356,27 +356,27 @@ hash_t ResourceBindingInfo::hash() const VERA_NOEXCEPT
 	return seed;
 }
 
-ResourceBinding::~ResourceBinding()
+DescriptorSet::~DescriptorSet()
 {
 	auto& impl      = getImpl(this);
-	auto& pool_impl = getImpl(impl.resourceBindingPool);
+	auto& pool_impl = getImpl(impl.descriptorPool);
 
-	pool_impl.bindingMap.erase(impl.hashValue);
+	pool_impl.descriptorSetMap.erase(impl.hashValue);
 
 	destroyObjectImpl(this);
 }
 
-ref<ResourceBindingPool> ResourceBinding::getResourceBindingPool() VERA_NOEXCEPT
+ref<DescriptorPool> DescriptorSet::getDescriptorPool() VERA_NOEXCEPT
 {
-	return getImpl(this).resourceBindingPool;
+	return getImpl(this).descriptorPool;
 }
 
-const_ref<ResourceLayout> ResourceBinding::getResourceLayout() VERA_NOEXCEPT
+const_ref<DescriptorSetLayout> DescriptorSet::getDescriptorSetLayout() VERA_NOEXCEPT
 {
-	return getImpl(this).resourceLayout;
+	return getImpl(this).descriptorSetLayout;
 }
 
-const ResourceBindingInfo& ResourceBinding::getBindingInfo(uint32_t binding, uint32_t array_element) VERA_NOEXCEPT
+const DescriptorBindingInfo& DescriptorSet::getDescriptorBindingInfo(uint32_t binding, uint32_t array_element) VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 
@@ -389,20 +389,20 @@ const ResourceBindingInfo& ResourceBinding::getBindingInfo(uint32_t binding, uin
 	return array_desc.bindingDescs[array_element].bindingInfo;
 }
 
-void ResourceBinding::setBindingInfo(const ResourceBindingInfo& info)
+void DescriptorSet::setDescriptorBindingInfo(const DescriptorBindingInfo& info)
 {
 	auto& impl      = getImpl(this);
-	auto& pool_impl = getImpl(impl.resourceBindingPool);
+	auto& pool_impl = getImpl(impl.descriptorPool);
 
 	if (!impl.descriptorSet)
-		reallocate_resource_binding(impl);
+		reallocate_descriptor_binding(impl);
 
 	if (impl.isCached) {
-		pool_impl.bindingMap.erase(impl.hashValue);
+		pool_impl.descriptorSetMap.erase(impl.hashValue);
 
 		rewrite_binding_info_cached(impl, info);
 
-		pool_impl.bindingMap.insert(std::make_pair(impl.hashValue, ref<ResourceBinding>(this)));
+		pool_impl.descriptorSetMap.insert(std::make_pair(impl.hashValue, ref<DescriptorSet>(this)));
 	} else {
 		rewrite_binding_info(impl, info);
 	}
@@ -410,21 +410,21 @@ void ResourceBinding::setBindingInfo(const ResourceBindingInfo& info)
 	update_descriptor_set_single_info(impl, info);
 }
 
-void ResourceBinding::setBindingInfo(array_view<ResourceBindingInfo> infos)
+void DescriptorSet::setDescriptorBindingInfo(array_view<DescriptorBindingInfo> infos)
 {
 	auto& impl      = getImpl(this);
-	auto& pool_impl = getImpl(impl.resourceBindingPool);
+	auto& pool_impl = getImpl(impl.descriptorPool);
 
 	if (!impl.descriptorSet)
-		reallocate_resource_binding(impl);
+		reallocate_descriptor_binding(impl);
 
 	if (impl.isCached) {
-		pool_impl.bindingMap.erase(impl.hashValue);
+		pool_impl.descriptorSetMap.erase(impl.hashValue);
 
 		for (const auto& info : infos)
 			rewrite_binding_info_cached(impl, info);
 
-		pool_impl.bindingMap.insert(std::make_pair(impl.hashValue, ref<ResourceBinding>(this)));
+		pool_impl.descriptorSetMap.insert(std::make_pair(impl.hashValue, ref<DescriptorSet>(this)));
 	} else {
 		for (const auto& info : infos)
 			rewrite_binding_info(impl, info);
@@ -435,13 +435,13 @@ void ResourceBinding::setBindingInfo(array_view<ResourceBindingInfo> infos)
 		update_descriptor_set_single_info(impl, info);
 }
 
-void ResourceBinding::update()
+void DescriptorSet::update()
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
 	if (!impl.descriptorSet)
-		reallocate_resource_binding(impl);
+		reallocate_descriptor_binding(impl);
 
 	std::vector<vk::DescriptorBufferInfo> buffer_infos;
 	std::vector<vk::DescriptorImageInfo>  image_infos;
@@ -449,40 +449,40 @@ void ResourceBinding::update()
 
 	for (const auto& array_desc : impl.bindingStates) {
 		switch (array_desc.resourceType) {
-		case ResourceType::Sampler:
-		case ResourceType::CombinedImageSampler:
-		case ResourceType::SampledImage:
-		case ResourceType::StorageImage:
-		case ResourceType::InputAttachment:
+		case DescriptorType::Sampler:
+		case DescriptorType::CombinedImageSampler:
+		case DescriptorType::SampledImage:
+		case DescriptorType::StorageImage:
+		case DescriptorType::InputAttachment:
 			update_descriptor_image_info(vk_device, impl.descriptorSet, image_infos, array_desc);
 			break;
-		case ResourceType::UniformTexelBuffer:
-		case ResourceType::StorageTexelBuffer:
+		case DescriptorType::UniformTexelBuffer:
+		case DescriptorType::StorageTexelBuffer:
 			update_descriptor_texel_buffer_info(vk_device, impl.descriptorSet, buffer_views, array_desc);
 			break;
-		case ResourceType::UniformBuffer:
-		case ResourceType::StorageBuffer:
-		case ResourceType::UniformBufferDynamic:
-		case ResourceType::StorageBufferDynamic:
+		case DescriptorType::UniformBuffer:
+		case DescriptorType::StorageBuffer:
+		case DescriptorType::UniformBufferDynamic:
+		case DescriptorType::StorageBufferDynamic:
 			update_descriptor_buffer_info(vk_device, impl.descriptorSet, buffer_infos, array_desc);
 			break;
 		}
 	}
 }
 
-void ResourceBinding::makeCached()
+void DescriptorSet::makeCached()
 {
 	auto& impl      = getImpl(this);
-	auto& pool_impl = getImpl(impl.resourceBindingPool);
+	auto& pool_impl = getImpl(impl.descriptorPool);
 
 	if (check_empty(impl))
 		throw Exception("to make resource binding cached all of resource are should updated");
 
-	pool_impl.bindingMap.erase(impl.hashValue);
+	pool_impl.descriptorSetMap.erase(impl.hashValue);
 
 	impl.hashValue = 0;
 
-	hash_combine(impl.hashValue, impl.resourceLayout->hash());
+	hash_combine(impl.hashValue, impl.descriptorSetLayout->hash());
 
 	hash_combine(impl.hashValue, count_total_bindings(impl));
 	for (auto& array_desc : impl.bindingStates) {
@@ -492,27 +492,27 @@ void ResourceBinding::makeCached()
 		}
 	}
 	
-	pool_impl.bindingMap.insert(std::make_pair(impl.hashValue, ref<ResourceBinding>(this)));
+	pool_impl.descriptorSetMap.insert(std::make_pair(impl.hashValue, ref<DescriptorSet>(this)));
 	
 	impl.isCached = true;
 }
 
-bool ResourceBinding::isCached() const VERA_NOEXCEPT
+bool DescriptorSet::isCached() const VERA_NOEXCEPT
 {
 	return getImpl(this).isCached;
 }
 
-bool ResourceBinding::isValid() const VERA_NOEXCEPT
+bool DescriptorSet::isValid() const VERA_NOEXCEPT
 {
 	return static_cast<bool>(getImpl(this).descriptorSet);
 }
 
-bool ResourceBinding::isDestroyed() const VERA_NOEXCEPT
+bool DescriptorSet::isDestroyed() const VERA_NOEXCEPT
 {
-	return static_cast<bool>(getImpl(this).resourceBindingPool);
+	return static_cast<bool>(getImpl(this).descriptorPool);
 }
 
-hash_t ResourceBinding::hashValue() const VERA_NOEXCEPT
+hash_t DescriptorSet::hashValue() const VERA_NOEXCEPT
 {
 	return getImpl(this).hashValue;
 }

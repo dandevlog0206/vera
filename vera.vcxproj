@@ -161,11 +161,13 @@
     <ClInclude Include="include\vera\core\buffer_view.h" />
     <ClInclude Include="include\vera\core\framebuffer.h" />
     <ClInclude Include="include\vera\core\render_frame.h" />
-    <ClInclude Include="include\vera\core\resource_binding.h" />
-    <ClInclude Include="include\vera\core\resource_binding_pool.h" />
+    <ClInclude Include="include\vera\core\descriptor_set.h" />
+    <ClInclude Include="include\vera\core\descriptor_pool.h" />
     <ClInclude Include="include\vera\core\shader_storage.h" />
     <ClInclude Include="include\vera\core\intrusive_ptr.h" />
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
+    <ClInclude Include="include\vera\geometry\frustum.h" />
+    <ClInclude Include="include\vera\geometry\plane.h" />
     <ClInclude Include="include\vera\math\constant.h" />
     <ClInclude Include="include\vera\math\detail\config.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x2.h" />
@@ -208,6 +210,8 @@
     <ClInclude Include="include\vera\util\flycam.h" />
     <ClInclude Include="include\vera\math\radian.h" />
     <ClInclude Include="include\vera\util\index_map.h" />
+    <ClInclude Include="include\vera\util\range.h" />
+    <ClInclude Include="include\vera\util\ranged_set.h" />
     <ClInclude Include="include\vera\util\result_message.h" />
     <ClInclude Include="include\vera\util\ring_vector.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
@@ -221,8 +225,8 @@
     <ClInclude Include="source\impl\buffer_impl.h" />
     <ClInclude Include="source\impl\device_memory_impl.h" />
     <ClInclude Include="source\impl\framebuffer_impl.h" />
-    <ClInclude Include="source\impl\resource_binding_impl.h" />
-    <ClInclude Include="source\impl\resource_binding_pool_impl.h" />
+    <ClInclude Include="source\impl\descriptor_set_impl.h" />
+    <ClInclude Include="source\impl\descriptor_pool_impl.h" />
     <ClInclude Include="source\impl\sampler_impl.h" />
     <ClInclude Include="source\impl\semaphore_impl.h" />
     <ClInclude Include="source\impl\context_impl.h" />
@@ -239,7 +243,7 @@
     <ClInclude Include="include\vera\core\coredefs.h" />
     <ClInclude Include="include\vera\core\core_object.h" />
     <ClInclude Include="include\vera\core\logger.h" />
-    <ClInclude Include="include\vera\core\resource_layout.h" />
+    <ClInclude Include="include\vera\core\descriptor_set_layout.h" />
     <ClInclude Include="include\vera\core\device.h" />
     <ClInclude Include="include\vera\core\exception.h" />
     <ClInclude Include="include\vera\core\fence.h" />
@@ -280,7 +284,7 @@
     <ClInclude Include="source\impl\pipeline_layout_impl.h" />
     <ClInclude Include="source\impl\command_buffer_impl.h" />
     <ClInclude Include="source\impl\render_context_impl.h" />
-    <ClInclude Include="source\impl\resource_layout_impl.h" />
+    <ClInclude Include="source\impl\descriptor_set_layout_impl.h" />
     <ClInclude Include="source\impl\shader_impl.h" />
     <ClInclude Include="source\impl\shader_storage_impl.h" />
     <ClInclude Include="source\impl\swapchain_impl.h" />
@@ -292,10 +296,10 @@
     <ClCompile Include="source\core\command_buffer_sync.cpp" />
     <ClCompile Include="source\core\exception.cpp" />
     <ClCompile Include="source\impl\detail\shader_reflection.cpp" />
-    <ClCompile Include="source\core_object\resource_binding_pool.cpp" />
+    <ClCompile Include="source\core_object\descriptor_pool.cpp" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
     <ClCompile Include="source\core_object\framebuffer.cpp" />
-    <ClCompile Include="source\core_object\resource_binding.cpp" />
+    <ClCompile Include="source\core_object\decriptor_set.cpp" />
     <ClCompile Include="source\core_object\shader_storage.cpp" />
     <ClCompile Include="source\core_object\texture_view.cpp" />
     <ClCompile Include="source\core_object\buffer.cpp" />
@@ -310,7 +314,7 @@
     <ClCompile Include="source\graphics\transform3d.cpp" />
     <ClCompile Include="source\logger.cpp" />
     <ClCompile Include="source\core_object\render_context.cpp" />
-    <ClCompile Include="source\core_object\resource_layout.cpp" />
+    <ClCompile Include="source\core_object\descriptor_set_layout.cpp" />
     <ClCompile Include="source\core_object\sampler.cpp" />
   </ItemGroup>
   <ItemGroup>

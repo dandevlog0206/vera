@@ -1,12 +1,13 @@
 #pragma once
 
 #include "../../../include/vera/core/shader.h"
+#include "../../../include/vera/util/range.h"
 
 VERA_NAMESPACE_BEGIN
 
-enum class ResourceType VERA_ENUM;
+enum class DescriptorType VERA_ENUM;
 
-class ResourceLayout;
+class DescriptorSetLayout;
 
 /*
 Primitive      -> must be leaf
@@ -186,48 +187,48 @@ struct ReflectionStructDesc : ReflectionBlockDesc
 
 struct ReflectionResourceDesc : ReflectionRootMemberDesc
 {
-//  ReflectionType            type;              = ReflectionType::Resource
-//  ShaderStageFlags          shaderStageFlags;
-// 	uint32_t                  reflectionIndex;
-	const_ref<ResourceLayout> resourceLayout;
-	ResourceType              resourceType;
-	uint32_t                  set;
-	uint32_t                  binding;
+//  ReflectionType                 type;         = ReflectionType::Resource
+//  ShaderStageFlags               stageFlags;
+// 	uint32_t                       reflectionIndex;
+	const_ref<DescriptorSetLayout> descriptorSetLayout;
+	DescriptorType                 descriptorType;
+	uint32_t                       set;
+	uint32_t                       binding;
 };
 
 struct ReflectionResourceBlockDesc : ReflectionResourceDesc
 {
-//  ReflectionType            type;                  = ReflectionType::ResourceBlock
-//  ShaderStageFlags          shaderStageFlags;
-// 	uint32_t                  reflectionIndex;
-//  const_ref<ResourceLayout> resourceLayout;
-//  ResourceType              resourceType;
-//  uint32_t                  set;
-//  uint32_t                  binding;
-	uint32_t                  sizeInByte;
-	uint32_t                  memberCount;
-	ReflectionBlockDesc**     members;
-	uint32_t                  nameMapCount;
-	ReflectionNameMap*        nameMaps;
+//  ReflectionType                 type;         = ReflectionType::ResourceBlock
+//  ShaderStageFlags               stageFlags;
+// 	uint32_t                       reflectionIndex;
+//  const_ref<DescriptorSetLayout> descriptorSetLayout;
+//  DescriptorType                 descriptorType;
+//  uint32_t                       set;
+//  uint32_t                       binding;
+	uint32_t                       sizeInByte;
+	uint32_t                       memberCount;
+	ReflectionBlockDesc**          members;
+	uint32_t                       nameMapCount;
+	ReflectionNameMap*             nameMaps;
 };
 
 struct ReflectionResourceArrayDesc : ReflectionResourceDesc
 {
-//  ReflectionType            type;              = ReflectionType::ResourceArray
-//  ShaderStageFlags          shaderStageFlags;
-// 	uint32_t                  reflectionIndex;
-//  const_ref<ResourceLayout> resourceLayout;
-//  ResourceType              resourceType;
-//  uint32_t                  set;
-//  uint32_t                  binding;
-	uint32_t                  elementCount;      // UINT32_MAX for unsized array
-	ReflectionResourceDesc*   element;           // pointer to ReflectionResourceDesc or ReflectionResourceBlockDesc
+//  ReflectionType                 type;         = ReflectionType::ResourceArray
+//  ShaderStageFlags               stageFlags;
+// 	uint32_t                       reflectionIndex;
+//  const_ref<DescriptorSetLayout> descriptorSetLayout;
+//  DescriptorType                 descriptorType;
+//  uint32_t                       set;
+//  uint32_t                       binding;
+	uint32_t                       elementCount; // UINT32_MAX for unsized array
+	ReflectionResourceDesc*        element;      // pointer to ReflectionResourceDesc or ReflectionResourceBlockDesc
 };
 
 struct ReflectionPushConstantDesc : ReflectionRootMemberDesc
 {
 //  ReflectionType        type;                  = ReflectionType::PushConstant
-//  ShaderStageFlags      shaderStageFlags;
+//  ShaderStageFlags      stageFlags;
 // 	uint32_t              reflectionIndex;
 	uint32_t              sizeInByte;
 	uint32_t              memberCount;
@@ -247,9 +248,10 @@ struct ShaderReflection
 	ReflectionRootMemberDesc** reflections;
 	uint32_t                   nameMapCount;
 	ReflectionNameMap*         nameMaps;         // must ordered by name
+	uint32_t                   setRangeCount;
+	basic_range<uint32_t>*     setRanges;
 	uint32_t                   resourceCount;
 	uint32_t                   pushConstantCount;
-	uint32_t                   maxSetCount;
 };
 
 extern void destroy_shader_reflection(ShaderReflection& reflection);

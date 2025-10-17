@@ -5,15 +5,15 @@
 
 VERA_NAMESPACE_BEGIN
 
-struct ResourceBindingPoolImpl
+struct DescriptorPoolImpl
 {
-	using ResourceBindingMap = std::unordered_map<uint64_t, ref<ResourceBinding>>;
+	using DescriptorSetMap = std::unordered_map<uint64_t, ref<DescriptorSet>>;
 
 	obj<Device>        device;
 
 	vk::DescriptorPool descriptorPool;
 
-	ResourceBindingMap bindingMap;
+	DescriptorSetMap   descriptorSetMap;
 };
 
 VERA_NAMESPACE_END

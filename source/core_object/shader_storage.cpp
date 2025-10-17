@@ -3,12 +3,13 @@
 #include "../impl/pipeline_layout_impl.h"
 
 #include "../../include/vera/core/device.h"
-#include "../../include/vera/core/resource_layout.h"
-#include "../../include/vera/core/resource_binding.h"
-#include "../../include/vera/core/resource_binding_pool.h"
+#include "../../include/vera/core/descriptor_set_layout.h"
+#include "../../include/vera/core/descriptor_pool.h"
+#include "../../include/vera/core/descriptor_set.h"
 #include "../../include/vera/core/sampler.h"
 #include "../../include/vera/core/buffer.h"
 #include "../../include/vera/core/buffer_view.h"
+#include "../../include/vera/core/texture.h"
 #include "../../include/vera/core/texture_view.h"
 
 VERA_NAMESPACE_BEGIN
@@ -67,14 +68,52 @@ template <> static constexpr auto primitive_type_v<double4x2> = ReflectionPrimit
 template <> static constexpr auto primitive_type_v<double4x3> = ReflectionPrimitiveType::Double_4x3;
 template <> static constexpr auto primitive_type_v<double4x4> = ReflectionPrimitiveType::Double_4x4;
 
-static uint32_t get_offset(ReflectionDesc& desc)
+template <class ShaderStorageDataType>
+ShaderStorageDataType& construct_storage_data(ShaderStorageResource& resource)
+{
+	auto* data = reinterpret_cast<ShaderStorageData*>(&resource.data);
+	auto* ptr  = static_cast<ShaderStorageDataType*>(data);
+	return *std::construct_at(ptr);
+}
+
+template <class ShaderStorageDataType>
+void destroy_storage_data(ShaderStorageResource& resource)
+{
+	auto* data = reinterpret_cast<ShaderStorageData*>(&resource.data);
+	auto* ptr  = static_cast<ShaderStorageDataType*>(data);
+	std::destroy_at(ptr);
+}
+
+static uint32_t get_array_element_count(const ReflectionResourceArrayDesc* desc)
+{
+	return std::min(desc->elementCount, 1024u);
+}
+
+static uint32_t get_offset(const ReflectionDesc& desc)
 {
 	switch (desc.type) {
-	case ReflectionType::Primitive: return static_cast<ReflectionPrimitiveDesc*>(&desc)->offset;
-	case ReflectionType::Array:     return static_cast<ReflectionArrayDesc*>(&desc)->offset;
-	case ReflectionType::Struct:    return static_cast<ReflectionStructDesc*>(&desc)->offset;
+	case ReflectionType::Primitive: return static_cast<const ReflectionPrimitiveDesc*>(&desc)->offset;
+	case ReflectionType::Array:     return static_cast<const ReflectionArrayDesc*>(&desc)->offset;
+	case ReflectionType::Struct:    return static_cast<const ReflectionStructDesc*>(&desc)->offset;
 	}
 	return 0;
+}
+
+static TextureLayout get_default_texture_layout(TextureUsageFlags flags)
+{
+	if (flags.has(TextureUsageFlagBits::Sampled))
+		return TextureLayout::ShaderReadOnlyOptimal;
+	if (flags.has(TextureUsageFlagBits::Storage))
+		return TextureLayout::ShaderReadOnlyOptimal;
+	if (flags.has(TextureUsageFlagBits::ColorAttachment))
+		return TextureLayout::ColorAttachmentOptimal;
+	if (flags.has(TextureUsageFlagBits::DepthStencilAttachment))
+		return TextureLayout::DepthStencilAttachmentOptimal;
+	if (flags.has(TextureUsageFlagBits::InputAttachment))
+		return TextureLayout::ShaderReadOnlyOptimal;
+
+	VERA_ASSERT_MSG(false, "unsupported texture usage");
+	return TextureLayout::Undefined;
 }
 
 template <class MemberDescType>
@@ -100,56 +139,62 @@ static int32_t find_member_index(const MemberDescType& desc, const char* name)
 	return -1;
 }
 
-template <class StorageArrayData>
-static ShaderStorageData* subscript_storage_array_data(ShaderStorageData* data, uint32_t idx)
-{
-	auto& array_data = *static_cast<StorageArrayData*>(data);
-
-	VERA_ASSERT_MSG(idx < array_data.elements.size(), "array subscript out of range");
-
-	return array_data.elements[idx];
-}
-
-template <class StorageArrayData>
-static ShaderStorageData* access_storage_array_data(ShaderStorageData* data, uint32_t idx)
-{
-	auto& array_data = *static_cast<StorageArrayData*>(data);
-
-	if (array_data.elements.size() <= idx)
-		throw Exception("resource array out of bounds: {} <= {}", array_data.elements.size(), idx);
-
-	return &array_data.elements[idx];
-}
-
-ShaderVariable::ShaderVariable(
-	ref<ShaderStorage> storage,
-	ShaderStorageData* data,
-	ReflectionDesc*    desc,
-	uint32_t           offset
-) :
-	m_storage(storage),
-	m_data(data),
-	m_desc(desc),
-	m_offset(offset)
-{
-	VERA_ASSERT(storage && data && desc);
-}
-
 ShaderVariable ShaderVariable::operator[](std::string_view name) VERA_NOEXCEPT
 {
-	VERA_ASSERT_MSG(m_desc->type == ReflectionType::Struct, "variable does not have any member");
+	switch (m_desc->type) {
+	case ReflectionType::Struct: {
+		const auto& struct_desc = static_cast<const ReflectionStructDesc&>(*m_desc);
+		
+		int32_t idx = find_member_index(struct_desc, name.data());
 
-	auto& struct_desc = static_cast<const ReflectionStructDesc&>(*m_desc);
+		VERA_ASSERT_MSG(0 <= idx, "member not found");
 
-	if (int32_t idx = find_member_index(struct_desc, name.data()); 0 <= idx) {
-		auto member_desc = struct_desc.members[idx];
-		auto new_offset  = m_offset + get_offset(*member_desc);
+		auto& member_desc = struct_desc.members[idx];
+		
+		return ShaderVariable(
+			m_storage,
+			m_resource,
+			member_desc,
+			m_offset + get_offset(*member_desc)
+		);
+	}
+	case ReflectionType::ResourceBlock: {
+		const auto& block_desc = static_cast<const ReflectionResourceBlockDesc&>(*m_desc);
 
-		return ShaderVariable(m_storage, m_data, member_desc, new_offset);
+		int32_t idx = find_member_index(block_desc, name.data());
+
+		VERA_ASSERT_MSG(0 <= idx, "member not found");
+
+		auto& member_desc = block_desc.members[idx];
+
+		return ShaderVariable(
+			m_storage,
+			m_resource,
+			member_desc,
+			m_offset + get_offset(*member_desc)
+		);
+	}
+	case ReflectionType::PushConstant: {
+		const auto& pc_desc = static_cast<const ReflectionPushConstantDesc&>(*m_desc);
+
+		int32_t idx = find_member_index(pc_desc, name.data());
+
+		VERA_ASSERT_MSG(0 <= idx, "member not found");
+
+		auto& member_desc = pc_desc.members[idx];
+
+		return ShaderVariable(
+			m_storage,
+			m_resource,
+			member_desc,
+			m_offset + get_offset(*member_desc)
+		);
+	}
+	default:
+		VERA_ASSERT_MSG(false, "variable has no member");
 	}
 
-	VERA_ASSERT_MSG(false, "variable does not have member");
-	// to supress warning
+	// to suppress warning
 	return {};
 }
 
@@ -157,536 +202,343 @@ ShaderVariable ShaderVariable::operator[](uint32_t idx) VERA_NOEXCEPT
 {
 	switch (m_desc->type) {
 	case ReflectionType::Array: {
-		const auto& array_desc = static_cast<const ReflectionArrayDesc&>(*m_desc);
-		const auto  new_offset = m_offset + array_desc.stride * idx;
+		const auto* array_desc = static_cast<const ReflectionArrayDesc*>(m_desc);
 
-		VERA_ASSERT_MSG(array_desc.elementCount <= idx, "array subscript out of range");
+		VERA_ASSERT_MSG(idx < array_desc->elementCount, "array index out of range");
 
-		return ShaderVariable(m_storage, m_data, array_desc.element, new_offset);
+		return ShaderVariable(
+			m_storage,
+			m_resource,
+			array_desc->element,
+			m_offset + array_desc->stride * idx
+		);
 	}
 	case ReflectionType::ResourceArray: {
-		auto& resource_array = static_cast<ShaderStorageResourceArrayData&>(*m_data);
-		auto* element_desc   = static_cast<ReflectionResourceArrayDesc*>(m_desc)->element;
+		const auto* array_desc = static_cast<const ReflectionResourceArrayDesc*>(m_desc);
 
-		VERA_ASSERT_MSG(idx < resource_array.elements.size(), "resource array subscript out of range");
+		VERA_ASSERT_MSG(idx < get_array_element_count(array_desc), "array index out of range");
 
-		auto* array_element  = resource_array.elements[idx].frames.front();
-
-		return ShaderVariable(m_storage, array_element, element_desc, 0);
+		return ShaderVariable(
+			m_storage,
+			m_resource + idx,
+			array_desc->element,
+			m_offset
+		);
 	}
 	default:
 		VERA_ASSERT_MSG(false, "variable is not subscriptable");
 	}
 
-	// to supress warning
+	// to suppress warning
 	return {};
 }
 
+ShaderVariable::ShaderVariable(
+	ref<ShaderStorage>     storage,
+	ShaderStorageResource* resource,
+	ReflectionDesc*        desc,
+	uint32_t               offset
+) :
+	m_storage(std::move(storage)),
+	m_resource(resource),
+	m_desc(desc),
+	m_offset(offset) {}
+
 ShaderVariable ShaderVariable::at(std::string_view name)
 {
-	if (m_desc->type != ReflectionType::Struct)
-		throw Exception("variable does not have any member");
-	
-	auto& struct_desc = static_cast<const ReflectionStructDesc&>(*m_desc);
-
-	if (int32_t idx = find_member_index(struct_desc, name.data()); 0 <= idx) {
-		auto member_desc = struct_desc.members[idx];
-		auto new_offset  = m_offset + get_offset(*member_desc);
-
-		return ShaderVariable(m_storage, m_data, member_desc, new_offset);
-	}
-
-	throw Exception("variable does not have member: {}", name);
+	return {};
 }
 
 ShaderVariable ShaderVariable::at(uint32_t idx)
 {
-	switch (m_desc->type) {
-	case ReflectionType::Array: {
-		const auto& array_desc = static_cast<const ReflectionArrayDesc&>(*m_desc);
-		const auto  new_offset = m_offset + array_desc.stride * idx;
-
-		if (array_desc.elementCount <= idx)
-			throw Exception("array subscript out of range");
-
-		return ShaderVariable(m_storage, m_data, array_desc.element, new_offset);
-	}
-	case ReflectionType::ResourceArray: {
-		auto& resource_array = static_cast<ShaderStorageResourceArrayData&>(*m_data);
-		auto* element_desc   = static_cast<ReflectionResourceArrayDesc*>(m_desc)->element;
-		
-		if (resource_array.elements.size() <= idx)
-			throw Exception("resource array subscript out of range");
-
-		auto* array_element  = resource_array.elements[idx].frames.front();
-
-		return ShaderVariable(m_storage, array_element, element_desc, 0);
-	}
-	default:
-		throw Exception("variable is not subscriptable");
-	}
+	return {};
 }
 
-void ShaderVariable::operator=(obj<Sampler> obj)
+void ShaderVariable::operator=(obj<Sampler> sampler)
 {
-	setSampler(std::move(obj));
+	m_storage->setSampler(*this, sampler);
 }
 
-void ShaderVariable::operator=(obj<TextureView> obj)
+void ShaderVariable::operator=(obj<Texture> texture)
 {
-	setTextureView(std::move(obj));
+	auto layout = get_default_texture_layout(texture->getUsageFlags());
+	auto obj    = TextureView::create(texture, TextureViewCreateInfo{
+		.type   = TextureViewType::View2D,
+		.format = texture->getFormat()
+	});
+
+	m_storage->setTextureView(*this, std::move(obj), layout);
 }
 
-void ShaderVariable::operator=(obj<BufferView> obj)
+void ShaderVariable::operator=(obj<TextureView> texture_view)
 {
-	setBufferView(std::move(obj));
+	m_storage->setTextureView(*this, texture_view);
 }
 
-void ShaderVariable::operator=(obj<Buffer> obj)
+void ShaderVariable::operator=(obj<BufferView> buffer_view)
 {
-	setBuffer(std::move(obj));
+	m_storage->setBufferView(*this, buffer_view);
+}
+
+void ShaderVariable::operator=(obj<Buffer> buffer)
+{
+	m_storage->setBuffer(*this, buffer);
 }
 
 void ShaderVariable::setSampler(obj<Sampler> sampler)
 {
-#ifdef _DEBUG
-	auto& desc = static_cast<ReflectionResourceDesc&>(*m_desc);
-	VERA_ASSERT(m_desc->type == ReflectionType::Resource && (
-		desc.resourceType == ResourceType::Sampler ||
-		desc.resourceType == ResourceType::CombinedImageSampler));
-#endif
-	m_storage->setSampler(*this, std::move(sampler));
+	m_storage->setSampler(*this, sampler);
 }
 
 void ShaderVariable::setTextureView(obj<TextureView> texture_view)
 {
-	auto& desc = static_cast<ReflectionResourceDesc&>(*m_desc);
+	m_storage->setTextureView(*this, texture_view);
+}
 
-	VERA_ASSERT(m_desc->type == ReflectionType::Resource && (
-		desc.resourceType == ResourceType::CombinedImageSampler ||
-		desc.resourceType == ResourceType::SampledImage ||
-		desc.resourceType == ResourceType::StorageImage ||
-		desc.resourceType == ResourceType::InputAttachment));
-
-	m_storage->setTextureView(
-		*this,
-		std::move(texture_view),
-		desc.resourceType == ResourceType::InputAttachment ?
-		TextureLayout::ColorAttachmentOptimal :
-		TextureLayout::ShaderReadOnlyOptimal);
+void ShaderVariable::setTextureView(obj<TextureView> texture_view, TextureLayout texture_layout)
+{
+	m_storage->setTextureView(*this, texture_view, texture_layout);
 }
 
 void ShaderVariable::setBufferView(obj<BufferView> buffer_view)
 {
-#ifdef _DEBUG
-	auto& desc = static_cast<ReflectionResourceDesc&>(*m_desc);
-	VERA_ASSERT(m_desc->type == ReflectionType::Resource && (
-		desc.resourceType == ResourceType::UniformTexelBuffer ||
-		desc.resourceType == ResourceType::StorageTexelBuffer));
-#endif
-	m_storage->setBufferView(*this, std::move(buffer_view));
+	m_storage->setBufferView(*this, buffer_view);
 }
 
 void ShaderVariable::setBuffer(obj<Buffer> buffer)
 {
-#ifdef _DEBUG
-	auto& desc = static_cast<ReflectionResourceDesc&>(*m_desc);
-	VERA_ASSERT(m_desc->type == ReflectionType::Resource && (
-		desc.resourceType == ResourceType::UniformBuffer ||
-		desc.resourceType == ResourceType::UniformBufferDynamic ||
-		desc.resourceType == ResourceType::StorageBuffer ||
-		desc.resourceType == ResourceType::StorageBufferDynamic));
-#endif
-	m_storage->setBuffer(
-		*this,
-		std::move(buffer),
-		0,
-		VK_WHOLE_SIZE);
+	m_storage->setBuffer(*this, buffer);
 }
 
-static uint32_t get_resource_count(const ReflectionResourceDesc& desc)
-{
-	if (desc.type == ReflectionType::ResourceArray) {
-		const auto& arr_desc = static_cast<const ReflectionResourceArrayDesc&>(desc);
-		return arr_desc.elementCount == UINT32_MAX ? VERA_UNSIZED_ARRAY_RESOURCE_COUNT : arr_desc.elementCount;
-	}
-	
-	return 1;
-}
-
-static ShaderStorageData* create_resource_data(ShaderStorageImpl& impl, const ReflectionResourceDesc& desc)
-{
-	// TODO: use default resource
-	switch (desc.resourceType) {
-	case ResourceType::Sampler: {
-		auto* data = new ShaderStorageSamplerData;
-		data->sampler = impl.device->getDefaultSampler();
-		return data;
-	} break;
-	case ResourceType::CombinedImageSampler: {
-		auto* data = new ShaderStorageCombinedImageSamplerData;
-		data->sampler = impl.device->getDefaultSampler();
-		return data;
-	} break;
-	case ResourceType::SampledImage:
-	case ResourceType::StorageImage:
-	case ResourceType::InputAttachment: {
-		auto* data = new ShaderStorageTextureData;
-		data->textureView = impl.device->getDefaultTextureView();
-		return data;
-	} break;
-	case ResourceType::UniformTexelBuffer:
-	case ResourceType::StorageTexelBuffer: {
-		auto* data = new ShaderStorageTexelBufferData;
-		data->bufferView = impl.device->getDefaultBufferView();
-		return data;
-	}
-	case ResourceType::UniformBuffer:
-	case ResourceType::UniformBufferDynamic:
-	case ResourceType::StorageBuffer:
-	case ResourceType::StorageBufferDynamic: {
-		auto* data = new ShaderStorageBufferData;
-		data->buffer = impl.device->getDefaultBuffer();
-		data->offset = 0;
-		data->range  = VK_WHOLE_SIZE;
-		return data;
-	}
-	default:
-		VERA_ASSERT_MSG(false, "invalid resource type for resource data");
-	}
-}
-
-static ShaderStorageData* create_resource_block_data(ShaderStorageImpl& impl, const ReflectionResourceBlockDesc& desc)
-{
-	auto& block_desc = static_cast<const ReflectionResourceBlockDesc&>(desc);
-	auto* data       = new ShaderStorageBufferBlockData;
-
-	switch (desc.resourceType) {
-	case ResourceType::UniformBuffer:
-	case ResourceType::UniformBufferDynamic: {
-		data->buffer = Buffer::createUniform(impl.device, block_desc.sizeInByte);
-	} break;
-	case ResourceType::StorageBuffer:
-	case ResourceType::StorageBufferDynamic: {
-		data->buffer = Buffer::createStorage(impl.device, block_desc.sizeInByte);
-	} break;
-	default:
-		VERA_ASSERT_MSG(false, "invalid resource type for resource block");
-	}
-
-	return data;
-}
-
-static ShaderStorageData* create_push_constant_data(ShaderStorageImpl& impl, const ReflectionPushConstantDesc& desc)
-{
-	auto* data = new ShaderStoragePushConstantData;
-	data->block.resize(desc.sizeInByte);
-	return data;
-}
-
-static ShaderStorageResourceArrayData* create_resource_array_data(ShaderStorageImpl& impl, const ReflectionResourceArrayDesc& desc)
-{
-	auto*  array_data    = new ShaderStorageResourceArrayData;
-	size_t element_count = get_resource_count(desc);
-
-	array_data->elements.resize(element_count);
-
-	switch (desc.element->type) {
-	case ReflectionType::Resource: {
-		for (size_t i = 0; i < element_count; i++) {
-			auto& element_desc  = static_cast<const ReflectionResourceDesc&>(*desc.element);
-			auto* resource_data = create_resource_data(impl, element_desc);
-			array_data->elements[i].frames.push_back(resource_data);
-		}
-	} break;
-	case ReflectionType::ResourceBlock: {
-		for (size_t i = 0; i < element_count; i++) {
-			auto& element_desc  = static_cast<const ReflectionResourceBlockDesc&>(*desc.element);
-			auto* resource_data = create_resource_block_data(impl, element_desc);
-			array_data->elements[i].frames.push_back(resource_data);
-		}
-	} break;
-	default:
-		VERA_ASSERT_MSG(false, "invalid element type for resource array");
-	}
-
-	return array_data;
-}
-
-static void create_storage_data(ShaderStorageImpl& impl, const PipelineLayoutImpl& layout_impl)
-{
-	auto reflections = array_view(layout_impl.reflection.reflections, layout_impl.reflection.reflectionCount);
-
-	impl.storageDatas.reserve(reflections.size());
-	for (auto& desc : reflections) {
-		switch (desc->type) {
-		case ReflectionType::Resource: {
-			auto& res_desc      = static_cast<const ReflectionResourceDesc&>(*desc);
-			auto* resource_data = new ShaderStorageResourceData;
-			resource_data->frames.push_back(create_resource_data(impl, res_desc));
-			impl.storageDatas.push_back(resource_data);
-		} break;
-		case ReflectionType::ResourceBlock: {
-			auto& block_desc    = static_cast<const ReflectionResourceBlockDesc&>(*desc);
-			auto* resource_data = new ShaderStorageResourceData;
-			resource_data->frames.push_back(create_resource_block_data(impl, block_desc));
-			impl.storageDatas.push_back(resource_data);
-		} break;
-		case ReflectionType::PushConstant: {
-			auto& pc_desc       = static_cast<const ReflectionPushConstantDesc&>(*desc);
-			auto* resource_data = new ShaderStorageResourceData;
-			resource_data->frames.push_back(create_push_constant_data(impl, pc_desc));
-			impl.storageDatas.push_back(resource_data);
-		} break;
-		case ReflectionType::ResourceArray: {
-			auto& array_desc = static_cast<const ReflectionResourceArrayDesc&>(*desc);
-			auto* array_data = create_resource_array_data(impl, array_desc);
-			impl.storageDatas.push_back(array_data);
-		} break;
-		default:
-			VERA_ASSERT_MSG(false, "invalid reflection type for resource data");
-		}
-	}
-}
-
-static void destroy_storage_data(ShaderStorageImpl& impl)
-{
-	for (auto* data : impl.storageDatas)
-		delete data;
-	impl.storageDatas.clear();
-}
-
-static void append_storage_resource(
-	std::vector<ShaderStorageResource>& resources,
-	std::vector<ShaderStorageBinding>&  storage_bindings,
-	const ReflectionDesc*               reflection,
-	int32_t                             array_index = -1
+static void reset_shader_storage_frame(
+	ShaderStorageImpl&        impl,
+	const ShaderStorageFrame* prev_frame,
+	ShaderStorageFrame&       out_frame
 ) {
-	switch (reflection->type) {
-	case ReflectionType::Resource:
-	case ReflectionType::ResourceBlock: {
-		auto* res_desc = static_cast<const ReflectionResourceDesc*>(reflection);
-		auto& resource = resources.emplace_back();
+	out_frame.commandBuffer     = {};
+	out_frame.commandBufferSync = {};
+	out_frame.samplers          = {};
+	out_frame.textureViews      = {};
+	out_frame.bufferViews       = {};
+	out_frame.buffers           = {};
 
-		resource.resourceBinding = storage_bindings[res_desc->set].resourceBinding;
-		resource.set             = res_desc->set;
-		resource.binding         = res_desc->binding;
-		resource.arrayIndex      = array_index;
-		resource.resourceID      = resources.size() - 1;
-		resource.lastUpdateFrame = 0;
-	} break;
-	case ReflectionType::ResourceArray: {
-		const auto* array_desc    = static_cast<const ReflectionResourceArrayDesc*>(reflection);
-		const auto  element_count = array_desc->elementCount == UINT32_MAX ?
-			VERA_UNSIZED_ARRAY_RESOURCE_COUNT : array_desc->elementCount;
+	for (auto frame_set : out_frame.frameSets) {
+		frame_set.subFrameIndex = 0;
 
-		for (uint32_t i = 0; i < element_count; ++i)
-			append_storage_resource(resources, storage_bindings, array_desc->element, i);
-	} break;
-	case ReflectionType::PushConstant: {
-		auto* pc_desc  = static_cast<const ReflectionPushConstantDesc*>(reflection);
-		auto& resource = resources.emplace_back();
-
-		resource.resourceBinding = {};
-		resource.set             = UINT32_MAX;
-		resource.binding         = UINT32_MAX;
-		resource.arrayIndex      = array_index;
-		resource.resourceID      = resources.size() - 1;
-		resource.lastUpdateFrame = 0;
-	} break;
-	default:
-		VERA_ASSERT_MSG(false, "invalid reflection type");
-	}
-}
-
-static const ReflectionResourceDesc* find_set_last_resource_desc(const ShaderReflection& reflection, uint32_t set_id)
-{
-	// TODO: optimize
-	const ReflectionResourceDesc* last_desc = nullptr;
-
-	for (uint32_t i = 0; i < reflection.resourceCount; ++i) {
-		const auto* res_desc = static_cast<const ReflectionResourceDesc*>(reflection.reflections[i]);
-
-		if (set_id == res_desc->set)
-			last_desc = res_desc;
-		else if (set_id < res_desc->set)
-			break;
-	}
-
-	VERA_ASSERT(last_desc);
-
-	return last_desc;
-}
-
-static obj<ResourceBinding> allocate_resource_binding(ShaderStorageImpl& impl, uint32_t set)
-{
-	auto& reflection      = CoreObject::getImpl(impl.pipelineLayout).reflection;
-	auto* last_desc       = find_set_last_resource_desc(reflection, set);
-	auto  resource_layout = last_desc->resourceLayout;
-	auto  resource_count  = get_resource_count(*last_desc);
+		if (frame_set.subFrames.size() == 1) continue;
 	
-	return impl.bindingPool->allocateBinding(resource_layout, resource_count);
-}
+		auto&  first_frame = frame_set.subFrames.front();
+		auto&  set         = impl.sets[frame_set.set];
+		size_t res_offset  = impl.setResourceRanges[frame_set.set].first();
 
-static void reset_storage_frame(ShaderStorageImpl& impl, ShaderStorageFrame& prev_frame, ShaderStorageFrame& out_frame)
-{
-	VERA_ASSERT(&prev_frame != &out_frame);
-
-	const auto& pipeline_impl = CoreObject::getImpl(impl.pipelineLayout);
-	const auto& reflection    = pipeline_impl.reflection;
-
-	for (uint32_t set_id = 0; set_id < reflection.maxSetCount; ++set_id) {
-		auto& prev_binding = prev_frame.storageSetBindings[set_id];
-		auto& out_binding  = out_frame.storageSetBindings[set_id];
-
-		if (out_binding.resourceBinding == prev_binding.resourceBinding) continue;
-
-		impl.bindingSetPool[set_id].push_back(std::move(out_binding.resourceBinding));
-		out_binding.resourceBinding = prev_binding.resourceBinding;
-	}
-
-	for (uint32_t i = 0; i < reflection.reflectionCount; ++i) {
-		auto& prev_resource = prev_frame.storageResources[i];
-		auto& out_resource  = out_frame.storageResources[i];
-
-		out_resource.resourceBinding = prev_resource.resourceBinding;
-		out_resource.lastUpdateFrame = prev_resource.lastUpdateFrame;
-	}
-
-	out_frame.frameID         = ++impl.frameID;
-	out_frame.commandSync     = {};
-	out_frame.lastUpdateFrame = prev_frame.lastUpdateFrame;
-}
-
-static void append_storage_frame(ShaderStorageImpl& impl, ShaderStorageFrame* prev_frame, size_t at)
-{
-	const auto& pipeline_impl = CoreObject::getImpl(impl.pipelineLayout);
-	const auto& reflection    = pipeline_impl.reflection;
-
-	auto& frame = *impl.storageFrames.emplace(impl.storageFrames.cbegin() + at);
-
-	if (prev_frame) {
-		for (uint32_t set_id = 0; set_id < reflection.maxSetCount; ++set_id) {
-			auto& prev_binding  = prev_frame->storageSetBindings[set_id];
-			auto& frame_binding = frame.storageSetBindings[set_id];
-
-			if (frame_binding.resourceBinding == prev_binding.resourceBinding) continue;
-
-			impl.bindingSetPool[set_id].push_back(std::move(frame_binding.resourceBinding));
-			frame_binding.resourceBinding = prev_binding.resourceBinding;
-		}
-
-		for (uint32_t i = 0; i < reflection.reflectionCount; ++i) {
-			const auto* desc = reflection.reflections[i];
-			append_storage_resource(frame.storageResources, prev_frame->storageSetBindings, desc);
-		}
-
-		frame.frameID         = ++impl.frameID;
-		frame.lastUpdateFrame = prev_frame->lastUpdateFrame;
-	} else {
-		for (uint32_t set_id = 0; set_id < reflection.maxSetCount; ++set_id) {
-			auto new_binding = allocate_resource_binding(impl, set_id);
-
-			auto& binding = frame.storageSetBindings.emplace_back();
-			binding.resourceBinding = std::move(new_binding);
-			binding.set             = set_id;
-			binding.lastUpdateFrame = 0;
-		}
-
-		for (uint32_t i = 0; i < reflection.reflectionCount; ++i) {
-			const auto* desc = reflection.reflections[i];
-			append_storage_resource(frame.storageResources, frame.storageSetBindings, desc);
-		}
-
-		frame.frameID         = impl.frameID;
-		frame.lastUpdateFrame = 0;
-	}
-
-	frame.commandSync = {};
-}
-
-static void prepare_storage_frame(ShaderStorageImpl& impl)
-{
-	auto&       curr_frame = impl.storageFrames[impl.frameIndex];
-	const auto& curr_sync  = curr_frame.commandSync;
-
-	if (!curr_sync.empty() && curr_sync.getState() == CommandBufferState::Submitted) {
-		const auto  frame_count    = static_cast<uint32_t>(impl.storageFrames.size());
-		const auto  next_frame_idx = (impl.frameIndex + 1) % frame_count;
-		auto&       next_frame     = impl.storageFrames[next_frame_idx];
-		const auto& next_sync      = next_frame.commandSync;
-
-		if (next_frame_idx != impl.frameIndex && next_sync.getState() != CommandBufferState::Submitted)
-			reset_storage_frame(impl, curr_frame, next_frame);
-		else
-			append_storage_frame(impl, &curr_frame, next_frame_idx);
-
-		impl.frameIndex = next_frame_idx;
-	} else {
-		impl.completeFrameID = impl.frameID;
-	}
-}
-
-static void prepare_resource_write(ShaderStorageImpl& impl, uint32_t resource_id)
-{
-	if (impl.confirmedFrameID != impl.frameID) {
-		prepare_storage_frame(impl);
-		impl.confirmedFrameID = impl.frameID;
-	}
-
-	if (true /* check if resource is used or need update*/) {
-		auto&    frame    = impl.storageFrames[impl.frameIndex];
-		auto&    resource = frame.storageResources[resource_id];
-		uint32_t dst_set  = resource.set;
-
-		if (auto& binding = frame.storageSetBindings[dst_set]; binding.lastUpdateFrame < impl.frameID) {
-			if (auto& binding_set_pool = impl.bindingSetPool[dst_set]; binding_set_pool.empty()) {
-				auto new_binding = allocate_resource_binding(impl, dst_set);
-				binding.resourceBinding = std::move(new_binding);
-			} else {
-				binding.resourceBinding = std::move(binding_set_pool.back());
-				binding_set_pool.pop_back();
-			}         
-
-			// TODO: optimize
-			for (auto& res : frame.storageResources) {
-				if (dst_set == res.set)
-					res.resourceBinding = binding.resourceBinding;
-				else if (dst_set < res.set)
-					break;
+		for (size_t i = 0; i < first_frame.lastSubFrameIDs.size(); ++i) {
+			const auto& resource = impl.resources[res_offset + i];
+			
+			if (first_frame.lastSubFrameIDs[i] < resource.lastSubFrameID) {
+				auto& binding = set.bindings[resource.bindingIndex];
+				binding.needUpdate = true;
+				set.needUpdate     = true;
+				
+				// TODO: optimize range insertion
+				if (resource.arrayIndex != UINT32_MAX)
+					binding.arrayUpdateRange.insert(resource.arrayIndex);
 			}
+		}
+	}
+}
 
-			binding.lastUpdateFrame = impl.frameID;
+static uint32_t get_variable_descriptor_count(const ShaderStorageImpl& impl, uint32_t set)
+{
+	auto& reflection = impl.reflection;
+
+	auto** first = reflection.reflections;
+	auto** last  = first + reflection.resourceCount;
+
+	auto it = std::prev(std::upper_bound(first, last, set,
+		[](uint32_t set, const ReflectionRootMemberDesc* desc) {
+			return set < static_cast<const ReflectionResourceDesc*>(desc)->set;
+		}));
+
+	auto* res_desc = static_cast<const ReflectionResourceDesc*>(*it);
+
+	VERA_ASSERT(res_desc->set == set);
+
+	if (res_desc->type != ReflectionType::ResourceArray)
+		return 1;
+
+	return get_array_element_count(static_cast<const ReflectionResourceArrayDesc*>(*it));
+}
+
+static void update_all_set(ShaderStorageImpl& impl)
+{
+	for (auto& set : impl.sets) {
+		for (auto& binding : set.bindings) {
+			uint32_t array_count     = static_cast<uint32_t>(binding.resourceRange.size());
+			binding.arrayUpdateRange = basic_range(0u, array_count);
+			binding.needUpdate       = true;
 		}
 
-		resource.lastUpdateFrame = impl.frameID;
+		set.needUpdate = true;
 	}
+}
+
+static void append_shader_storage_frame(
+	ShaderStorageImpl&        impl,
+	const ShaderStorageFrame* prev_frame,
+	uint32_t                  at
+) {
+	auto& new_frame = *impl.frames.emplace(impl.frames.cbegin() + at);
+
+	new_frame.descriptorPool = DescriptorPool::create(impl.device);
+
+	new_frame.frameSets.resize(impl.reflection.setRangeCount);
+	for (uint32_t i = 0; i < new_frame.frameSets.size(); ++i) {
+		auto& set = new_frame.frameSets[i];
+		set.set                = i;
+		set.variableArrayCount = get_variable_descriptor_count(impl, i);
+		set.subFrameIndex      = 0;
+
+		auto  set_range  = impl.setResourceRanges[i];
+		auto  set_layout = impl.pipelineLayout->getDescriptorSetLayout(i);
+		auto& subframe   = set.subFrames.emplace_back();
+
+		subframe.descriptorSet = new_frame.descriptorPool->
+			allocateDescriptorSet(set_layout, set.variableArrayCount);
+		subframe.lastSubFrameIDs.resize(set_range.size(), 0);
+	}
+
+	update_all_set(impl);
+}
+
+static void next_frame(ShaderStorageImpl& impl)
+{
+	impl.frameID      += 1;
+	impl.subFrameIndex = 0;
+	
+	auto& curr_frame = impl.frames[impl.frameIndex];
+	auto& curr_sync  = curr_frame.commandBufferSync;
+
+	if (curr_sync.empty()) return;
+
+	if (curr_sync.isComplete()) {
+		reset_shader_storage_frame(impl, nullptr, curr_frame);
+	} else if (impl.frames.size() == 1) {
+		append_shader_storage_frame(impl, &curr_frame, 1);
+		impl.frameIndex = 1;
+	} else {
+		auto  next_idx   = (impl.frameIndex + 1) % static_cast<uint32_t>(impl.frames.size());
+		auto& next_frame = impl.frames[next_idx];
+		auto& next_sync  = next_frame.commandBufferSync;
+
+		if (next_sync.isComplete()) {
+			reset_shader_storage_frame(impl, &curr_frame, next_frame);
+		} else {
+			append_shader_storage_frame(impl, &curr_frame, next_idx);
+		}
+
+		impl.prevFrameIndex = std::exchange(impl.frameIndex, next_idx);
+	}
+}
+
+static void prepare_frame(ShaderStorageImpl& impl)
+{
+	// TODO: optimize next frame checking !!!!!
+	if (!impl.currentSync.empty() &&
+		CommandBufferState::Executable <= impl.currentSync.getState())
+		next_frame(impl);
+}
+
+static void backup_resource_prev_frame(ShaderStorageImpl& impl, ShaderStorageResource& resource)
+{
+	if (impl.prevFrameIndex == 0 || impl.frames.size() == 1) return;
+
+	auto& prev_frame = impl.frames[impl.prevFrameIndex];
+
+	if (prev_frame.commandBufferSync.isComplete()) return;
+
+	switch (resource.resourceDesc->descriptorType) {
+	case DescriptorType::Sampler: {
+		auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+		if (image_data.sampler.count() == 1)
+			prev_frame.samplers.push_back(image_data.sampler);
+	} break;
+	case DescriptorType::CombinedImageSampler: {
+		auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+		if (image_data.sampler.count() == 1)
+			prev_frame.samplers.push_back(image_data.sampler);
+		if (image_data.textureView.count() == 1)
+			prev_frame.textureViews.push_back(image_data.textureView);
+	} break;
+	case DescriptorType::SampledImage:
+	case DescriptorType::StorageImage:
+	case DescriptorType::InputAttachment: {
+		auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+		if (image_data.sampler.count() == 1)
+			prev_frame.textureViews.push_back(image_data.textureView);
+	} break;
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::StorageTexelBuffer: {
+		auto& view_data = get_storage_data<ShaderStorageBufferViewData>(resource);
+		if (view_data.bufferView.count() == 1)
+			prev_frame.bufferViews.push_back(view_data.bufferView);
+	} break;
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic: {
+		if (resource.resourceDesc->type == ReflectionType::ResourceBlock) {
+			auto& block_data = get_storage_data<ShaderStorageBufferBlockData>(resource);
+			if (block_data.buffer.count() == 1)
+				prev_frame.buffers.push_back(block_data.buffer);
+		} else /* resource.resourceDesc->type == ReflectionType::Resource */ {
+			VERA_ASSERT(resource.resourceDesc->type == ReflectionType::Resource);
+
+			auto& buffer_data = get_storage_data<ShaderStorageBufferData>(resource);
+			if (buffer_data.buffer.count() == 1)
+				prev_frame.buffers.push_back(buffer_data.buffer);
+		}
+	} break;
+	}
+}
+
+static void prepare_resource_write(ShaderStorageImpl& impl, ShaderStorageResource& resource)
+{
+	if (resource.lastSubFrameID == impl.subFrameID) return;
+
+	auto& set     = impl.sets[resource.set];
+	auto& binding = set.bindings[resource.bindingIndex];
+
+	set.needUpdate     = true;
+	binding.needUpdate = true;
+
+	if (resource.arrayIndex != UINT32_MAX)
+		binding.arrayUpdateRange.insert(resource.arrayIndex);
+	
+	backup_resource_prev_frame(impl, resource);
+
+	resource.lastSubFrameID = impl.subFrameID;
 }
 
 template <class T>
 static void store_scalar_impl(
-	ShaderStorageImpl&    impl,
-	ShaderStorageData*    storage_data,
-	const ReflectionDesc* desc,
-	uint32_t              offset,
-	const T&              value
+	ShaderStorageImpl&     impl,
+	ShaderStorageResource* resource,
+	const ReflectionDesc*  desc,
+	uint32_t               offset,
+	const T&               value
 ) {
-	const auto& prim_desc = static_cast<const ReflectionPrimitiveDesc&>(*desc);
-	
 	VERA_ASSERT_MSG(desc->type == ReflectionType::Primitive, "invalid resource type");
-	VERA_ASSERT_MSG(prim_desc.primitiveType == primitive_type_v<decltype(value)>, "invalid primitive type");
 
-	auto& storage = static_cast<ShaderStorageResourceData&>(*storage_data);
+	prepare_frame(impl);
 
-	prepare_resource_write(impl, storage.resourceID);
+	if (resource->set != UINT32_MAX) // push constant don't need to be prepared
+		prepare_resource_write(impl, *resource);
 
-	VERA_ASSERT_MSG(dynamic_cast<ShaderStorageBlockData*>(storage.frames.front()), "invalid storage type");
-
-	auto& front_data = static_cast<ShaderStorageBlockData&>(*storage.frames.front());
-	auto* data_ptr   = front_data.block.data() + offset;
+	auto& data     = get_storage_data<ShaderStorageBlockData>(*resource);
+	auto* data_ptr = data.block.data() + offset;
 
 	// automatic type casting
-	switch (prim_desc.primitiveType) {
+	switch (static_cast<const ReflectionPrimitiveDesc*>(desc)->primitiveType) {
 	case ReflectionPrimitiveType::Bool:
 		*reinterpret_cast<bool*>(data_ptr) = static_cast<bool>(value);
 		break;
@@ -725,76 +577,78 @@ static void store_scalar_impl(
 
 template <class T>
 static void store_vector_impl(
-	ShaderStorageImpl&    impl,
-	ShaderStorageData*    storage_data,
-	const ReflectionDesc* desc,
-	uint32_t              offset,
-	const T&              value
+	ShaderStorageImpl&     impl,
+	ShaderStorageResource* resource,
+	const ReflectionDesc*  desc,
+	uint32_t               offset,
+	const T&               value
 ) {
 #ifdef _DEBUG
 	const auto& prim_desc = static_cast<const ReflectionPrimitiveDesc&>(*desc);
 	VERA_ASSERT_MSG(desc->type == ReflectionType::Primitive, "invalid resource type");
-	VERA_ASSERT_MSG(prim_desc.primitiveType == primitive_type_v<decltype(value)>, "invalid primitive type");
+	VERA_ASSERT_MSG(prim_desc.primitiveType == primitive_type_v<T>, "invalid primitive type");
 #endif
-	auto& storage = static_cast<ShaderStorageResourceData&>(*storage_data);
 
-	prepare_resource_write(impl, storage.resourceID);
+	prepare_frame(impl);
 
-	VERA_ASSERT_MSG(dynamic_cast<ShaderStorageBlockData*>(storage.frames.front()), "invalid storage type");
+	if (resource->set != UINT32_MAX) // push constant don't need to be prepared
+		prepare_resource_write(impl, *resource);
 
-	auto& front_data = static_cast<ShaderStorageBlockData&>(*storage.frames.front());
+	auto& data     = get_storage_data<ShaderStorageBlockData>(*resource);
+	auto* data_ptr = data.block.data() + offset;
 
-	*reinterpret_cast<T*>(&front_data.block[offset]) = value;
+	*reinterpret_cast<T*>(data_ptr) = value;
 }
 
 template <class T>
 static void store_matrix_impl(
-	ShaderStorageImpl&    impl,
-	ShaderStorageData*    storage_data,
-	const ReflectionDesc* desc,
-	uint32_t              offset,
-	const T&              value
+	ShaderStorageImpl&     impl,
+	ShaderStorageResource* resource,
+	const ReflectionDesc*  desc,
+	uint32_t               offset,
+	const T&               value
 ) {
 #ifdef _DEBUG
 	const auto& prim_desc = static_cast<const ReflectionPrimitiveDesc&>(*desc);
 	VERA_ASSERT_MSG(desc->type == ReflectionType::Primitive, "invalid resource type");
-	VERA_ASSERT_MSG(prim_desc.primitiveType == primitive_type_v<decltype(value)>, "invalid primitive type");
+	VERA_ASSERT_MSG(prim_desc.primitiveType == primitive_type_v<T>, "invalid primitive type");
 #endif
-	auto& storage = static_cast<ShaderStorageResourceData&>(*storage_data);
 
-	prepare_resource_write(impl, storage.resourceID);
+	prepare_frame(impl);
 
-	VERA_ASSERT_MSG(dynamic_cast<ShaderStorageBlockData*>(storage.frames.front()), "invalid storage type");
+	if (resource->set != UINT32_MAX) // push constant don't need to be prepared
+		prepare_resource_write(impl, *resource);
 
-	auto& front_data = static_cast<ShaderStorageBlockData&>(*storage.frames.front());
+	auto& data     = get_storage_data<ShaderStorageBlockData>(*resource);
+	auto* data_ptr = data.block.data();
 
 	// GLSL and some ::vr::matrix_base<> type have different matrix layout
 	if constexpr (primitive_type_v<T> == ReflectionPrimitiveType::Float_2x3) {
-		*reinterpret_cast<float3*>(&front_data.block[offset + 0])  = value[0];
-		*reinterpret_cast<float3*>(&front_data.block[offset + 16]) = value[1];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 0])  = value[0];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 16]) = value[1];
 	} else if constexpr (primitive_type_v<T> == ReflectionPrimitiveType::Float_3x3) {
-		*reinterpret_cast<float3*>(&front_data.block[offset + 0])  = value[0];
-		*reinterpret_cast<float3*>(&front_data.block[offset + 16]) = value[1];
-		*reinterpret_cast<float3*>(&front_data.block[offset + 32]) = value[2];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 0])  = value[0];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 16]) = value[1];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 32]) = value[2];
 	} else if constexpr (primitive_type_v<T> == ReflectionPrimitiveType::Float_4x3) {
-		*reinterpret_cast<float3*>(&front_data.block[offset + 0])  = value[0];
-		*reinterpret_cast<float3*>(&front_data.block[offset + 16]) = value[1];
-		*reinterpret_cast<float3*>(&front_data.block[offset + 32]) = value[2];
-		*reinterpret_cast<float3*>(&front_data.block[offset + 48]) = value[3];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 0])  = value[0];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 16]) = value[1];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 32]) = value[2];
+		*reinterpret_cast<float3*>(&data_ptr[offset + 48]) = value[3];
 	} else if constexpr (primitive_type_v<T> == ReflectionPrimitiveType::Double_2x3) {
-		*reinterpret_cast<double3*>(&front_data.block[offset + 0])  = value[0];
-		*reinterpret_cast<double3*>(&front_data.block[offset + 16]) = value[1];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 0])  = value[0];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 16]) = value[1];
 	} else if constexpr (primitive_type_v<T> == ReflectionPrimitiveType::Double_3x3) {
-		*reinterpret_cast<double3*>(&front_data.block[offset + 0])  = value[0];
-		*reinterpret_cast<double3*>(&front_data.block[offset + 16]) = value[1];
-		*reinterpret_cast<double3*>(&front_data.block[offset + 32]) = value[2];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 0])  = value[0];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 16]) = value[1];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 32]) = value[2];
 	} else if constexpr (primitive_type_v<T> == ReflectionPrimitiveType::Double_4x3) {
-		*reinterpret_cast<double3*>(&front_data.block[offset + 0])  = value[0];
-		*reinterpret_cast<double3*>(&front_data.block[offset + 16]) = value[1];
-		*reinterpret_cast<double3*>(&front_data.block[offset + 32]) = value[2];
-		*reinterpret_cast<double3*>(&front_data.block[offset + 48]) = value[3];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 0])  = value[0];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 16]) = value[1];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 32]) = value[2];
+		*reinterpret_cast<double3*>(&data_ptr[offset + 48]) = value[3];
 	} else {
-		*reinterpret_cast<T*>(&front_data.block[offset]) = value;
+		*reinterpret_cast<T*>(&data_ptr[offset]) = value;
 	}
 }
 
@@ -871,6 +725,326 @@ static void check_pipeline_layout(PipelineLayoutImpl& impl)
 		check_reflection_name_map(reflection.reflections[i]);
 }
 
+static void append_shader_storage_resource_data(
+	ShaderStorageImpl&            impl,
+	const ReflectionResourceDesc* desc,
+	uint32_t                      binding_idx,
+	uint32_t                      array_idx
+) {
+	auto& data = impl.resources.emplace_back();
+
+	switch (desc->descriptorType) {
+	case DescriptorType::Sampler:
+	case DescriptorType::CombinedImageSampler: {
+		auto& image_data = construct_storage_data<ShaderStorageImageData>(data);
+		image_data.sampler    = impl.device->getDefaultSampler();
+	} break;
+	case DescriptorType::SampledImage:
+	case DescriptorType::StorageImage: {
+		construct_storage_data<ShaderStorageImageData>(data);
+	} break;
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::StorageTexelBuffer: {
+		construct_storage_data<ShaderStorageBufferViewData>(data);
+	} break;
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic: {
+		construct_storage_data<ShaderStorageBufferData>(data);
+	} break;
+	case DescriptorType::InputAttachment: {
+		construct_storage_data<ShaderStorageImageData>(data);
+	} break;
+	default:
+		VERA_ASSERT_MSG(false, "invalid resource descriptor type");
+	}
+
+	data.resourceDesc   = desc;
+	data.resourceID     = static_cast<uint32_t>(impl.resources.size() - 1);
+	data.set            = desc->set;
+	data.bindingIndex   = desc->binding;
+	data.arrayIndex     = array_idx;
+	data.lastSubFrameID = 0;
+}
+
+static void append_shader_storage_block_data(
+	ShaderStorageImpl&                 impl,
+	const ReflectionResourceBlockDesc* desc,
+	uint32_t                           binding_idx,
+	uint32_t                           array_idx
+) {
+	auto& data = impl.resources.emplace_back();
+
+	switch (desc->descriptorType) {
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic: {
+		auto& block_data = construct_storage_data<ShaderStorageBufferBlockData>(data);
+		block_data.block.resize(desc->sizeInByte);
+	} break;
+	default:
+		VERA_ASSERT_MSG(false, "invalid resource block descriptor type");
+	}
+
+	data.resourceDesc   = desc;
+	data.resourceID     = static_cast<uint32_t>(impl.resources.size() - 1);
+	data.set            = desc->set;
+	data.bindingIndex   = binding_idx;
+	data.arrayIndex     = array_idx;
+	data.lastSubFrameID = 0;
+}
+
+static void append_shader_storage_pc_data(ShaderStorageImpl& impl, const ReflectionPushConstantDesc* desc)
+{
+	VERA_ASSERT_MSG(desc->type == ReflectionType::PushConstant, "invalid push constant type");
+
+	auto& data    = impl.resources.emplace_back();
+	data.resourceDesc   = nullptr;
+	data.resourceID     = static_cast<uint32_t>(impl.resources.size() - 1);
+	data.set            = UINT32_MAX;
+	data.bindingIndex   = UINT32_MAX;
+	data.arrayIndex     = UINT32_MAX;
+	data.lastSubFrameID = 0;
+
+	auto& pc_data = construct_storage_data<ShaderStoragePushConstantData>(data);
+	pc_data.stageFlags = desc->stageFlags;
+	pc_data.block.resize(desc->sizeInByte);
+}
+
+static void append_shader_storage_resource_data(
+	ShaderStorageImpl&              impl,
+	const ReflectionRootMemberDesc* desc,
+	uint32_t                        binding_idx
+) {
+	uint32_t resource_offset = static_cast<uint32_t>(impl.resources.size());
+
+	switch (desc->type) {
+	case ReflectionType::Resource: {
+		const auto* res_desc = static_cast<const ReflectionResourceDesc*>(desc);
+		append_shader_storage_resource_data(impl, res_desc, binding_idx, UINT32_MAX);
+	} break;
+	case ReflectionType::ResourceBlock: {
+		const auto* block_desc = static_cast<const ReflectionResourceBlockDesc*>(desc);
+		append_shader_storage_block_data(impl, block_desc, binding_idx, UINT32_MAX);
+	} break;
+	case ReflectionType::ResourceArray: {
+		const auto* array_desc    = static_cast<const ReflectionResourceArrayDesc*>(desc);
+		uint32_t    element_count = get_array_element_count(array_desc);
+
+		if (array_desc->element->type == ReflectionType::Resource) {
+			const auto* res_desc = static_cast<const ReflectionResourceDesc*>(array_desc->element);
+			for (uint32_t i = 0; i < element_count; ++i)
+				append_shader_storage_resource_data(impl, res_desc, binding_idx, i);
+		} else if (array_desc->element->type == ReflectionType::ResourceBlock) {
+			const auto* block_desc = static_cast<const ReflectionResourceBlockDesc*>(array_desc->element);
+			for (uint32_t i = 0; i < element_count; ++i)
+				append_shader_storage_block_data(impl, block_desc, binding_idx, i);
+		} else {
+			VERA_ASSERT_MSG(false, "invalid resource array element type");
+		}
+	} break;
+	case ReflectionType::PushConstant: {
+		const auto* pc_desc = static_cast<const ReflectionPushConstantDesc*>(desc);
+		append_shader_storage_pc_data(impl, pc_desc);
+	} break;
+	default:
+		VERA_ASSERT_MSG(false, "invalid resource type");
+	}
+
+	impl.resourceRanges.emplace_back(resource_offset, static_cast<uint32_t>(impl.resources.size()));
+}
+
+static void create_shader_storage_resource_data(ShaderStorageImpl& impl)
+{
+	auto& layout_impl = CoreObject::getImpl(impl.pipelineLayout);
+
+	impl.setResourceRanges.resize(impl.reflection.setRangeCount);
+
+	uint32_t res_first        = 0;
+	uint32_t res_last         = 0;
+	uint32_t set_id           = 0;
+	uint32_t binding_idx      = 0;
+
+	for (uint32_t i = 0; i < impl.reflection.resourceCount; ++i) {
+		const auto* res_desc = static_cast<const ReflectionResourceDesc*>(impl.reflection.reflections[i]);
+		
+		if (res_desc->set != set_id)
+			binding_idx = 0;
+
+		res_last = static_cast<uint32_t>(impl.resources.size());
+		append_shader_storage_resource_data(impl, res_desc, binding_idx++);
+
+		if (res_desc->set != set_id) {
+			impl.setResourceRanges[set_id] = basic_range(res_first, res_last);
+			res_first                      = res_last;
+			set_id                         = res_desc->set;
+		}
+	}
+
+	if (!impl.setResourceRanges.empty()) {
+		res_last               = static_cast<uint32_t>(impl.resources.size());
+		impl.setResourceRanges[set_id] = basic_range(res_first, res_last);
+	}
+
+	uint32_t pc_first = static_cast<uint32_t>(impl.resources.size());
+	uint32_t pc_last  = pc_first + impl.reflection.reflectionCount - impl.reflection.resourceCount;
+
+	for (uint32_t i = impl.reflection.resourceCount; i < impl.reflection.reflectionCount; ++i)
+		append_shader_storage_resource_data(impl, impl.reflection.reflections[i], UINT32_MAX);
+
+	impl.pcRange = basic_range(pc_first, pc_last);
+}
+
+static const ReflectionResourceDesc* find_first_binding(const ShaderReflection& reflection, uint32_t set)
+{
+	const auto* first = reflection.reflections;
+	const auto* last  = first + reflection.resourceCount;
+
+	const auto* ptr = std::lower_bound(first, last, set,
+		[](const ReflectionRootMemberDesc* desc, uint32_t set) {
+			return static_cast<const ReflectionResourceDesc*>(desc)->set < set;
+		});
+
+	return ptr == last ? nullptr : static_cast<const ReflectionResourceDesc*>(*ptr);
+}
+
+static void create_shader_storage_set(ShaderStorageImpl& impl)
+{
+	const auto&    layout_impl = CoreObject::getImpl(impl.pipelineLayout);
+	const uint32_t set_count   = impl.reflection.setRangeCount;
+
+	impl.sets.resize(set_count);
+
+	for (uint32_t set_id = 0; set_id < set_count; ++set_id) {
+		auto& set       = impl.sets[set_id];
+		auto  set_range = layout_impl.reflection.setRanges[set_id];
+
+		set.bindings.resize(set_range.size());
+		for (uint32_t binding_idx = 0; binding_idx < set.bindings.size(); ++binding_idx) {
+			auto& binding    = set.bindings[binding_idx];
+			auto  res_idx    = set_range.first() + binding_idx;
+			auto& reflection = impl.reflection.reflections[res_idx];
+			auto& res_desc   = static_cast<const ReflectionResourceDesc&>(*reflection);
+			auto& res_range  = impl.setResourceRanges[set_id];
+
+			binding.reflectionType    = res_desc.type;
+			binding.descriptorType    = res_desc.descriptorType;
+			binding.set               = res_desc.set;
+			binding.binding           = res_desc.binding;
+			binding.bindingIndex      = binding_idx;
+			binding.setResourceOffset = res_range.first() - set_range.first();
+			binding.resourceRange     = res_range;
+			binding.arrayUpdateRange  = {};
+			binding.needUpdate        = false;
+		}
+
+		set.set            = set_id;
+		set.lastSubFrameID = 0;
+		set.needUpdate     = false;
+	}
+}
+
+static void destroy_shader_storage_resource_data(
+	ShaderStorageImpl&            impl,
+	const ReflectionResourceDesc* desc,
+	uint32_t&                     res_id
+) {
+	switch (desc->descriptorType) {
+	case DescriptorType::Sampler:
+	case DescriptorType::CombinedImageSampler:
+	case DescriptorType::SampledImage:
+	case DescriptorType::StorageImage:
+		destroy_storage_data<ShaderStorageImageData>(impl.resources[res_id++]);
+		break;
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::StorageTexelBuffer:
+		destroy_storage_data<ShaderStorageBufferViewData>(impl.resources[res_id++]);
+		break;
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic:
+		destroy_storage_data<ShaderStorageBufferData>(impl.resources[res_id++]);
+		break;
+	default:
+		VERA_ASSERT_MSG(false, "invalid resource descriptor type");
+	}
+}
+
+static void destroy_shader_storage_block_data(
+	ShaderStorageImpl&                 impl,
+	const ReflectionResourceBlockDesc* desc,
+	uint32_t&                          res_id
+) {
+	switch (desc->descriptorType) {
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic:
+		destroy_storage_data<ShaderStorageBufferBlockData>(impl.resources[res_id++]);
+		break;
+	default:
+		VERA_ASSERT_MSG(false, "invalid resource block descriptor type");
+	}
+}
+
+static void destroy_shader_storage_array_data(
+	ShaderStorageImpl&            impl,
+	const ReflectionResourceArrayDesc* desc,
+	uint32_t&                     res_id
+) {
+	uint32_t element_count = get_array_element_count(desc);
+
+	switch (desc->element->type) {
+	case ReflectionType::Resource: {
+		const auto* res_desc = static_cast<const ReflectionResourceDesc*>(desc->element);
+		for (uint32_t j = 0; j < element_count; ++j)
+			destroy_shader_storage_resource_data(impl, res_desc, res_id);
+	} break;
+	case ReflectionType::ResourceArray: {
+		const auto* block_desc = static_cast<const ReflectionResourceBlockDesc*>(desc->element);
+		for (uint32_t j = 0; j < element_count; ++j)
+			destroy_shader_storage_block_data(impl, block_desc, res_id);
+	} break;
+	default:
+		VERA_ASSERT_MSG(false, "invalid resource array element type");
+	}
+}
+
+static void destroy_shader_storage_resource_data(ShaderStorageImpl& impl)
+{
+	uint32_t res_id = 0;
+
+	for (uint32_t i = 0; i < impl.reflection.reflectionCount; ++i) {
+		const auto* reflection = impl.reflection.reflections[i];
+
+		switch (reflection->type) {
+		case ReflectionType::Resource: {
+			const auto* res_desc = static_cast<const ReflectionResourceDesc*>(reflection);
+			destroy_shader_storage_resource_data(impl, res_desc, res_id);
+		} break;
+		case ReflectionType::ResourceBlock: {
+			const auto* block_desc = static_cast<const ReflectionResourceBlockDesc*>(reflection);
+			destroy_shader_storage_block_data(impl, block_desc, res_id);
+		} break;
+		case ReflectionType::ResourceArray: {
+			const auto* array_desc = static_cast<const ReflectionResourceArrayDesc*>(reflection);
+			destroy_shader_storage_array_data(impl, array_desc, res_id);
+		} break;
+		case ReflectionType::PushConstant: {
+			destroy_storage_data<ShaderStoragePushConstantData>(impl.resources[res_id++]);
+		} break;
+		}
+	}
+
+	impl.resources           = {};
+	impl.resourceRanges      = {};
+	impl.setResourceRanges   = {};
+	impl.pcRange             = {};
+}
+
 obj<ShaderStorage> ShaderStorage::create(obj<PipelineLayout> pipeline_layout)
 {
 	VERA_ASSERT_MSG(pipeline_layout, "empty pipeline layout");
@@ -881,17 +1055,21 @@ obj<ShaderStorage> ShaderStorage::create(obj<PipelineLayout> pipeline_layout)
 
 	check_pipeline_layout(layout_impl);
 
-	impl.device           = layout_impl.device;
-	impl.pipelineLayout   = std::move(pipeline_layout);
-	impl.bindingPool      = ResourceBindingPool::create(impl.device);
-	impl.frameIndex       = 0;
-	impl.confirmedFrameID = 0;
-	impl.frameID          = 0;
+	impl.device            = layout_impl.device;
+	impl.pipelineLayout    = std::move(pipeline_layout);
+	impl.reflection        = layout_impl.reflection;
+	impl.pipelineBindPoint = layout_impl.pipelineBindPoint;
+	impl.currentSync       = {};
+	impl.frameIndex        = 0;
+	impl.prevFrameIndex    = UINT32_MAX;
+	impl.frameID           = 1;
+	impl.subFrameIndex     = 0;
+	impl.subFrameID        = 1;
 
-	impl.bindingSetPool.resize(layout_impl.reflection.maxSetCount);
+	create_shader_storage_resource_data(impl);
+	create_shader_storage_set(impl);
 
-	create_storage_data(impl, layout_impl);
-	append_storage_frame(impl, nullptr, 0);
+	append_shader_storage_frame(impl, nullptr, 0);
 
 	return obj;
 }
@@ -900,7 +1078,7 @@ ShaderStorage::~ShaderStorage()
 {
 	auto& impl = getImpl(this);
 
-	destroy_storage_data(impl);
+	destroy_shader_storage_resource_data(impl);
 
 	destroyObjectImpl(this);
 }
@@ -917,410 +1095,370 @@ obj<PipelineLayout> ShaderStorage::getPipelineLayout() VERA_NOEXCEPT
 
 ShaderVariable ShaderStorage::accessVariable(std::string_view name)
 {
-	auto& impl        = getImpl(this);
-	auto& layout_impl = getImpl(impl.pipelineLayout);
+	auto& impl = getImpl(this);
 
-	int32_t idx = find_member_index(layout_impl.reflection, name.data());
-	if (idx == -1)
-		throw Exception("variable not found: {}", name);
+	int32_t idx = find_member_index(impl.reflection, name.data());
 
-	auto& reflection = *layout_impl.reflection.reflections[idx];
-	auto& data       = *impl.storageDatas[idx];
+	VERA_ASSERT_MSG(0 <= idx, "variable not found");
 
-	return ShaderVariable(this, &data, &reflection, 0);
+	auto& var_desc = impl.reflection.reflections[idx];
+	auto& resource = impl.resources[impl.resourceRanges[idx].first()];
+
+	return ShaderVariable(
+		ref<ShaderStorage>(this),
+		&resource,
+		var_desc,
+		0);
 }
 
 void ShaderStorage::setSampler(const ShaderVariable& variable, obj<Sampler> sampler)
 {
-#ifdef _DEBUG
-	const auto& res_desc = static_cast<const ReflectionResourceDesc&>(*variable.m_desc);
 
-	VERA_ASSERT_MSG(variable.m_desc->type == ReflectionType::Resource, "invalid resource type");
-	VERA_ASSERT_MSG(
-		res_desc.resourceType == ResourceType::Sampler ||
-		res_desc.resourceType == ResourceType::CombinedImageSampler,
-		"invalid resource type for sampler");
-#endif
-	auto& storage = static_cast<ShaderStorageResourceData&>(*variable.m_data);
+}
 
-	prepare_resource_write(getImpl(this), storage.resourceID);
-
-	auto& front_data = static_cast<ShaderStorageSamplerData&>(*storage.frames.front());
-	front_data.sampler = std::move(sampler);
+void ShaderStorage::setTextureView(const ShaderVariable& variable, obj<TextureView> texture_view)
+{
+	auto usage_flags = texture_view->getTexture()->getUsageFlags();
+	setTextureView(variable, texture_view, get_default_texture_layout(usage_flags));
 }
 
 void ShaderStorage::setTextureView(const ShaderVariable& variable, obj<TextureView> texture_view, TextureLayout texture_layout)
 {
 #ifdef _DEBUG
-	const auto& res_desc = static_cast<const ReflectionResourceDesc&>(*variable.m_desc);
-	
-	VERA_ASSERT_MSG(variable.m_desc->type == ReflectionType::Resource, "invalid resource type");
-	VERA_ASSERT_MSG(
-		res_desc.resourceType == ResourceType::CombinedImageSampler ||
-		res_desc.resourceType == ResourceType::SampledImage ||
-		res_desc.resourceType == ResourceType::StorageImage ||
-		res_desc.resourceType == ResourceType::InputAttachment,
-		"invalid resource type for texture view");
+	auto& res_desc = static_cast<const ReflectionResourceDesc&>(*variable.m_desc);
+	VERA_ASSERT(variable.m_desc->type == ReflectionType::Resource);
+	VERA_ASSERT_MSG(res_desc.descriptorType == DescriptorType::CombinedImageSampler ||
+					res_desc.descriptorType == DescriptorType::SampledImage ||
+					res_desc.descriptorType == DescriptorType::StorageImage ||
+					res_desc.descriptorType == DescriptorType::InputAttachment,
+					"variable is not a texture");
 #endif
-	auto& storage = static_cast<ShaderStorageResourceData&>(*variable.m_data);
-	
-	prepare_resource_write(getImpl(this), storage.resourceID);
+	prepare_frame(getImpl(this));
+	prepare_resource_write(getImpl(this), *variable.m_resource);
 
-	auto& front_data = static_cast<ShaderStorageTextureData&>(*storage.frames.front());
-	front_data.textureView   = std::move(texture_view);
-	front_data.textureLayout = texture_layout;
+	auto& image_data = get_storage_data<ShaderStorageImageData&>(*variable.m_resource);
+	image_data.textureView   = texture_view;
+	image_data.textureLayout = texture_layout;
 }
 
 void ShaderStorage::setBufferView(const ShaderVariable& variable, obj<BufferView> buffer_view)
 {
-#ifdef _DEBUG
-	const auto& res_desc = static_cast<const ReflectionResourceDesc&>(*variable.m_desc);
-	
-	VERA_ASSERT_MSG(variable.m_desc->type == ReflectionType::Resource, "invalid resource type");
-	VERA_ASSERT_MSG(
-		res_desc.resourceType == ResourceType::UniformTexelBuffer ||
-		res_desc.resourceType == ResourceType::StorageTexelBuffer,
-		"invalid resource type for texture view");
-#endif
-	auto& storage = static_cast<ShaderStorageResourceData&>(*variable.m_data);
-	
-	prepare_resource_write(getImpl(this), storage.resourceID);
 
-	auto& front_data = static_cast<ShaderStorageTexelBufferData&>(*storage.frames.front());
-	front_data.bufferView = std::move(buffer_view);
 }
 
 void ShaderStorage::setBuffer(const ShaderVariable& variable, obj<Buffer> buffer, size_t offset, size_t range)
 {
-#ifdef _DEBUG
-	const auto& res_desc = static_cast<const ReflectionResourceDesc&>(*variable.m_desc);
-	
-	VERA_ASSERT_MSG(variable.m_desc->type == ReflectionType::Resource, "invalid resource type");
-	VERA_ASSERT_MSG(
-		res_desc.resourceType == ResourceType::UniformBuffer ||
-		res_desc.resourceType == ResourceType::UniformBufferDynamic ||
-		res_desc.resourceType == ResourceType::StorageBuffer ||
-		res_desc.resourceType == ResourceType::StorageBufferDynamic,
-		"invalid resource type for texture view");
-#endif
-	auto& storage = static_cast<ShaderStorageResourceData&>(*variable.m_data);
-	
-	prepare_resource_write(getImpl(this), storage.resourceID);
 
-	auto& front_data = static_cast<ShaderStorageBufferData&>(*storage.frames.front());
-	front_data.buffer = std::move(buffer);
-	front_data.offset = offset;
-	front_data.range  = range;
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const bool value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const int8_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uint8_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const int16_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uint16_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const int32_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uint32_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const int64_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uint64_t value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double value)
 {
-	store_scalar_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_scalar_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const bool2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const bool3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const bool4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const char2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const char3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const char4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uchar2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uchar3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uchar4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const short2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const short3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const short4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const ushort2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const ushort3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const ushort4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const int2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const int3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const int4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uint2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uint3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const uint4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const long2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const long3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const long4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const ulong2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const ulong3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const ulong4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double2& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double3& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double4& value)
 {
-	store_vector_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_vector_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float2x2& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float2x3& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float2x4& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float3x2& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float3x3& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float3x4& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float4x2& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float4x3& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const float4x4& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double2x2& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double2x3& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double2x4& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double3x2& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double3x3& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double3x4& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double4x2& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double4x3& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 void ShaderStorage::setPrimitive(const ShaderVariable& variable, const double4x4& value)
 {
-	store_matrix_impl(getImpl(this), variable.m_data, variable.m_desc, variable.m_offset, value);
+	store_matrix_impl(getImpl(this), variable.m_resource, variable.m_desc, variable.m_offset, value);
 }
 
 VERA_NAMESPACE_END

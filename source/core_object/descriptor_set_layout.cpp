@@ -1,6 +1,6 @@
-#include "../../include/vera/core/resource_layout.h"
+#include "../../include/vera/core/descriptor_set_layout.h"
 #include "../impl/device_impl.h"
-#include "../impl/resource_layout_impl.h"
+#include "../impl/descriptor_set_layout_impl.h"
 #include "../impl/shader_impl.h"
 
 #include "../../include/vera/core/device.h"
@@ -9,7 +9,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-static bool check_contiguous(array_view<ResourceLayoutBinding> ordered_bindings)
+static bool check_contiguous(array_view<DescriptorSetLayoutBinding> ordered_bindings)
 {
 	if (ordered_bindings.front().binding != 0)
 		return false;
@@ -21,7 +21,7 @@ static bool check_contiguous(array_view<ResourceLayoutBinding> ordered_bindings)
 	return true;
 }
 
-static hash_t hash_resource_set_layout(const ResourceLayoutCreateInfo& info)
+static hash_t hash_descriptor_set_layout(const DescriptorSetLayoutCreateInfo& info)
 {
 	hash_t seed = 0;
 
@@ -33,8 +33,8 @@ static hash_t hash_resource_set_layout(const ResourceLayoutCreateInfo& info)
 
 		hash_combine(local_seed, static_cast<uint32_t>(binding.flags));
 		hash_combine(local_seed, binding.binding);
-		hash_combine(local_seed, binding.resourceType);
-		hash_combine(local_seed, binding.resourceCount);
+		hash_combine(local_seed, binding.descriptorType);
+		hash_combine(local_seed, binding.descriptorCount);
 		hash_combine(local_seed, static_cast<uint32_t>(binding.stageFlags));
 
 		hash_unordered(seed, local_seed);
@@ -43,30 +43,30 @@ static hash_t hash_resource_set_layout(const ResourceLayoutCreateInfo& info)
 	return seed;
 }
 
-const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<ResourceLayout> resource_layout)
+const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> descriptor_set_layout)
 {
-	return CoreObject::getImpl(resource_layout).descriptorSetLayout;
+	return CoreObject::getImpl(descriptor_set_layout).descriptorSetLayout;
 }
 
-vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<ResourceLayout> resource_layout)
+vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<DescriptorSetLayout> descriptor_set_layout)
 {
-	return CoreObject::getImpl(resource_layout).descriptorSetLayout;
+	return CoreObject::getImpl(descriptor_set_layout).descriptorSetLayout;
 }
 
-obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const ResourceLayoutCreateInfo& info)
+obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const DescriptorSetLayoutCreateInfo& info)
 {
 	VERA_ASSERT_MSG(device, "device is null");
-	VERA_ASSERT_MSG(!info.bindings.empty(), "resource layout must have at least one binding");
+	VERA_ASSERT_MSG(!info.bindings.empty(), "descriptor set layout must have at least one binding");
 
 	auto&  device_impl = getImpl(device);
-	hash_t hash_value  = hash_resource_set_layout(info);
+	hash_t hash_value  = hash_descriptor_set_layout(info);
 
-	if (auto it = device_impl.resourceLayoutCacheMap.find(hash_value);
-		it != device_impl.resourceLayoutCacheMap.end()) {
-		return unsafe_obj_cast<ResourceLayout>(it->second);
+	if (auto it = device_impl.descriptorSetLayoutCacheMap.find(hash_value);
+		it != device_impl.descriptorSetLayoutCacheMap.end()) {
+		return unsafe_obj_cast<DescriptorSetLayout>(it->second);
 	}
 
-	auto  obj  = createNewCoreObject<ResourceLayout>();
+	auto  obj  = createNewCoreObject<DescriptorSetLayout>();
 	auto& impl = getImpl(obj);
 
 	impl.bindings.assign(VERA_SPAN(info.bindings));
@@ -84,8 +84,8 @@ obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const ResourceLay
 	for (const auto& binding : impl.bindings) {
 		auto& vk_binding = bindings.emplace_back();
 		vk_binding.binding            = binding.binding;
-		vk_binding.descriptorType     = to_vk_descriptor_type(binding.resourceType);
-		vk_binding.descriptorCount    = binding.resourceCount;
+		vk_binding.descriptorType     = to_vk_descriptor_type(binding.descriptorType);
+		vk_binding.descriptorCount    = binding.descriptorCount;
 		vk_binding.stageFlags         = to_vk_shader_stage_flags(binding.stageFlags);
 		vk_binding.pImmutableSamplers = nullptr;
 
@@ -106,12 +106,12 @@ obj<ResourceLayout> ResourceLayout::create(obj<Device> device, const ResourceLay
 	impl.descriptorSetLayout = device_impl.device.createDescriptorSetLayout(desc_info);
 	impl.hashValue           = hash_value;
 	
-	device_impl.resourceLayoutCacheMap.insert({ hash_value, obj });
+	device_impl.descriptorSetLayoutCacheMap.insert({ hash_value, obj });
 	
 	return obj;
 }
 
-ResourceLayout::~ResourceLayout()
+DescriptorSetLayout::~DescriptorSetLayout()
 {
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
@@ -121,17 +121,17 @@ ResourceLayout::~ResourceLayout()
 	destroyObjectImpl(this);
 }
 
-obj<Device> ResourceLayout::getDevice()
+obj<Device> DescriptorSetLayout::getDevice()
 {
 	return getImpl(this).device;
 }
 
-const std::vector<ResourceLayoutBinding>& ResourceLayout::getBindings() const
+const std::vector<DescriptorSetLayoutBinding>& DescriptorSetLayout::getBindings() const
 {
 	return getImpl(this).bindings;
 }
 
-hash_t ResourceLayout::hash() const
+hash_t DescriptorSetLayout::hash() const
 {
 	return getImpl(this).hashValue;
 }

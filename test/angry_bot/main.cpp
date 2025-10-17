@@ -166,7 +166,7 @@ public:
 		m_pass0->getShaderParameter()["pc"]["mat"] = proj * view;
 		m_pass1->getShaderParameter()["pc"]["mat"] = proj * view;
 
-		// m_pass0->execute(m_render_ctx, image);
+		m_pass0->execute(m_render_ctx, image);
 		m_pass1->execute(m_render_ctx, image);
 
 		m_render_ctx->submit();

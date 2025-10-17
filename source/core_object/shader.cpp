@@ -4,38 +4,38 @@
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/pipeline_layout.h"
-#include "../../include/vera/core/resource_layout.h"
+#include "../../include/vera/core/descriptor_set_layout.h"
 #include "../../include/vera/util/hash.h"
 #include <spirv_reflect.h>
 #include <fstream>
 
 VERA_NAMESPACE_BEGIN
 
-static ResourceType to_resource_type(SpvReflectDescriptorType type)
+static DescriptorType to_descriptor_type(SpvReflectDescriptorType type)
 {
 	switch (type) {
 	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
-		return ResourceType::Sampler;
+		return DescriptorType::Sampler;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-		return ResourceType::CombinedImageSampler;
+		return DescriptorType::CombinedImageSampler;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-		return ResourceType::SampledImage;
+		return DescriptorType::SampledImage;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-		return ResourceType::StorageImage;
+		return DescriptorType::StorageImage;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-		return ResourceType::UniformTexelBuffer;
+		return DescriptorType::UniformTexelBuffer;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-		return ResourceType::StorageTexelBuffer;
+		return DescriptorType::StorageTexelBuffer;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-		return ResourceType::UniformBuffer;
+		return DescriptorType::UniformBuffer;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-		return ResourceType::StorageBuffer;
+		return DescriptorType::StorageBuffer;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-		return ResourceType::UniformBufferDynamic;
+		return DescriptorType::UniformBufferDynamic;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-		return ResourceType::StorageBufferDynamic;
+		return DescriptorType::StorageBufferDynamic;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-		return ResourceType::InputAttachment;
+		return DescriptorType::InputAttachment;
 	}
 
 	VERA_ASSERT_MSG(false, "invalid resource type");
@@ -110,8 +110,7 @@ static bool sort_reflection(const ReflectionRootMemberDesc* a, const ReflectionR
 
 static bool sort_name_map(const ReflectionNameMap& a, const ReflectionNameMap& b)
 {
-	if (a.stageFlags == b.stageFlags)
-		return static_cast<uint32_t>(a.stageFlags) < static_cast<uint32_t>(b.stageFlags);
+	VERA_ASSERT(a.stageFlags == b.stageFlags);
 	return std::strcmp(a.name, b.name) < 0;
 }
 
@@ -394,15 +393,15 @@ static ReflectionRootMemberDesc* reflect_resource(
 		auto* result  = new ReflectionResourceArrayDesc;
 		auto* element = reflect_resource(impl, binding, reflection_idx, array_dim + 1);
 
-		result->type            = ReflectionType::ResourceArray;
-		result->stageFlags      = impl.stageFlags;
-		result->reflectionIndex = reflection_idx;
-		result->resourceLayout  = nullptr;
-		result->resourceType    = to_resource_type(binding.descriptor_type);
-		result->set             = binding.set;
-		result->binding         = binding.binding;
-		result->elementCount    = is_unsized_array(binding.array) ? UINT32_MAX : binding.array.dims[0];
-		result->element         = static_cast<ReflectionResourceDesc*>(element);
+		result->type                = ReflectionType::ResourceArray;
+		result->stageFlags          = impl.stageFlags;
+		result->reflectionIndex     = reflection_idx;
+		result->descriptorSetLayout = nullptr;
+		result->descriptorType      = to_descriptor_type(binding.descriptor_type);
+		result->set                 = binding.set;
+		result->binding             = binding.binding;
+		result->elementCount        = is_unsized_array(binding.array) ? UINT32_MAX : binding.array.dims[0];
+		result->element             = static_cast<ReflectionResourceDesc*>(element);
 
 		return result;
 	}
@@ -410,18 +409,18 @@ static ReflectionRootMemberDesc* reflect_resource(
 	if (binding.block.name) {
 		auto* result = new ReflectionResourceBlockDesc;
 
-		result->type            = ReflectionType::ResourceBlock;
-		result->stageFlags      = impl.stageFlags;
-		result->reflectionIndex = reflection_idx;
-		result->resourceLayout  = nullptr;
-		result->resourceType    = to_resource_type(binding.descriptor_type);
-		result->set             = binding.set;
-		result->binding         = binding.binding;
-		result->sizeInByte      = binding.block.padded_size;
-		result->memberCount     = binding.block.member_count;
-		result->members         = new ReflectionBlockDesc*[binding.block.member_count];
-		result->nameMapCount    = binding.block.member_count;
-		result->nameMaps        = new ReflectionNameMap[binding.block.member_count];
+		result->type                = ReflectionType::ResourceBlock;
+		result->stageFlags          = impl.stageFlags;
+		result->reflectionIndex     = reflection_idx;
+		result->descriptorSetLayout = nullptr;
+		result->descriptorType      = to_descriptor_type(binding.descriptor_type);
+		result->set                 = binding.set;
+		result->binding             = binding.binding;
+		result->sizeInByte          = binding.block.padded_size;
+		result->memberCount         = binding.block.member_count;
+		result->members             = new ReflectionBlockDesc*[binding.block.member_count];
+		result->nameMapCount        = binding.block.member_count;
+		result->nameMaps            = new ReflectionNameMap[binding.block.member_count];
 
 		for (uint32_t i = 0; i < binding.block.member_count; ++i) {
 			if (i != binding.block.member_count - 1 && is_unsized_array(binding.block.array))
@@ -442,13 +441,13 @@ static ReflectionRootMemberDesc* reflect_resource(
 
 	auto* result = new ReflectionResourceDesc;
 
-	result->type            = ReflectionType::Resource;
-	result->stageFlags      = impl.stageFlags;
-	result->reflectionIndex = reflection_idx;
-	result->resourceLayout  = nullptr;
-	result->resourceType    = to_resource_type(binding.descriptor_type);
-	result->set             = binding.set;
-	result->binding         = binding.binding;
+	result->type                = ReflectionType::Resource;
+	result->stageFlags          = impl.stageFlags;
+	result->reflectionIndex     = reflection_idx;
+	result->descriptorSetLayout = nullptr;
+	result->descriptorType	    = to_descriptor_type(binding.descriptor_type);
+	result->set                 = binding.set;
+	result->binding             = binding.binding;
 
 	return result;
 }
@@ -485,6 +484,16 @@ static ReflectionRootMemberDesc* reflect_push_constant(
 	return result;
 }
 
+static uint32_t get_max_set_count(array_view<SpvReflectDescriptorSet> sets)
+{
+	uint32_t max_count = 0;
+
+	for (const auto& set : sets)
+		max_count = std::max(max_count, set.set + 1);
+
+	return max_count;
+}
+
 static void parse_shader_reflection_info(ShaderImpl& impl, const uint32_t* spirv_code, size_t size_in_byte)
 {
 	SpvReflectShaderModule module;
@@ -499,9 +508,10 @@ static void parse_shader_reflection_info(ShaderImpl& impl, const uint32_t* spirv
 	impl.reflection.reflections       = new ReflectionRootMemberDesc*[impl.reflection.reflectionCount];
 	impl.reflection.nameMapCount      = impl.reflection.reflectionCount;
 	impl.reflection.nameMaps          = new ReflectionNameMap[impl.reflection.nameMapCount];
+	impl.reflection.setRangeCount     = get_max_set_count(desc_sets);
+	impl.reflection.setRanges         = new basic_range<uint32_t>[impl.reflection.setRangeCount];
 	impl.reflection.resourceCount     = module.descriptor_binding_count;
 	impl.reflection.pushConstantCount = module.push_constant_block_count;
-	impl.reflection.maxSetCount       = 0;
 
 	impl.entryPointName    = impl.namePool << module.entry_point_name;
 	impl.stageFlags        = to_shader_stage(module.shader_stage);
@@ -510,6 +520,11 @@ static void parse_shader_reflection_info(ShaderImpl& impl, const uint32_t* spirv
 	uint32_t resource_idx = 0;
 
 	for (const auto& set : desc_sets) {
+		uint32_t range_first = resource_idx;
+		uint32_t range_last  = resource_idx + set.binding_count;
+
+		impl.reflection.setRanges[set.set] = basic_range(range_first, range_last);
+
 		for (uint32_t i = 0; i < set.binding_count; ++i, ++resource_idx) {
 			auto& binding = *set.bindings[i];
 
@@ -525,8 +540,6 @@ static void parse_shader_reflection_info(ShaderImpl& impl, const uint32_t* spirv
 				.index      = resource_idx
 			};
 		}
-
-		impl.reflection.maxSetCount = std::max(impl.reflection.maxSetCount, set.set + 1);
 	}
 
 	if (1 < pc_blocks.size())

@@ -23,6 +23,7 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 		},
 		.rasterizationInfo              = RasterizationInfo{},
 		.tessellationPatchControlPoints = 0,
+		.depthStencilInfo               = DepthStencilInfo{},
 		.colorBlendInfo                 = ColorBlendInfo{}
 	};
 

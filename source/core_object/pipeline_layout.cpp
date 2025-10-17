@@ -1,20 +1,21 @@
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../impl/device_impl.h"
 #include "../impl/pipeline_layout_impl.h"
-#include "../impl/resource_layout_impl.h"
+#include "../impl/descriptor_set_layout_impl.h"
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/util/hash.h"
 #include "../../include/vera/util/static_vector.h"
 
+#define VERA_MAX_SHADER_STAGE_COUNT 32
 #define VERA_MAX_SHADER_COUNT 8
 #define VERA_MAX_SET_COUNT 64
 #define VERA_MAX_BINDING_COUNT 128
 
 #define UNSIZED_ARRAY_BINDING_FLAGS \
-	ResourceLayoutBindingFlagBits::UpdateAfterBind | \
-	ResourceLayoutBindingFlagBits::PartiallyBound | \
-	ResourceLayoutBindingFlagBits::VariableBindingCount
+	DescriptorSetLayoutBindingFlagBits::UpdateAfterBind | \
+	DescriptorSetLayoutBindingFlagBits::PartiallyBound | \
+	DescriptorSetLayoutBindingFlagBits::VariableBindingCount
 
 VERA_NAMESPACE_BEGIN
 
@@ -22,30 +23,30 @@ typedef static_vector<ReflectionBlockDescPtr, VERA_MAX_SHADER_COUNT> BlockDescAr
 typedef static_vector<const ReflectionResourceDesc*, VERA_MAX_SET_COUNT> SetDescArray;
 typedef static_vector<const ReflectionResourceDesc*, VERA_MAX_BINDING_COUNT> BindingReflectionArray;
 
-static uint32_t get_max_resource_count(const PipelineLayoutImpl& impl, ResourceType resource_type)
+static uint32_t get_max_resource_count(const PipelineLayoutImpl& impl, DescriptorType resource_type)
 {
 	const auto& indexing_props = CoreObject::getImpl(impl.device).descriptorIndexingProperties;
 
 	switch (resource_type) {
-	case ResourceType::Sampler:
+	case DescriptorType::Sampler:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers;
-	case ResourceType::CombinedImageSampler:
+	case DescriptorType::CombinedImageSampler:
 		return std::min(
 			indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers,
 			indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages);
-	case ResourceType::SampledImage:
+	case DescriptorType::SampledImage:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages;
-	case ResourceType::StorageImage:
+	case DescriptorType::StorageImage:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageImages;
-	case ResourceType::UniformTexelBuffer:
-	case ResourceType::UniformBuffer:
-	case ResourceType::UniformBufferDynamic:
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindUniformBuffers;
-	case ResourceType::StorageTexelBuffer:
-	case ResourceType::StorageBuffer:
-	case ResourceType::StorageBufferDynamic:
+	case DescriptorType::StorageTexelBuffer:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageBuffers;
-	case ResourceType::InputAttachment:
+	case DescriptorType::InputAttachment:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindInputAttachments;
 	default:
 		VERA_ASSERT_MSG(false, "invalid resource type");
@@ -54,9 +55,7 @@ static uint32_t get_max_resource_count(const PipelineLayoutImpl& impl, ResourceT
 
 static bool sort_name_map(const ReflectionNameMap& a, const ReflectionNameMap& b)
 {
-	int32_t cmp = std::strcmp(a.name, b.name);
-
-	if (cmp != 0)
+	if (int32_t cmp = std::strcmp(a.name, b.name); cmp != 0)
 		return cmp < 0;
 
 	return static_cast<uint32_t>(a.stageFlags) < static_cast<uint32_t>(b.stageFlags);
@@ -103,7 +102,7 @@ static bool check_compatible_reflection(const ReflectionDesc* a, const Reflectio
 		const auto& desc_b = static_cast<const ReflectionResourceDesc&>(*b);
 
 		return
-			desc_a.resourceType == desc_b.resourceType &&
+			desc_a.descriptorType == desc_b.descriptorType &&
 			desc_a.set == desc_b.set&&
 			desc_a.binding == desc_b.binding;
 	}
@@ -111,7 +110,7 @@ static bool check_compatible_reflection(const ReflectionDesc* a, const Reflectio
 		const auto& desc_a = static_cast<const ReflectionResourceBlockDesc&>(*a);
 		const auto& desc_b = static_cast<const ReflectionResourceBlockDesc&>(*b);
 		
-		if (desc_a.resourceType != desc_b.resourceType ||
+		if (desc_a.descriptorType != desc_b.descriptorType ||
 			desc_a.set != desc_b.set ||
 			desc_a.binding != desc_b.binding ||
 			desc_a.sizeInByte != desc_b.sizeInByte ||
@@ -129,7 +128,7 @@ static bool check_compatible_reflection(const ReflectionDesc* a, const Reflectio
 		const auto& desc_b = static_cast<const ReflectionResourceArrayDesc&>(*b);
 
 		return
-			desc_a.resourceType == desc_b.resourceType &&
+			desc_a.descriptorType == desc_b.descriptorType &&
 			desc_a.set == desc_b.set &&
 			desc_a.binding == desc_b.binding &&
 			desc_a.elementCount == desc_b.elementCount &&
@@ -228,12 +227,12 @@ static ReflectionRootMemberDesc* copy_root_reflection(const ReflectionRootMember
 		const auto* res_desc = static_cast<const ReflectionResourceDesc*>(source);
 		auto*       new_desc = new ReflectionResourceDesc;
 		
-		new_desc->type           = ReflectionType::Resource;
-		new_desc->stageFlags     = res_desc->stageFlags;
-		new_desc->resourceLayout = res_desc->resourceLayout;
-		new_desc->resourceType   = res_desc->resourceType;
-		new_desc->set            = res_desc->set;
-		new_desc->binding        = res_desc->binding;
+		new_desc->type                = ReflectionType::Resource;
+		new_desc->stageFlags          = res_desc->stageFlags;
+		new_desc->descriptorSetLayout = res_desc->descriptorSetLayout;
+		new_desc->descriptorType      = res_desc->descriptorType;
+		new_desc->set                 = res_desc->set;
+		new_desc->binding             = res_desc->binding;
 		
 		return new_desc;
 	}
@@ -241,17 +240,17 @@ static ReflectionRootMemberDesc* copy_root_reflection(const ReflectionRootMember
 		const auto* block_desc = static_cast<const ReflectionResourceBlockDesc*>(source);
 		auto*       new_desc   = new ReflectionResourceBlockDesc;
 
-		new_desc->type           = ReflectionType::ResourceBlock;
-		new_desc->stageFlags     = block_desc->stageFlags;
-		new_desc->resourceLayout = block_desc->resourceLayout;
-		new_desc->resourceType   = block_desc->resourceType;
-		new_desc->set            = block_desc->set;
-		new_desc->binding        = block_desc->binding;
-		new_desc->sizeInByte     = block_desc->sizeInByte;
-		new_desc->memberCount    = block_desc->memberCount;
-		new_desc->members        = new ReflectionBlockDesc*[block_desc->memberCount];
-		new_desc->nameMapCount   = block_desc->nameMapCount;
-		new_desc->nameMaps       = new ReflectionNameMap[block_desc->nameMapCount];
+		new_desc->type                = ReflectionType::ResourceBlock;
+		new_desc->stageFlags          = block_desc->stageFlags;
+		new_desc->descriptorSetLayout = block_desc->descriptorSetLayout;
+		new_desc->descriptorType      = block_desc->descriptorType;
+		new_desc->set                 = block_desc->set;
+		new_desc->binding             = block_desc->binding;
+		new_desc->sizeInByte          = block_desc->sizeInByte;
+		new_desc->memberCount         = block_desc->memberCount;
+		new_desc->members             = new ReflectionBlockDesc*[block_desc->memberCount];
+		new_desc->nameMapCount        = block_desc->nameMapCount;
+		new_desc->nameMaps            = new ReflectionNameMap[block_desc->nameMapCount];
 
 		for (uint32_t i = 0; i < block_desc->memberCount; ++i)
 			new_desc->members[i] = copy_block_reflection(block_desc->members[i]);
@@ -265,14 +264,14 @@ static ReflectionRootMemberDesc* copy_root_reflection(const ReflectionRootMember
 		auto*       new_desc    = new ReflectionResourceArrayDesc;
 		auto*       new_element = copy_root_reflection(array_desc->element);
 		
-		new_desc->type           = ReflectionType::ResourceArray;
-		new_desc->stageFlags     = array_desc->stageFlags;
-		new_desc->resourceLayout = array_desc->resourceLayout;
-		new_desc->resourceType   = array_desc->resourceType;
-		new_desc->set            = array_desc->set;
-		new_desc->binding        = array_desc->binding;
-		new_desc->elementCount   = array_desc->elementCount;
-		new_desc->element        = static_cast<ReflectionResourceDesc*>(new_element);
+		new_desc->type                = ReflectionType::ResourceArray;
+		new_desc->stageFlags          = array_desc->stageFlags;
+		new_desc->descriptorSetLayout = array_desc->descriptorSetLayout;
+		new_desc->descriptorType      = array_desc->descriptorType;
+		new_desc->set                 = array_desc->set;
+		new_desc->binding             = array_desc->binding;
+		new_desc->elementCount        = array_desc->elementCount;
+		new_desc->element             = static_cast<ReflectionResourceDesc*>(new_element);
 		
 		return new_desc;
 	}
@@ -281,6 +280,7 @@ static ReflectionRootMemberDesc* copy_root_reflection(const ReflectionRootMember
 		auto*       new_desc = new ReflectionPushConstantDesc;
 		
 		new_desc->type         = ReflectionType::PushConstant;
+		new_desc->stageFlags   = pc_desc->stageFlags;
 		new_desc->sizeInByte   = pc_desc->sizeInByte;
 		new_desc->memberCount  = pc_desc->memberCount;
 		new_desc->members      = new ReflectionBlockDesc*[pc_desc->memberCount];
@@ -540,11 +540,14 @@ static void merge_set(
 			const auto  target_idx = bindings[idx]->reflectionIndex;
 			const char* name       = find_name_by_index(*shader_reflections[i], target_idx);
 
-			out_name_maps.push_back(ReflectionNameMap{
-				.name       = impl.namePool << name,
-				.stageFlags = bindings[idx]->stageFlags,
-				.index      = reflection_idx
-			});
+			insert_name_map(
+				out_name_maps,
+				impl.namePool,
+				ReflectionNameMap{
+					.name       = impl.namePool << name,
+					.stageFlags = bindings[idx]->stageFlags,
+					.index      = reflection_idx
+				});
 
 			++indices[i];
 		}
@@ -555,20 +558,31 @@ static uint32_t get_set_count(array_view<const_ref<Shader>> shaders)
 {
 	uint32_t max_set_count = 0;
 
-	for (const auto& shader : shaders)
-		max_set_count = std::max(max_set_count, CoreObject::getImpl(shader).reflection.maxSetCount);
+	for (const auto& shader : shaders) {
+		const auto& shader_impl = CoreObject::getImpl(shader);
+		max_set_count = std::max(max_set_count, shader_impl.reflection.setRangeCount);
+	}
 
 	return max_set_count;
 }
 
+static uint32_t get_set_id(const ReflectionRootMemberDesc* desc)
+{
+	return static_cast<const ReflectionResourceDesc*>(desc)->set;
+}
+
 static int32_t find_reflection_first_binding(const ShaderReflection& reflection, uint32_t set_id)
 {
-	for (uint32_t i = 0; i < reflection.resourceCount; ++i) {
-		const auto* res_desc = static_cast<const ReflectionResourceDesc*>(reflection.reflections[i]);
+	const auto* first = reflection.reflections;
+	const auto* last  = first + reflection.resourceCount;
 
-		if (res_desc->set == set_id)
-			return static_cast<int32_t>(i);
-	}
+	auto it = std::lower_bound(first, last, set_id,
+		[](const ReflectionDesc* a, uint32_t set) {
+			return static_cast<const ReflectionResourceDesc*>(a)->set < set;
+		});
+
+	if (it != last)
+		return static_cast<int32_t>(it - first);
 
 	return -1;
 }
@@ -608,6 +622,7 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 
 	std::vector<ReflectionRootMemberDescPtr> root_descs;
 	std::vector<ReflectionNameMap>           name_maps;
+	std::vector<basic_range<uint32_t>>       set_ranges;
 
 	const uint32_t shader_count = shaders.size();
 	const uint32_t set_count    = get_set_count(shaders);
@@ -621,44 +636,57 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 
 	// check set compatibility and append resource reflection descriptors
 	for (uint32_t set_id = 0; set_id < set_count; ++set_id) {
-		static_vector<BindingReflectionArray, VERA_MAX_SHADER_COUNT> shader_bindings(shaders.size());
-
+		static_vector<BindingReflectionArray, VERA_MAX_SHADER_COUNT>  shader_bindings;
+		static_vector<const ShaderReflection*, VERA_MAX_SHADER_COUNT> erased_reflections;
+		
 		for (uint32_t shader_idx = 0; shader_idx < shader_count; ++shader_idx) {
-			const auto& reflection  = *shader_reflections[shader_idx];
-			const auto* reflections = reflection.reflections;
-
-			auto idx = find_reflection_first_binding(reflection, set_id);
+			const auto&   reflection = *shader_reflections[shader_idx];
+			const int32_t idx        = find_reflection_first_binding(reflection, set_id);
 
 			if (idx == -1) continue;
 
-			for (uint32_t i = static_cast<uint32_t>(idx); i < reflection.resourceCount; ++i) {
-				const auto* res_desc = static_cast<const ReflectionResourceDesc*>(reflections[i]);
+			erased_reflections.push_back(shader_reflections[shader_idx]);
 
-				if (res_desc->set != set_id) break;
+			auto&       bindings = shader_bindings.emplace_back();
+			const auto* first    = reflection.reflections + idx;
+			const auto* last     = first + reflection.resourceCount;
 
-				shader_bindings[shader_idx].push_back(res_desc);
+			while (first < last && get_set_id(*first) == set_id)
+				bindings.push_back(static_cast<const ReflectionResourceDesc*>(*first++));
+		}
+
+		if (shader_bindings.size() == 0)
+			throw Exception("set={} not found, set must be in contiguous order", set_id);
+
+		uint32_t range_first = static_cast<uint32_t>(root_descs.size());
+		
+		if (1 < shader_bindings.size()) {
+			// will throw an exception if not compatible
+			merge_set(impl, erased_reflections, shader_bindings, set_id, root_descs, name_maps);
+		} else {
+			for (const auto* desc : shader_bindings.front()) {
+				const char* name = find_name_by_index(*erased_reflections.front(), desc->reflectionIndex);
+
+				root_descs.push_back(copy_root_reflection(desc));
+				name_maps.push_back(ReflectionNameMap{
+					.name       = impl.namePool << name,
+					.stageFlags = desc->stageFlags,
+					.index      = static_cast<uint32_t>(root_descs.size() - 1)
+				});
 			}
 		}
 
-		const auto last = std::remove_if(VERA_SPAN(shader_bindings), array_is_empty);
-		shader_bindings.erase(last, shader_bindings.cend());
-
-		if (shader_bindings.empty())
-			throw Exception("set={} not found, set must be in contiguous order", set_id);
-
-		if (1 < shader_bindings.size()) {
-			// will throw an exception if not compatible
-			merge_set(impl, shader_reflections, shader_bindings, set_id, root_descs, name_maps);
-		} else {
-			for (const auto* desc : shader_bindings.front())
-				root_descs.push_back(copy_root_reflection(desc));
-		}
+		uint32_t range_last = static_cast<uint32_t>(root_descs.size());
+		set_ranges.emplace_back(range_first, range_last);
 	}
 
 	res_count = static_cast<uint32_t>(root_descs.size());
 
 	// append push constant reflection descriptors
+	static_vector<bool, VERA_MAX_SHADER_COUNT> pc_pushed(shader_count, false);
 	for (size_t i = 0; i < shader_count; ++i) {
+		if (pc_pushed[i]) continue;
+
 		const auto& target_reflection = *shader_reflections[i];
 		const auto* target_desc       = find_pc_reflection(target_reflection);
 		
@@ -668,14 +696,18 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 		auto  desc_idx = static_cast<uint32_t>(root_descs.size());
 
 		root_descs.push_back(new_desc);
-		name_maps.push_back(ReflectionNameMap{
-			.name       = impl.namePool << find_pc_name(target_reflection),
-			.stageFlags = target_desc->stageFlags,
-			.index      = desc_idx
-		});
+		insert_name_map(
+			name_maps,
+			impl.namePool,
+			ReflectionNameMap{
+				.name       = impl.namePool << find_pc_name(target_reflection),
+				.stageFlags = target_desc->stageFlags,
+				.index      = desc_idx
+			});
 
-		// TODO: optimize, skip checking if already pushed
 		for (size_t j = i + 1; j < shader_count; ++j) {
+			if (pc_pushed[j]) continue;
+
 			const auto& cmp_reflection = *shader_reflections[j];
 			const auto* cmp_desc       = find_pc_reflection(cmp_reflection);
 
@@ -683,11 +715,16 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 				const char* name = find_pc_name(cmp_reflection);
 				
 				new_desc->stageFlags |= cmp_desc->stageFlags;
-				name_maps.push_back(ReflectionNameMap{
-					.name       = impl.namePool << name,
-					.stageFlags = cmp_desc->stageFlags,
-					.index      = desc_idx
-				});
+				insert_name_map(
+					name_maps,
+					impl.namePool,
+					ReflectionNameMap{
+						.name       = impl.namePool << name,
+						.stageFlags = cmp_desc->stageFlags,
+						.index      = desc_idx
+					});
+
+				pc_pushed[j] = true;
 			}
 		}
 	}
@@ -703,26 +740,28 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 	impl.reflection.reflections       = new ReflectionRootMemberDesc*[root_descs.size()];
 	impl.reflection.nameMapCount      = static_cast<uint32_t>(name_maps.size());
 	impl.reflection.nameMaps          = new ReflectionNameMap[name_maps.size()];
+	impl.reflection.setRangeCount     = set_count;
+	impl.reflection.setRanges         = new basic_range<uint32_t>[set_count];
 	impl.reflection.resourceCount     = res_count;
 	impl.reflection.pushConstantCount = pc_count;
-	impl.reflection.maxSetCount       = set_count;
 
 	// TODO: consider release vector memeory
 	std::copy(VERA_SPAN(root_descs), impl.reflection.reflections);
 	std::copy(VERA_SPAN(name_maps), impl.reflection.nameMaps);
+	std::copy(VERA_SPAN(set_ranges), impl.reflection.setRanges);
 }
 
 static void create_resource_layout(PipelineLayoutImpl& impl)
 {
-	ResourceLayoutCreateInfo layout_info;
+	DescriptorSetLayoutCreateInfo layout_info;
 
-	for (uint32_t set_id = 0; set_id < impl.reflection.maxSetCount; ++set_id) {
+	for (uint32_t set_id = 0; set_id < impl.reflection.setRangeCount; ++set_id) {
 		auto idx = find_reflection_first_binding(impl.reflection, set_id);
 
 		VERA_ASSERT(idx != -1);
 
 		layout_info.bindings.clear();
-		layout_info.flags = ResourceLayoutCreateFlags{};
+		layout_info.flags = DescriptorSetLayoutCreateFlags{};
 
 		for (; static_cast<uint32_t>(idx) < impl.reflection.resourceCount; ++idx) {
 			const auto* desc     = impl.reflection.reflections[idx];
@@ -731,27 +770,27 @@ static void create_resource_layout(PipelineLayoutImpl& impl)
 			if (res_desc->set != set_id) break;
 			
 			auto& layout_binding = layout_info.bindings.emplace_back();
-			layout_binding.binding      = res_desc->binding;
-			layout_binding.resourceType = res_desc->resourceType;
-			layout_binding.stageFlags   = res_desc->stageFlags;
+			layout_binding.binding        = res_desc->binding;
+			layout_binding.descriptorType = res_desc->descriptorType;
+			layout_binding.stageFlags     = res_desc->stageFlags;
 
 			if (res_desc->type == ReflectionType::ResourceArray) {
 				auto& array_desc = static_cast<const ReflectionResourceArrayDesc&>(*res_desc);
 
 				if (array_desc.elementCount == UINT32_MAX) {
-					layout_binding.flags         = UNSIZED_ARRAY_BINDING_FLAGS;
-					layout_binding.resourceCount = get_max_resource_count(impl, array_desc.resourceType);
-					layout_info.flags            = ResourceLayoutCreateFlagBits::UpdateAfterBindPool;
+					layout_binding.flags           = UNSIZED_ARRAY_BINDING_FLAGS;
+					layout_binding.descriptorCount = get_max_resource_count(impl, array_desc.descriptorType);
+					layout_info.flags              = DescriptorSetLayoutCreateFlagBits::UpdateAfterBindPool;
 				} else {
-					layout_binding.resourceCount = array_desc.elementCount;
+					layout_binding.descriptorCount = array_desc.elementCount;
 				}
 			} else {
-				layout_binding.resourceCount = 1;
+				layout_binding.descriptorCount = 1;
 			}
 		}
 
-		auto new_layout = ResourceLayout::create(impl.device, layout_info);
-		impl.resourceLayouts.push_back(std::move(new_layout));
+		auto new_layout = DescriptorSetLayout::create(impl.device, layout_info);
+		impl.descriptorSetLayouts.push_back(std::move(new_layout));
 	}
 }
 
@@ -777,7 +816,7 @@ static void create_pipeline_layout(const DeviceImpl & device_impl, PipelineLayou
 	static_vector<vk::DescriptorSetLayout, VERA_MAX_SET_COUNT> vk_layouts;
 	static_vector<vk::PushConstantRange, VERA_MAX_SET_COUNT>   vk_constants;
 
-	for (const auto& layout : impl.resourceLayouts)
+	for (const auto& layout : impl.descriptorSetLayouts)
 		vk_layouts.push_back(get_vk_descriptor_set_layout(layout));
 	for (const auto& range : impl.pushConstantRanges)
 		vk_constants.push_back(get_vk_push_constant_range(range));
@@ -829,7 +868,7 @@ static bool check_shader_device(ref<Device> device, array_view<const_ref<Shader>
 	return true;
 }
 
-static bool check_layout_device(ref<Device> device, array_view<obj<ResourceLayout>> layouts)
+static bool check_layout_device(ref<Device> device, array_view<obj<DescriptorSetLayout>> layouts)
 {
 	if (layouts.empty()) return false;
 
@@ -854,8 +893,8 @@ static hash_t hash_pipeline_layout(const PipelineLayoutCreateInfo& info)
 {
 	hash_t seed = 0;
 
-	hash_combine(seed, info.resourceLayouts.size());
-	for (const auto& layout : info.resourceLayouts)
+	hash_combine(seed, info.descriptorSetLayouts.size());
+	for (const auto& layout : info.descriptorSetLayouts)
 		hash_combine(seed, layout->hash());
 		
 	hash_combine(seed, info.pushConstantRanges.size());
@@ -906,8 +945,8 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_
 	create_pc_info(impl);
 	create_pipeline_layout(device_impl, impl);
 
-	for (uint32_t set_id = 0, resource_idx = 0; set_id < impl.reflection.maxSetCount; ++set_id) {
-		auto& resource_layout = impl.resourceLayouts[set_id];
+	for (uint32_t set_id = 0, resource_idx = 0; set_id < impl.reflection.setRangeCount; ++set_id) {
+		auto& set_layout = impl.descriptorSetLayouts[set_id];
 
 		while (resource_idx < impl.reflection.resourceCount) {
 			auto* desc     = impl.reflection.reflections[resource_idx];
@@ -915,8 +954,8 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_
 
 			if (res_desc->set != set_id) break;
 
-			res_desc->resourceLayout = resource_layout;
-			resource_idx            += 1;
+			res_desc->descriptorSetLayout = set_layout;
+			resource_idx                 += 1;
 		}
 	}
 
@@ -928,7 +967,7 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_
 obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLayoutCreateInfo& info)
 {
 	VERA_ASSERT_MSG(device, "device is null");
-	VERA_ASSERT_MSG(check_layout_device(device, info.resourceLayouts), "layout device mismatch");
+	VERA_ASSERT_MSG(check_layout_device(device, info.descriptorSetLayouts), "layout device mismatch");
 
 	auto&  device_impl = getImpl(device);
 	hash_t hash_value  = hash_pipeline_layout(info);
@@ -940,7 +979,7 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLay
 	auto  obj  = createNewCoreObject<PipelineLayout>();
 	auto& impl = getImpl(obj);
 
-	impl.resourceLayouts.assign(info.resourceLayouts.begin(), info.resourceLayouts.end());
+	impl.descriptorSetLayouts.assign(info.descriptorSetLayouts.begin(), info.descriptorSetLayouts.end());
 	impl.pushConstantRanges.assign(info.pushConstantRanges.begin(), info.pushConstantRanges.end());
 	
 	// TODO: fill reflection datas
@@ -978,24 +1017,24 @@ obj<Device> PipelineLayout::getDevice()
 	return getImpl(this).device;
 }
 
-array_view<ref<ResourceLayout>> PipelineLayout::getResourceLayouts() const
+array_view<ref<DescriptorSetLayout>> PipelineLayout::getDescriptorSetLayouts() const
 {
 	auto& impl = getImpl(this);
 
 	return { 
-		reinterpret_cast<const ref<ResourceLayout>*>(impl.resourceLayouts.data()),
-		impl.resourceLayouts.size()
+		reinterpret_cast<const ref<DescriptorSetLayout>*>(impl.descriptorSetLayouts.data()),
+		impl.descriptorSetLayouts.size()
 	};
 }
 
 uint32_t PipelineLayout::getResourceLayoutCount() const
 {
-	return  static_cast<uint32_t>(getImpl(this).resourceLayouts.size());
+	return  static_cast<uint32_t>(getImpl(this).descriptorSetLayouts.size());
 }
 
-const_ref<ResourceLayout> PipelineLayout::getResourceLayout(uint32_t set) const
+const_ref<DescriptorSetLayout> PipelineLayout::getDescriptorSetLayout(uint32_t set) const
 {
-	return getImpl(this).resourceLayouts[set];
+	return getImpl(this).descriptorSetLayouts[set];
 }
 
 array_view<PushConstantRange> PipelineLayout::getPushConstantRanges() const

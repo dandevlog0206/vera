@@ -21,6 +21,9 @@ struct ResourceSetBindingState
 
 struct CommandBufferImpl
 {
+	using DescriptorSetState = std::vector<const_ref<DescriptorSet>>;
+	using ShaderParameters   = std::vector<ShaderParameter*>;
+
 	obj<Device>        device;
 	obj<Semaphore>     semaphore;
 	obj<Fence>         fence;
@@ -36,6 +39,7 @@ struct CommandBufferImpl
 	ref<Buffer>        currentVertexBuffer;
 	ref<Buffer>        currentIndexBuffer;
 	RenderingInfo      currentRenderingInfo;
+	DescriptorSetState currentDescriptorSets;
 	ref<Pipeline>      currentPipeline;
 };
 

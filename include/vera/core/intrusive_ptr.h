@@ -514,7 +514,7 @@ public:
 
 	template <class T>
 	VERA_INLINE ref(ref<T> rhs) VERA_NOEXCEPT :
-		my_base(static_cast<T*>(rhs.m_ptr)) {}
+		my_base(static_cast<const Object*>(rhs.m_ptr)) {}
 
 	VERA_INLINE ref(const ref& rhs) VERA_NOEXCEPT :
 		my_base(rhs.m_ptr) {}

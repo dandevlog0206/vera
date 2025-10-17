@@ -97,8 +97,8 @@ public:
 
 	ref<TextureView> getTextureView();
 
-
-	TextureUsageFlags getUsageFlags();
+	Format getFormat() const;
+	TextureUsageFlags getUsageFlags() const;
 
 	uint32_t width() const;
 	uint32_t height() const;

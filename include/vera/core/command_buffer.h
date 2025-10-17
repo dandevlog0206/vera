@@ -12,7 +12,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-class ResourceBinding;
+class DescriptorSet;
 class GraphicsState;
 class ShaderParameter;
 
@@ -128,15 +128,15 @@ public:
 
 	void bindGraphicsState(const GraphicsState& state);
 
-	void bindResource(
+	void bindDescriptorSet(
 		const_ref<PipelineLayout> pipeline_layout,
 		uint32_t                  set,
-		ref<ResourceBinding>      binding);
+		ref<DescriptorSet>        desc_set);
 
-	void bindResource(
+	void bindDescriptorSet(
 		const_ref<PipelineLayout> pipeline_layout,
 		uint32_t                  set,
-		ref<ResourceBinding>      binding,
+		ref<DescriptorSet>        desc_set,
 		array_view<uint32_t>      dynamic_offsets);
 
 	void bindShaderParameter(const ShaderParameter& shader_param);

@@ -38,7 +38,7 @@ public:
 	{
 		using namespace std::chrono;
 
-		uint64_t count = duration_cast<microseconds>(clock_t::now() - m_global_begin).count();
+		uint64_t count = duration_cast<nanoseconds>(clock_t::now() - m_global_begin).count();
 
 		return static_cast<float>(count);
 	}

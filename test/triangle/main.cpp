@@ -75,6 +75,7 @@ public:
 
 		m_pass->execute(m_render_ctx, m_swapchain->acquireNextImage());
 
+
 		m_render_ctx->submit();
 		m_swapchain->present();
 	}

@@ -4,7 +4,6 @@
 #include "../impl/shader_impl.h"
 
 #include "../../include/vera/core/device.h"
-#include "../../include/vera/core/resource_layout.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/util/static_vector.h"

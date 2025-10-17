@@ -8,21 +8,14 @@
 
 VERA_NAMESPACE_BEGIN
 
-class Context;
-class Pipeline;
-class Shader;
-class Sampler;
-class PipelineLayout;
-class ResourceLayout;
-
 struct DeviceImpl
 {
-	using PipelineCacheType        = std::unordered_map<hash_t, ref<Pipeline>>;
-	using ShaderCacheType          = std::unordered_map<hash_t, ref<Shader>>;
-	using SamplerCacheType         = std::unordered_map<hash_t, ref<Sampler>>;
-	using PipelineLayoutCacheType  = std::unordered_map<hash_t, ref<PipelineLayout>>;
-	using PipelineLayoutCacheType2 = std::unordered_map<hash_t, ref<PipelineLayout>>;
-	using ResourceLayoutCacheType  = std::unordered_map<hash_t, ref<ResourceLayout>>;
+	using PipelineCacheType             = std::unordered_map<hash_t, ref<Pipeline>>;
+	using ShaderCacheType               = std::unordered_map<hash_t, ref<Shader>>;
+	using SamplerCacheType              = std::unordered_map<hash_t, ref<Sampler>>;
+	using PipelineLayoutCacheType       = std::unordered_map<hash_t, ref<PipelineLayout>>;
+	using PipelineLayoutCacheType2      = std::unordered_map<hash_t, ref<PipelineLayout>>;
+	using DescriptorSetLayoutCacheType  = std::unordered_map<hash_t, ref<DescriptorSetLayout>>;
 
 	using DeviceProperties             = vk::PhysicalDeviceProperties;
 	using DeviceMemoryProperties       = vk::PhysicalDeviceMemoryProperties;
@@ -56,7 +49,7 @@ struct DeviceImpl
 	SamplerCacheType             samplerCacheMap;
 	PipelineLayoutCacheType      pipelineLayoutCacheMap;         // hash with layout itself
 	PipelineLayoutCacheType2     pipelineLayoutCacheMapByShader; // hash with shaders
-	ResourceLayoutCacheType      resourceLayoutCacheMap;
+	DescriptorSetLayoutCacheType descriptorSetLayoutCacheMap;
 
 	obj<Sampler>                 defaultSampler;
 	obj<Texture>                 defaultTexture;

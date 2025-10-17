@@ -20,9 +20,9 @@ class Context;
 		class Shader;
 		
 		// Resource Management
-		class ResourceLayout;
-		class ResourceBindingPool;
-		class ResourceBinding;
+		class DescriptorSetLayout;
+		class DescriptorPool;
+		class DescriptorSet;
 
 		// Rendering
 		class RenderContext;
@@ -49,10 +49,10 @@ vk::Fence& get_vk_fence(ref<Fence> fence);
 const vk::PipelineLayout& get_vk_pipeline_layout(const_ref<PipelineLayout> pipeline_layout);
 vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout);
 vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> render_command);
-const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<ResourceLayout> resource_layout);
-vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<ResourceLayout> resource_layout);
-const vk::DescriptorSet& get_vk_descriptor_set(const_ref<ResourceBinding> resource_binding);
-vk::DescriptorSet& get_vk_descriptor_set(ref<ResourceBinding> resource_binding);
+const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> descriptor_set_layout);
+vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<DescriptorSetLayout> descriptor_set_layout);
+const vk::DescriptorSet& get_vk_descriptor_set(const_ref<DescriptorSet> descriptor_set);
+vk::DescriptorSet& get_vk_descriptor_set(ref<DescriptorSet> descriptor_set);
 vk::Sampler& get_vk_sampler(ref<Sampler> sampler);
 const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore);
 vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore);

@@ -1,17 +1,21 @@
 #include "../../include/vera/core/command_buffer.h"
 #include "../impl/device_impl.h"
+#include "../impl/descriptor_set_layout_impl.h"
+#include "../impl/descriptor_set_impl.h"
 #include "../impl/buffer_impl.h"
 #include "../impl/command_buffer_impl.h"
 #include "../impl/pipeline_impl.h"
 #include "../impl/pipeline_layout_impl.h"
 #include "../impl/texture_impl.h"
 #include "../impl/device_memory_impl.h"
+#include "../impl/shader_storage_impl.h"
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/core/semaphore.h"
 #include "../../include/vera/core/fence.h"
-#include "../../include/vera/core/resource_binding.h"
+#include "../../include/vera/core/descriptor_set_layout.h"
+#include "../../include/vera/core/descriptor_set.h"
 #include "../../include/vera/graphics/shader_parameter.h"
 #include "../../include/vera/util/static_vector.h"
 
@@ -23,7 +27,7 @@ bool operator==(const AttachmentInfo<ClearType>& lhs, const AttachmentInfo<Clear
 	return !memcmp(&lhs, &rhs, sizeof(lhs));
 }
 
-bool operator==(const RenderingInfo& lhs, const RenderingInfo& rhs)
+static bool operator==(const RenderingInfo& lhs, const RenderingInfo& rhs)
 {
 	if (&lhs == &rhs) return true;
 
@@ -47,6 +51,338 @@ bool operator==(const RenderingInfo& lhs, const RenderingInfo& rhs)
 	if (stencill.has_value() && stencill.value() == stencilr.value()) return false;
 
 	return true;
+}
+
+static void update_resource_descriptor_set(
+	ShaderStorageImpl&     impl,
+	ShaderStorageBinding&  binding,
+	ShaderStorageSubFrame& sub_frame
+) {
+	vk::WriteDescriptorSet   write_info;
+	vk::DescriptorImageInfo  image_info;
+	vk::DescriptorBufferInfo buffer_info;
+
+	write_info.dstSet          = get_vk_descriptor_set(sub_frame.descriptorSet);
+	write_info.dstBinding      = binding.binding;
+	write_info.dstArrayElement = 0;
+	write_info.descriptorCount = 1;
+
+	switch (binding.descriptorType) {
+	case DescriptorType::Sampler: {
+		auto& resource   = impl.resources[binding.resourceRange.first()];
+		auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+		write_info.descriptorType = vk::DescriptorType::eSampler;
+		write_info.pImageInfo     = &image_info;
+		image_info.sampler        = get_vk_sampler(image_data.sampler);
+	} break;
+	case DescriptorType::CombinedImageSampler: {
+		auto& resource   = impl.resources[binding.resourceRange.first()];
+		auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+		write_info.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+		write_info.pImageInfo     = &image_info;
+		image_info.sampler        = get_vk_sampler(image_data.sampler);
+		image_info.imageView      = get_vk_image_view(image_data.textureView);
+		image_info.imageLayout    = to_vk_image_layout(image_data.textureLayout);
+	} break;
+	case DescriptorType::SampledImage:
+	case DescriptorType::StorageImage:
+	case DescriptorType::InputAttachment: {
+		auto& resource   = impl.resources[binding.resourceRange.first()];
+		auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+		write_info.descriptorType = to_vk_descriptor_type(binding.descriptorType);
+		write_info.pImageInfo     = &image_info;
+		image_info.imageView      = get_vk_image_view(image_data.textureView);
+		image_info.imageLayout    = to_vk_image_layout(image_data.textureLayout);
+	} break;
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::StorageTexelBuffer: {
+		auto& resource    = impl.resources[binding.resourceRange.first()];
+		auto& buffer_data = get_storage_data<ShaderStorageBufferData>(resource);
+		write_info.descriptorType = to_vk_descriptor_type(binding.descriptorType);
+		write_info.pBufferInfo    = &buffer_info;
+		buffer_info.buffer        = get_vk_buffer(buffer_data.buffer);
+	} break;
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic: {
+		auto& resource    = impl.resources[binding.resourceRange.first()];
+		auto& buffer_data = get_storage_data<ShaderStorageBufferData>(resource);
+		write_info.descriptorType = to_vk_descriptor_type(binding.descriptorType);
+		write_info.pBufferInfo    = &buffer_info;
+		buffer_info.buffer        = get_vk_buffer(buffer_data.buffer);
+		buffer_info.offset        = buffer_data.offset;
+		buffer_info.range         = buffer_data.range;
+	} break;
+	default:
+		VERA_ASSERT_MSG(false, "unsupported descriptor type");
+	}
+
+	get_vk_device(impl.device).updateDescriptorSets(
+		1,
+		&write_info,
+		0,
+		nullptr);
+
+	sub_frame.lastSubFrameIDs.front() = impl.subFrameID;
+}
+
+static void update_image_array_descriptor_set(
+	ShaderStorageImpl&                     impl,
+	ShaderStorageBinding&                  binding,
+	ShaderStorageSubFrame&                 sub_frame,
+	std::vector<vk::WriteDescriptorSet>&   write_infos,
+	std::vector<vk::DescriptorImageInfo>&  image_infos
+) {
+	auto     vk_desc_set    = get_vk_descriptor_set(sub_frame.descriptorSet);
+	uint32_t res_offset     = binding.resourceRange.first();
+	uint32_t set_res_offset = binding.setResourceOffset;
+	uint32_t info_offset    = 0;
+
+	write_infos.clear();
+	image_infos.clear();
+	image_infos.reserve(binding.resourceRange.size());
+
+	switch (binding.descriptorType) {
+	case DescriptorType::Sampler: {
+		for (auto resource_range : binding.arrayUpdateRange) {
+			for (auto array_idx : resource_range) {
+				auto& resource   = impl.resources[res_offset + array_idx];
+				auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+				auto& image_info = image_infos.emplace_back();
+				image_info.sampler     = get_vk_sampler(image_data.sampler);
+				image_info.imageView   = nullptr;
+				image_info.imageLayout = vk::ImageLayout{};
+
+				sub_frame.lastSubFrameIDs[set_res_offset + array_idx] = impl.subFrameID;
+			}
+
+			auto& write_info = write_infos.emplace_back();
+			write_info.dstSet          = vk_desc_set;
+			write_info.dstBinding      = binding.binding;
+			write_info.dstArrayElement = resource_range.first();
+			write_info.descriptorCount = static_cast<uint32_t>(resource_range.size());
+			write_info.descriptorType  = vk::DescriptorType::eSampler;
+			write_info.pImageInfo      = image_infos.data() + info_offset;
+
+			info_offset += static_cast<uint32_t>(resource_range.size());
+		}
+	} break;
+	case DescriptorType::CombinedImageSampler: {
+		for (auto resource_range : binding.arrayUpdateRange) {
+			for (auto array_idx : resource_range) {
+				auto& resource   = impl.resources[res_offset + array_idx];
+				auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+				auto& image_info = image_infos.emplace_back();
+				image_info.sampler     = get_vk_sampler(image_data.sampler);
+				image_info.imageView   = get_vk_image_view(image_data.textureView);
+				image_info.imageLayout = to_vk_image_layout(image_data.textureLayout);
+
+				sub_frame.lastSubFrameIDs[set_res_offset + array_idx] = impl.subFrameID;
+			}
+
+			auto& write_info = write_infos.emplace_back();
+			write_info.dstSet          = vk_desc_set;
+			write_info.dstBinding      = binding.binding;
+			write_info.dstArrayElement = resource_range.first();
+			write_info.descriptorCount = static_cast<uint32_t>(resource_range.size());
+			write_info.descriptorType  = vk::DescriptorType::eCombinedImageSampler;
+			write_info.pImageInfo      = image_infos.data() + info_offset;
+
+			info_offset += static_cast<uint32_t>(resource_range.size());
+		}
+	} break;
+	case DescriptorType::SampledImage:
+	case DescriptorType::StorageImage:
+	case DescriptorType::InputAttachment: {
+		auto vk_desc_type = to_vk_descriptor_type(binding.descriptorType);
+
+		for (auto resource_range : binding.arrayUpdateRange) {
+			for (auto array_idx : resource_range) {
+				auto& resource   = impl.resources[res_offset + array_idx];
+				auto& image_data = get_storage_data<ShaderStorageImageData>(resource);
+				auto& image_info = image_infos.emplace_back();
+				image_info.sampler     = nullptr;
+				image_info.imageView   = get_vk_image_view(image_data.textureView);
+				image_info.imageLayout = to_vk_image_layout(image_data.textureLayout);
+
+				sub_frame.lastSubFrameIDs[set_res_offset + array_idx] = impl.subFrameID;
+			}
+
+			auto& write_info = write_infos.emplace_back();
+			write_info.dstSet          = vk_desc_set;
+			write_info.dstBinding      = binding.binding;
+			write_info.dstArrayElement = resource_range.first();
+			write_info.descriptorCount = static_cast<uint32_t>(resource_range.size());
+			write_info.descriptorType  = vk_desc_type;
+			write_info.pImageInfo      = image_infos.data() + info_offset;
+
+			info_offset += static_cast<uint32_t>(resource_range.size());
+		}
+	} break;
+	default:
+		VERA_ASSERT_MSG(false, "unsupported descriptor type");
+	}
+
+	get_vk_device(impl.device).updateDescriptorSets(
+		static_cast<uint32_t>(write_infos.size()),
+		write_infos.data(),
+		0,
+		nullptr);
+}
+
+static void update_buffer_view_array_descriptor_set(
+	ShaderStorageImpl&                   impl,
+	ShaderStorageBinding&                binding,
+	ShaderStorageSubFrame&               sub_frame,
+	std::vector<vk::WriteDescriptorSet>& write_infos,
+	std::vector<vk::BufferView>&         buffer_views
+) {
+	VERA_ASSERT_MSG(binding.descriptorType == DescriptorType::UniformTexelBuffer ||
+					binding.descriptorType == DescriptorType::StorageTexelBuffer,
+					"invalid descriptor type for buffer view array update");
+
+	auto     vk_desc_set    = get_vk_descriptor_set(sub_frame.descriptorSet);
+	auto     vk_desc_type   = to_vk_descriptor_type(binding.descriptorType);
+	uint32_t res_offset     = binding.resourceRange.first();
+	uint32_t set_res_offset = binding.setResourceOffset;
+	uint32_t view_offset    = 0;
+
+	write_infos.clear();
+	buffer_views.clear();
+	buffer_views.reserve(binding.resourceRange.size());
+
+	for (auto resource_range : binding.arrayUpdateRange) {
+		for (auto array_idx : resource_range) {
+			auto& resource  = impl.resources[res_offset + array_idx];
+			auto& view_data = get_storage_data<ShaderStorageBufferViewData>(resource);
+			buffer_views.emplace_back(get_vk_buffer_view(view_data.bufferView));
+
+			sub_frame.lastSubFrameIDs[set_res_offset + array_idx] = impl.subFrameID;
+		}
+
+		auto& write_info = write_infos.emplace_back();
+		write_info.dstSet           = vk_desc_set;
+		write_info.dstBinding       = binding.binding;
+		write_info.dstArrayElement  = resource_range.first();
+		write_info.descriptorCount  = static_cast<uint32_t>(resource_range.size());
+		write_info.descriptorType   = vk_desc_type;
+		write_info.pTexelBufferView = buffer_views.data() + view_offset;
+
+		view_offset += static_cast<uint32_t>(resource_range.size());
+	}
+
+	get_vk_device(impl.device).updateDescriptorSets(
+		static_cast<uint32_t>(write_infos.size()),
+		write_infos.data(),
+		0,
+		nullptr);
+}
+
+static void update_buffer_array_descriptor_set(
+	ShaderStorageImpl&                     impl,
+	ShaderStorageBinding&                  binding,
+	ShaderStorageSubFrame&                 sub_frame,
+	std::vector<vk::WriteDescriptorSet>&   write_infos,
+	std::vector<vk::DescriptorBufferInfo>& buffer_infos
+) {
+	VERA_ASSERT_MSG(binding.descriptorType == DescriptorType::UniformBuffer ||
+					binding.descriptorType == DescriptorType::UniformBufferDynamic ||
+					binding.descriptorType == DescriptorType::StorageBuffer ||
+					binding.descriptorType == DescriptorType::StorageBufferDynamic,
+					"invalid descriptor type for buffer array update");
+
+	auto     vk_desc_set    = get_vk_descriptor_set(sub_frame.descriptorSet);
+	auto     vk_desc_type   = to_vk_descriptor_type(binding.descriptorType);
+	uint32_t res_offset     = binding.resourceRange.first();
+	uint32_t set_res_offset = binding.setResourceOffset;
+	uint32_t info_offset    = 0;
+
+	write_infos.clear();
+	buffer_infos.clear();
+	buffer_infos.reserve(binding.resourceRange.size());
+
+	for (auto resource_range : binding.arrayUpdateRange) {
+		for (auto array_idx : resource_range) {
+			auto& resource    = impl.resources[res_offset + array_idx];
+			auto& buffer_data = get_storage_data<ShaderStorageBufferData>(resource);
+			auto& buffer_info = buffer_infos.emplace_back();
+			buffer_info.buffer = get_vk_buffer(buffer_data.buffer);
+			buffer_info.offset = buffer_data.offset;
+			buffer_info.range  = buffer_data.range;
+
+			sub_frame.lastSubFrameIDs[set_res_offset + array_idx] = impl.subFrameID;
+		}
+
+		auto& write_info = write_infos.emplace_back();
+		write_info.dstSet           = vk_desc_set;
+		write_info.dstBinding       = binding.binding;
+		write_info.dstArrayElement  = resource_range.first();
+		write_info.descriptorCount  = static_cast<uint32_t>(resource_range.size());
+		write_info.descriptorType   = vk_desc_type;
+		write_info.pBufferInfo      = buffer_infos.data() + info_offset;
+
+		info_offset += static_cast<uint32_t>(resource_range.size());
+	}
+
+	get_vk_device(impl.device).updateDescriptorSets(
+		static_cast<uint32_t>(write_infos.size()),
+		write_infos.data(),
+		0,
+		nullptr);
+}
+
+static void update_descriptor_set(ShaderStorageImpl& impl)
+{
+	std::vector<vk::WriteDescriptorSet>   write_infos;
+	std::vector<vk::DescriptorImageInfo>  image_infos;
+	std::vector<vk::DescriptorBufferInfo> buffer_infos;
+	std::vector<vk::BufferView>           buffer_views;
+
+	auto& frame = impl.frames[impl.frameIndex];
+
+	for (auto& set : impl.sets) {
+		if (!set.needUpdate) continue;
+
+		auto& frame_set = frame.frameSets[set.set];
+		auto& sub_frame = frame_set.subFrames[frame_set.subFrameIndex];
+
+		for (auto& binding : set.bindings) {
+			if (!set.needUpdate) continue;
+
+			switch (binding.reflectionType) {
+			case ReflectionType::Resource:
+			case ReflectionType::ResourceBlock:
+				update_resource_descriptor_set(impl, binding, sub_frame);
+			break;
+			case ReflectionType::ResourceArray:
+				switch (binding.descriptorType) {
+				case DescriptorType::Sampler:
+				case DescriptorType::CombinedImageSampler:
+				case DescriptorType::SampledImage:
+				case DescriptorType::StorageImage:
+				case DescriptorType::InputAttachment:
+					update_image_array_descriptor_set(impl, binding, sub_frame, write_infos, image_infos);
+					break;
+				case DescriptorType::UniformTexelBuffer:
+				case DescriptorType::StorageTexelBuffer:
+					update_buffer_view_array_descriptor_set(impl, binding, sub_frame, write_infos, buffer_views);
+					break;
+				case DescriptorType::UniformBuffer:
+				case DescriptorType::UniformBufferDynamic:
+				case DescriptorType::StorageBuffer:
+				case DescriptorType::StorageBufferDynamic:
+					update_buffer_array_descriptor_set(impl, binding, sub_frame, write_infos, buffer_infos);
+					break;
+				}
+			break;
+			}
+
+			binding.needUpdate = false;
+		}
+
+		set.needUpdate = false;
+	}
 }
 
 static vk::ImageView get_vk_image_view(ref<Texture> texture)
@@ -73,20 +409,21 @@ obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 	alloc_info.level              = vk::CommandBufferLevel::ePrimary;
 	alloc_info.commandBufferCount = 1;
 
-	impl.device               = device;
-	impl.semaphore            = Semaphore::create(impl.device);
-	impl.fence                = Fence::create(impl.device);
-	impl.commandPool          = alloc_info.commandPool;
-	impl.commandBuffer        = vk_device.allocateCommandBuffers(alloc_info).front();
-	impl.submitID             = 0;
-	impl.submitQueueType      = SubmitQueueType::Transfer;
-	impl.state                = CommandBufferState::Initialized;
-	impl.currentViewport      = {};
-	impl.currentScissor       = {};
-	impl.currentVertexBuffer  = {};
-	impl.currentIndexBuffer   = {};
-	impl.currentRenderingInfo = {};
-	impl.currentPipeline      = {};
+	impl.device                  = device;
+	impl.semaphore               = Semaphore::create(impl.device);
+	impl.fence                   = Fence::create(impl.device);
+	impl.commandPool             = alloc_info.commandPool;
+	impl.commandBuffer           = vk_device.allocateCommandBuffers(alloc_info).front();
+	impl.submitID                = 0;
+	impl.submitQueueType         = SubmitQueueType::Transfer;
+	impl.state                   = CommandBufferState::Initialized;
+	impl.currentViewport         = {};
+	impl.currentScissor          = {};
+	impl.currentVertexBuffer     = {};
+	impl.currentIndexBuffer      = {};
+	impl.currentRenderingInfo    = {};
+	impl.currentDescriptorSets   = {};
+	impl.currentPipeline         = {};
 
 	return obj;
 }
@@ -124,15 +461,16 @@ void CommandBuffer::reset()
 
 	impl.fence->reset();
 	
-	impl.submitID            += 1;
-	impl.submitQueueType      = SubmitQueueType::Transfer;
-	impl.state                = CommandBufferState::Initialized;
-	impl.currentViewport      = {};
-	impl.currentScissor       = {};
-	impl.currentVertexBuffer  = {};
-	impl.currentIndexBuffer   = {};
-	impl.currentRenderingInfo = {};
-	impl.currentPipeline      = {};
+	impl.submitID               += 1;
+	impl.submitQueueType         = SubmitQueueType::Transfer;
+	impl.state                   = CommandBufferState::Initialized;
+	impl.currentViewport         = {};
+	impl.currentScissor          = {};
+	impl.currentVertexBuffer     = {};
+	impl.currentIndexBuffer      = {};
+	impl.currentRenderingInfo    = {};
+	impl.currentDescriptorSets   = {};
+	impl.currentPipeline         = {};
 
 	vk_device.resetCommandPool(impl.commandPool);
 }
@@ -335,10 +673,10 @@ void CommandBuffer::bindGraphicsState(const GraphicsState& state)
 	}
 }
 
-void CommandBuffer::bindResource(
+void CommandBuffer::bindDescriptorSet(
 	const_ref<PipelineLayout> pipeline_layout,
 	uint32_t                  set,
-	ref<ResourceBinding>      binding
+	ref<DescriptorSet>        desc_set
 ) {
 	auto& impl = getImpl(this);
 
@@ -347,15 +685,15 @@ void CommandBuffer::bindResource(
 		get_vk_pipeline_layout(pipeline_layout),
 		set,
 		1,
-		&get_vk_descriptor_set(binding),
+		&get_vk_descriptor_set(desc_set),
 		0,
 		nullptr);
 }
 
-void CommandBuffer::bindResource(
+void CommandBuffer::bindDescriptorSet(
 	const_ref<PipelineLayout> pipeline_layout,
 	uint32_t                  set,
-	ref<ResourceBinding>      binding,
+	ref<DescriptorSet>        desc_set,
 	array_view<uint32_t>      dynamic_offsets
 ) {
 	VERA_ASSERT_MSG(pipeline_layout, "pipeline layout is null");
@@ -367,17 +705,66 @@ void CommandBuffer::bindResource(
 		get_vk_pipeline_layout(pipeline_layout),
 		set,
 		1,
-		&get_vk_descriptor_set(binding),
+		&get_vk_descriptor_set(desc_set),
 		static_cast<uint32_t>(dynamic_offsets.size()),
 		dynamic_offsets.data());
 }
 
 void CommandBuffer::bindShaderParameter(const ShaderParameter& shader_param)
 {
-	auto& impl         = getImpl(this);
-	auto& storage_impl = getImpl(shader_param.m_storage);
+	if (shader_param.empty()) return;
 
-	 
+	auto& impl         = getImpl(this);
+	auto& storage_impl = const_cast<ShaderStorageImpl&>(getImpl(shader_param.m_storage));
+	auto& frame        = storage_impl.frames[storage_impl.frameIndex];
+
+	if (frame.commandBuffer && frame.commandBuffer != const_ref(this)) {
+		// TODO : exception doesn't throw well here, need to improve
+		impl.device->waitIdle();
+		throw Exception("shader parameter was not used in this command buffer");
+	}
+
+	frame.commandBuffer      = const_ref(this);
+	frame.commandBufferSync  = getSync();
+	storage_impl.currentSync = frame.commandBufferSync;
+
+	update_descriptor_set(storage_impl);
+
+	for (auto& frame_set : frame.frameSets) {
+		auto& sub_frame = frame_set.subFrames[frame_set.subFrameIndex];
+		auto  desc_set  = ref<DescriptorSet>(sub_frame.descriptorSet);
+
+		if (impl.currentDescriptorSets.size() <= frame_set.set)
+			impl.currentDescriptorSets.resize(frame_set.set + 1);
+		else if (impl.currentDescriptorSets[frame_set.set] != desc_set)
+			continue;
+
+		impl.commandBuffer.bindDescriptorSets(
+			to_vk_pipeline_bind_point(storage_impl.pipelineBindPoint),
+			get_vk_pipeline_layout(storage_impl.pipelineLayout),
+			frame_set.set,
+			1,
+			&get_vk_descriptor_set(desc_set),
+			0,
+			nullptr);
+
+		impl.currentDescriptorSets[frame_set.set] = desc_set;
+	}
+
+	for (auto pc_idx : storage_impl.pcRange) {
+		const auto& pc      = storage_impl.resources[pc_idx];
+		const auto& pc_data = get_storage_data<ShaderStoragePushConstantData>(pc);
+		
+		impl.commandBuffer.pushConstants(
+			get_vk_pipeline_layout(storage_impl.pipelineLayout),
+			to_vk_shader_stage_flags(pc_data.stageFlags),
+			0,
+			static_cast<uint32_t>(pc_data.block.size()),
+			pc_data.block.data());
+	}
+
+	storage_impl.subFrameID    += 1;
+	storage_impl.subFrameIndex += 1;
 }
 
 void CommandBuffer::beginRendering(const RenderingInfo& info)
