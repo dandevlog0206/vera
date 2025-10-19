@@ -423,6 +423,45 @@
     <ClInclude Include="include\vera\geometry\frustum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\geometry\sphere.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\aabb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\line.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\line_segment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\geometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\math\sdf2d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\math\sdf3d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\pass\forward_pass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\graphics\font.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\graphics\detail\open_type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\parse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\bezier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\os\window.cpp">
@@ -555,6 +594,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\impl\detail\shader_reflection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

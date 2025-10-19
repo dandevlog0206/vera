@@ -46,24 +46,15 @@ static vk::PolygonMode to_vk_polygon_mode(PolygonMode mode)
 	case PolygonMode::Fill:            return vk::PolygonMode::eFill;
 	case PolygonMode::Line:            return vk::PolygonMode::eLine;
 	case PolygonMode::Point:           return vk::PolygonMode::ePoint;
-	case PolygonMode::FillRectangleNV: return vk::PolygonMode::eFillRectangleNV;
 	}
 
 	VERA_ASSERT_MSG(false, "invalid polygon mode");
 	return {};
 }
 
-static vk::CullModeFlags to_vk_cull_mode(CullMode mode)
+static vk::CullModeFlags to_vk_cull_mode(CullModeFlags flags)
 {
-	switch (mode) {
-	case CullMode::None:         return vk::CullModeFlagBits::eNone;
-	case CullMode::Front:        return vk::CullModeFlagBits::eFront;
-	case CullMode::Back:         return vk::CullModeFlagBits::eBack;
-	case CullMode::FrontAndBack: return vk::CullModeFlagBits::eFrontAndBack;
-	}
-
-	VERA_ASSERT_MSG(false, "invalid cull mode");
-	return {};
+	return vk::CullModeFlags(static_cast<vk::CullModeFlags>(flags));
 }
 
 static vk::FrontFace to_vk_front_face(FrontFace mode)

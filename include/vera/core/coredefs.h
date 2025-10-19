@@ -49,6 +49,8 @@
 #define VERA_OS_NAMESPACE_END }
 #define VERA_SCENE_NAMESPACE_BEGIN namespace scene {
 #define VERA_SCENE_NAMESPACE_END }
+#define VERA_SDF_NAMESPACE_BEGIN namespace sdf {
+#define VERA_SDF_NAMESPACE_END }
 #define VERA_PRIV_NAMESPACE_BEGIN namespace priv {
 #define VERA_PRIV_NAMESPACE_END }
 
@@ -92,6 +94,4 @@
 #define VERA_ENUM64 : uint32_t
 #define VERA_FLAG_BITS : uint32_t
 #define VERA_FLAG_BITS64 : uint32_t
-
-// some constants
-#define VERA_UNSIZED_ARRAY_RESOURCE_COUNT 4096
+#define VERA_VK_ABI_COMPATIBLE

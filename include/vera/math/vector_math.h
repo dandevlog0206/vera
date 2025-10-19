@@ -8,43 +8,103 @@
 VERA_NAMESPACE_BEGIN
 
 template <class T, MathQualifier Q>
-VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<2, T, Q>& v) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR vector_base<2, T, Q> abs(const vector_base<2, T, Q>& v) VERA_NOEXCEPT
 {
-	return std::sqrtf(v.x * v.x + v.y * v.y);
+	return {
+		static_cast<T>(0.0) < v.x ? v.x : -v.x,
+		static_cast<T>(0.0) < v.y ? v.y : -v.y
+	};
 }
 
 template <class T, MathQualifier Q>
-VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<3, T, Q>& v) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T, Q> abs(const vector_base<3, T, Q>& v) VERA_NOEXCEPT
 {
-	return std::sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+	return {
+		static_cast<T>(0.0) < v.x ? v.x : -v.x,
+		static_cast<T>(0.0) < v.y ? v.y : -v.y,
+		static_cast<T>(0.0) < v.z ? v.z : -v.z
+	};
 }
 
 template <class T, MathQualifier Q>
-VERA_NODISCARD VERA_CONSTEXPR float length(const vector_base<4, T, Q>& v) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR vector_base<4, T, Q> abs(const vector_base<4, T, Q>& v) VERA_NOEXCEPT
 {
-	return std::sqrtf(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+	return {
+		static_cast<T>(0.0) < v.x ? v.x : -v.x,
+		static_cast<T>(0.0) < v.y ? v.y : -v.y,
+		static_cast<T>(0.0) < v.z ? v.z : -v.z,
+		static_cast<T>(0.0) < v.w ? v.w : -v.w
+	};
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<2, T, Q> saturate(const vector_base<2, T, Q>& v) VERA_NOEXCEPT
+{
+	return {
+		v.x < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.x ? static_cast<T>(1.0) : v.x),
+		v.y < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.y ? static_cast<T>(1.0) : v.y)
+	};
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T, Q> saturate(const vector_base<3, T, Q>& v) VERA_NOEXCEPT
+{
+	return {
+		v.x < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.x ? static_cast<T>(1.0) : v.x),
+		v.y < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.y ? static_cast<T>(1.0) : v.y),
+		v.z < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.z ? static_cast<T>(1.0) : v.z)
+	};
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<4, T, Q> saturate(const vector_base<4, T, Q>& v) VERA_NOEXCEPT
+{
+	return {
+		v.x < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.x ? static_cast<T>(1.0) : v.x),
+		v.y < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.y ? static_cast<T>(1.0) : v.y),
+		v.z < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.z ? static_cast<T>(1.0) : v.z),
+		v.w < static_cast<T>(0.0) ? static_cast<T>(0.0) : (static_cast<T>(1.0) < v.w ? static_cast<T>(1.0) : v.w)
+	};
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR T length(const vector_base<2, T, Q>& v) VERA_NOEXCEPT
+{
+	return std::sqrt(v.x * v.x + v.y * v.y);
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR T length(const vector_base<3, T, Q>& v) VERA_NOEXCEPT
+{
+	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR T length(const vector_base<4, T, Q>& v) VERA_NOEXCEPT
+{
+	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
 }
 
 template <size_t Dim, class T, MathQualifier Q>
-VERA_NODISCARD VERA_CONSTEXPR float distance(const vector_base<Dim, T, Q>& lhs, const vector_base<Dim, T, Q>& rhs) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR T distance(const vector_base<Dim, T, Q>& lhs, const vector_base<Dim, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return length(rhs - lhs);
 }
 
 template <class T, MathQualifier Q>
-VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<2, T, Q>& lhs, const vector_base<2, T, Q>& rhs) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR T dot(const vector_base<2, T, Q>& lhs, const vector_base<2, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return lhs.x * rhs.x + lhs.y * rhs.y;
 }
 
 template <class T, MathQualifier Q>
-VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<3, T, Q>& lhs, const vector_base<3, T, Q>& rhs) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR T dot(const vector_base<3, T, Q>& lhs, const vector_base<3, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 }
 
 template <class T, MathQualifier Q>
-VERA_NODISCARD VERA_CONSTEXPR float dot(const vector_base<4, T, Q>& lhs, const vector_base<4, T, Q>& rhs) VERA_NOEXCEPT
+VERA_NODISCARD VERA_CONSTEXPR T dot(const vector_base<4, T, Q>& lhs, const vector_base<4, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
 }

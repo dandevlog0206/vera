@@ -24,7 +24,11 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 		.rasterizationInfo              = RasterizationInfo{},
 		.tessellationPatchControlPoints = 0,
 		.depthStencilInfo               = DepthStencilInfo{},
-		.colorBlendInfo                 = ColorBlendInfo{}
+		.colorBlendInfo                 = ColorBlendInfo{
+			.attachments = { 
+				ColorBlendAttachmentState{} // default attachment state
+			}
+		}
 	};
 
 	if (!info.vertexInput.vertexInputDescriptor.empty()) {

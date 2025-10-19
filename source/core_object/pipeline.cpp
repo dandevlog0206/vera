@@ -166,18 +166,10 @@ static void fill_vertex_input_attributes(
 
 static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, const GraphicsPipelineCreateInfo& info)
 {
-	 states = {
+	states = {
 		// viewport
 		vk::DynamicState::eViewport,
-		vk::DynamicState::eScissor,
-
-		// color blend
-		//vk::DynamicState::eLogicOpEnableEXT,
-		//vk::DynamicState::eLogicOpEXT,
-		//vk::DynamicState::eColorBlendEnableEXT,
-		//vk::DynamicState::eColorBlendEquationEXT,
-		//vk::DynamicState::eColorWriteMaskEXT,
-		//vk::DynamicState::eBlendConstants
+		vk::DynamicState::eScissor
 	};
 
 	if (!info.primitiveInfo) {
@@ -200,6 +192,15 @@ static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, con
 		states.push_back(vk::DynamicState::ePatchControlPointsEXT);
 
 	if (!info.depthStencilInfo) {
+		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
+		states.push_back(vk::DynamicState::eLogicOpEXT);
+		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
+		states.push_back(vk::DynamicState::eColorBlendEquationEXT);
+		states.push_back(vk::DynamicState::eColorWriteMaskEXT);
+		states.push_back(vk::DynamicState::eBlendConstants);
+	}
+
+	if (!info.colorBlendInfo) {
 		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
 		states.push_back(vk::DynamicState::eLogicOpEXT);
 		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
@@ -348,29 +349,19 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 		ds_info.maxDepthBounds        = info.depthStencilInfo->maxDepthBounds;
 	}
 
-	vk::PipelineColorBlendAttachmentState blend_attachemnt;
-	blend_attachemnt.blendEnable         = true;
-	blend_attachemnt.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
-	blend_attachemnt.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
-	blend_attachemnt.colorBlendOp        = vk::BlendOp::eAdd;
-	blend_attachemnt.srcAlphaBlendFactor = vk::BlendFactor::eSrcAlpha;
-	blend_attachemnt.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
-	blend_attachemnt.alphaBlendOp        = vk::BlendOp::eAdd;
-	blend_attachemnt.colorWriteMask      = 
-		vk::ColorComponentFlagBits::eR |
-		vk::ColorComponentFlagBits::eG |
-		vk::ColorComponentFlagBits::eB |
-		vk::ColorComponentFlagBits::eA;
-
 	vk::PipelineColorBlendStateCreateInfo cb_info;
-	cb_info.logicOpEnable     = false;
-	cb_info.logicOp           = vk::LogicOp::eCopy;
-	cb_info.attachmentCount   = 1;
-	cb_info.pAttachments      = &blend_attachemnt;
-	cb_info.blendConstants[0] = 0.f;
-	cb_info.blendConstants[1] = 0.f;
-	cb_info.blendConstants[2] = 0.f;
-	cb_info.blendConstants[3] = 0.f;
+	if (info.colorBlendInfo) {
+		const auto* attachment_ptr = info.colorBlendInfo->attachments.data();
+
+		cb_info.logicOpEnable     = false;
+		cb_info.logicOp           = vk::LogicOp::eCopy;
+		cb_info.attachmentCount   = static_cast<uint32_t>(info.colorBlendInfo->attachments.size());
+		cb_info.pAttachments      = reinterpret_cast<const vk::PipelineColorBlendAttachmentState*>(attachment_ptr);
+		cb_info.blendConstants[0] = info.colorBlendInfo->blendConstants[0];
+		cb_info.blendConstants[1] = info.colorBlendInfo->blendConstants[1];
+		cb_info.blendConstants[2] = info.colorBlendInfo->blendConstants[2];
+		cb_info.blendConstants[3] = info.colorBlendInfo->blendConstants[3];
+	}
 
 	static_vector<vk::DynamicState, 64> dynamic_states;
 	fill_dynamic_states(dynamic_states, info);

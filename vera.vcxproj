@@ -166,8 +166,16 @@
     <ClInclude Include="include\vera\core\shader_storage.h" />
     <ClInclude Include="include\vera\core\intrusive_ptr.h" />
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
+    <ClInclude Include="include\vera\geometry\aabb.h" />
+    <ClInclude Include="include\vera\geometry\bezier.h" />
     <ClInclude Include="include\vera\geometry\frustum.h" />
+    <ClInclude Include="include\vera\geometry\geometry.h" />
+    <ClInclude Include="include\vera\geometry\line.h" />
+    <ClInclude Include="include\vera\geometry\line_segment.h" />
+    <ClInclude Include="include\vera\geometry\path.h" />
     <ClInclude Include="include\vera\geometry\plane.h" />
+    <ClInclude Include="include\vera\geometry\sphere.h" />
+    <ClInclude Include="include\vera\graphics\font.h" />
     <ClInclude Include="include\vera\math\constant.h" />
     <ClInclude Include="include\vera\math\detail\config.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x2.h" />
@@ -185,7 +193,10 @@
     <ClInclude Include="include\vera\math\detail\vector_base.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x4.h" />
     <ClInclude Include="include\vera\math\quaternion.h" />
+    <ClInclude Include="include\vera\math\sdf2d.h" />
+    <ClInclude Include="include\vera\math\sdf3d.h" />
     <ClInclude Include="include\vera\math\vector_math.h" />
+    <ClInclude Include="include\vera\pass\forward_pass.h" />
     <ClInclude Include="include\vera\scene\axis_system.h" />
     <ClInclude Include="include\vera\scene\mesh_attribute.h" />
     <ClInclude Include="include\vera\scene\scene.h" />
@@ -219,6 +230,7 @@
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
+    <ClInclude Include="source\graphics\detail\open_type.h" />
     <ClInclude Include="source\impl\detail\resource_binding_desc.h" />
     <ClInclude Include="source\impl\detail\shader_reflection.h" />
     <ClInclude Include="source\graphics\pixel.h" />
@@ -295,6 +307,7 @@
     <ClInclude Include="source\impl\window_impl.h" />
     <ClCompile Include="source\core\command_buffer_sync.cpp" />
     <ClCompile Include="source\core\exception.cpp" />
+    <ClCompile Include="source\graphics\font.cpp" />
     <ClCompile Include="source\impl\detail\shader_reflection.cpp" />
     <ClCompile Include="source\core_object\descriptor_pool.cpp" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
@@ -316,6 +329,7 @@
     <ClCompile Include="source\core_object\render_context.cpp" />
     <ClCompile Include="source\core_object\descriptor_set_layout.cpp" />
     <ClCompile Include="source\core_object\sampler.cpp" />
+    <ClInclude Include="source\parse.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\core_object\fence.cpp" />

@@ -25,6 +25,16 @@ public:
 		return m_normal;
 	}
 
+	VERA_NODISCARD VERA_CONSTEXPR bool operator==(const Plane& rhs) const VERA_NOEXCEPT
+	{
+		return m_normal == rhs.m_normal && m_k == rhs.m_k;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR bool operator!=(const Plane& rhs) const VERA_NOEXCEPT
+	{
+		return !(*this == rhs);
+	}
+
 private:
 	float3 m_normal;
 	float  m_k;

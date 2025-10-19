@@ -29,6 +29,7 @@
 // graphics
 #include "graphics/color.h"
 #include "graphics/colormap.h"
+#include "graphics/font.h"
 #include "graphics/format.h"
 #include "graphics/format_traits.h"
 #include "graphics/graphics_state.h"
