@@ -116,6 +116,7 @@ DescriptorSetLayout::~DescriptorSetLayout()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 	
+	device_impl.descriptorSetLayoutCacheMap.erase(impl.hashValue);
 	device_impl.device.destroy(impl.descriptorSetLayout);
 
 	destroyObjectImpl(this);

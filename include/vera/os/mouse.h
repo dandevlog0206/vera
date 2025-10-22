@@ -5,20 +5,22 @@
 VERA_NAMESPACE_BEGIN
 VERA_OS_NAMESPACE_BEGIN
 
-class SystemWindow;
+class Window;
 
-class Mouse {
+class Mouse
+{
 public:
-	enum Button {
+	enum Button
+	{
 		Unknown,
 		LButton,
 		RButton,
 		MButton,
 	};
 
-	static void setPosition(const int2& pos, const SystemWindow& rel_wnd);
+	static void setPosition(const int2& pos, const Window& rel_wnd);
 	static void setPosition(const int2& pos);
-	VERA_NODISCARD static int2 getPosition(const SystemWindow& rel_wnd);
+	VERA_NODISCARD static int2 getPosition(const Window& rel_wnd);
 	VERA_NODISCARD static int2 getPosition();
 
 	VERA_NODISCARD static bool isDown(Button button);

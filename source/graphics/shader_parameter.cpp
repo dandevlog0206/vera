@@ -51,6 +51,11 @@ obj<ShaderStorage> ShaderParameter::getShaderStorage() VERA_NOEXCEPT
 	return m_storage;
 }
 
+bool ShaderParameter::hasVariable(std::string_view name) VERA_NOEXCEPT
+{
+	return m_storage && m_storage->hasVariable(name);
+}
+
 bool ShaderParameter::empty() const VERA_NOEXCEPT
 {
 	return !m_storage;

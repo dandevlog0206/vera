@@ -2,7 +2,7 @@
 
 int main()
 {
-	vr::os::Window window(1080, 720, "Triangle Demo");
+	vr::os::Window window(1080, 720, "Minimal Triangle Demo");
 
 	auto device    = vr::Device::create(vr::Context::create());
 	auto ctx       = vr::RenderContext::create(device);

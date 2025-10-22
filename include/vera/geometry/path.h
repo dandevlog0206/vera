@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/assertion.h"
+#include "../util/lookup_table.h"
 #include "bezier.h"
 #include <vector>
 
@@ -187,6 +187,25 @@ public:
 		return total_length;
 	}
 
+	VERA_NODISCARD VERA_INLINE lookup_table<float> createLookupTable(size_t segments_per_curve) const VERA_NOEXCEPT
+	{
+		lookup_table<float> table;
+
+		if (m_curves.empty()) return table;
+
+		float total_length = length(segments_per_curve);
+		float accumulated_length = 0.0f;
+
+		for (const auto& curve : m_curves)
+		{
+			float curve_length = curve.length();
+			// table.insert({ accumulated_length / total_length, curve });
+			accumulated_length += curve_length;
+		}
+
+		return table;
+	}
+
 	VERA_CONSTEXPR QuadraticPath2D& operator+=(const float2& p1) VERA_NOEXCEPT
 	{
 		lineTo(p1);
@@ -234,6 +253,11 @@ public:
 	VERA_CONSTEXPR size_t size() const VERA_NOEXCEPT
 	{
 		return m_curves.size();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR bool empty() const VERA_NOEXCEPT
+	{
+		return m_curves.empty();
 	}
 
 	VERA_CONSTEXPR void clear() VERA_NOEXCEPT

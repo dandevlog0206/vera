@@ -18,7 +18,13 @@ public:
 
 	virtual void updateEvent(const os::WindowEvent& e, float dt) {};
 	virtual void updateAsync(float dt) {};
-	virtual float4x4 getMatrix() const = 0;
+
+	VERA_NODISCARD virtual float3 getPosition() const VERA_NOEXCEPT = 0;
+	VERA_NODISCARD virtual float3 getLook() const VERA_NOEXCEPT = 0;
+	VERA_NODISCARD virtual float3 getDirection() const VERA_NOEXCEPT = 0;
+	VERA_NODISCARD virtual float3 getUp() const VERA_NOEXCEPT = 0;
+
+	VERA_NODISCARD virtual float4x4 getMatrix() const VERA_NOEXCEPT = 0;
 };
 
 VERA_NAMESPACE_END

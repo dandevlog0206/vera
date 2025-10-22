@@ -221,6 +221,7 @@
     <ClInclude Include="include\vera\util\flycam.h" />
     <ClInclude Include="include\vera\math\radian.h" />
     <ClInclude Include="include\vera\util\index_map.h" />
+    <ClInclude Include="include\vera\util\lookup_table.h" />
     <ClInclude Include="include\vera\util\range.h" />
     <ClInclude Include="include\vera\util\ranged_set.h" />
     <ClInclude Include="include\vera\util\result_message.h" />
@@ -337,6 +338,7 @@
     <ClCompile Include="source\core_object\context.cpp" />
     <ClCompile Include="source\graphics\graphics_state.cpp" />
     <ClCompile Include="source\os\keyboard.cpp" />
+    <ClCompile Include="source\os\mouse.cpp" />
     <ClCompile Include="source\pass\graphics_pass.cpp" />
     <ClCompile Include="source\core_object\pipeline.cpp" />
     <ClCompile Include="source\core_object\pipeline_layout.cpp" />
@@ -360,6 +362,10 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="vera.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="glsl shader\shader_toy\shader_toy3.frag.glsl" />
+    <None Include="glsl shader\shader_toy\shader_toy4.frag.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

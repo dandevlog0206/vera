@@ -13,9 +13,14 @@ public:
 	void updateEvent(const os::WindowEvent& e, float dt) override;
 	void updateAsync(float dt) override;
 
-	float3 getPosition() const;
+	VERA_NODISCARD float3 getPosition() const VERA_NOEXCEPT override;
+	VERA_NODISCARD float3 getLook() const VERA_NOEXCEPT override;
+	VERA_NODISCARD float3 getDirection() const VERA_NOEXCEPT override;
+	VERA_NODISCARD float3 getUp() const VERA_NOEXCEPT override;
 
-	float4x4 getMatrix() const override;
+	void setVelocity(float velocity) VERA_NOEXCEPT;
+
+	VERA_NODISCARD float4x4 getMatrix() const VERA_NOEXCEPT override;
 
 private:
 	void reinitOrientation();

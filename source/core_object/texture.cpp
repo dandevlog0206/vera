@@ -188,7 +188,8 @@ Texture::~Texture()
 	auto& memory_impl = getImpl(impl.deviceMemory);
 	auto  vk_device   = get_vk_device(impl.device);
 
-	VERA_ASSERT_MSG(impl.textureView.count() == 1, "default texture view must not be owned by others");
+	VERA_ASSERT_MSG(impl.textureView ? impl.textureView.count() == 1 : true,
+					"default texture view must not be owned by others");
 
 	impl.textureView.reset();
 

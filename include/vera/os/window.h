@@ -25,6 +25,8 @@ typedef void (*WindowEventHandler)(Window&, const WindowEvent&);
 class Window
 {
 	friend class ::vr::Swapchain;
+	friend class Keyboard;
+	friend class Mouse;
 
 	PROPERTY_INIT(Window);
 	VERA_NOCOPY(Window);
@@ -34,16 +36,21 @@ public:
 	Window(Window&& rhs) noexcept;
 	~Window();
 
+	void create(uint32_t width, uint32_t height, std::string_view title);
+	void destroy();
+
 	bool hasEvent() const;
 	bool waitEvent(WindowEvent& e);
 	bool pollEvent(WindowEvent& e);
 	void registerEventHandler(WindowEventHandler hanlder);
 	void handleEvent();
 
-	float getAspect() const;
+	float getAspect() const VERA_NOEXCEPT;
 
-	void cancelClose();
-	bool needClose() const;
+	void cancelClose() VERA_NOEXCEPT;
+	bool needClose() const VERA_NOEXCEPT;
+
+	VERA_NODISCARD bool empty() VERA_NOEXCEPT;
 
 	PROPERTY(std::string, Title);
 	PROPERTY(int2, Position);
@@ -67,7 +74,7 @@ private:
 	PROPERTY_GET_SET_DECL(UserPtr);
 
 private:
-	std::unique_ptr<priv::WindowImpl> m_impl;
+	priv::WindowImpl* m_impl;
 };
 
 VERA_OS_NAMESPACE_END

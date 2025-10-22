@@ -621,7 +621,7 @@ void CommandBuffer::bindPipeline(ref<Pipeline> pipeline)
 	auto& pipeline_impl = getImpl(pipeline);
 
 	impl.commandBuffer.bindPipeline(
-		pipeline_impl.pipelineBindPoint,
+		to_vk_pipeline_bind_point(pipeline_impl.pipelineBindPoint),
 		pipeline_impl.pipeline);
 	impl.currentPipeline = pipeline;
 }

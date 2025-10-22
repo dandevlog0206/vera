@@ -15,12 +15,14 @@ VERA_NAMESPACE_BEGIN
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
 	static_vector<const_ref<Shader>, VERA_MAX_SHADER_COUNT> shaders;
-
-	VERA_ASSERT_MSG(info.vertexShader, "vertex shader must be specified");
-	VERA_ASSERT_MSG(info.fragmentShader, "fragment shader must be specified");
 	
 	shaders.push_back(info.vertexShader);
 	
+	if (!info.vertexShader)
+		throw Exception("Graphics pipeline must have a vertex shader");
+	if (!info.fragmentShader)
+		throw Exception("Graphics pipeline must have a fragment shader");
+
 	if (info.tessellationControlShader)
 		shaders.push_back(info.tessellationControlShader);
 	if (info.tessellationEvaluationShader)
@@ -223,9 +225,6 @@ static size_t hash_graphics_pipeline(const GraphicsPipelineCreateInfo& info)
 
 obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
-	VERA_ASSERT_MSG(info.vertexShader && info.fragmentShader,
-		"vertex shader and fragment shader are required");
-
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_graphics_pipeline(info);
 
@@ -409,7 +408,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 	impl.device            = std::move(device);
 	impl.pipeline          = result.value;
-	impl.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
+	impl.hashValue         = hash_value;
 
 	device_impl.pipelineCacheMap.insert({ hash_value, obj });
 
@@ -421,6 +421,7 @@ Pipeline::~Pipeline()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
+	device_impl.pipelineCacheMap.erase(impl.hashValue);
 	device_impl.device.destroy(impl.pipeline);
 
 	destroyObjectImpl(this);

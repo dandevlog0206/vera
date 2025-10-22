@@ -7,17 +7,20 @@
 
 VERA_NAMESPACE_BEGIN
 
+enum class PipelineBindPoint VERA_ENUM;
+
 struct PipelineImpl
 {
 	using shader_pair = std::pair<ShaderStageFlagBits, obj<Shader>>;
 
 	obj<Device>              device;
+	obj<PipelineLayout>      pipelineLayout;
 
 	vk::Pipeline             pipeline;
-	vk::PipelineBindPoint    pipelineBindPoint;
 
-	obj<PipelineLayout>      pipelineLayout;
 	std::vector<shader_pair> shaders;
+	PipelineBindPoint        pipelineBindPoint;
+	hash_t                   hashValue;
 };
 
 static vk::PrimitiveTopology to_vk_primitive_topology(PrimitiveTopology topology)

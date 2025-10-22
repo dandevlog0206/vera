@@ -68,6 +68,7 @@ public:
 	obj<Device> getDevice() VERA_NOEXCEPT;
 	obj<PipelineLayout> getPipelineLayout() VERA_NOEXCEPT;
 
+	VERA_NODISCARD bool hasVariable(std::string_view name) VERA_NOEXCEPT;
 	VERA_NODISCARD ShaderVariable accessVariable(std::string_view name);
 
 	void setSampler(

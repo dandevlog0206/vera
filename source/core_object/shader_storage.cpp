@@ -1093,6 +1093,12 @@ obj<PipelineLayout> ShaderStorage::getPipelineLayout() VERA_NOEXCEPT
 	return getImpl(this).pipelineLayout;
 }
 
+bool ShaderStorage::hasVariable(std::string_view name) VERA_NOEXCEPT
+{
+	auto& impl = getImpl(this);
+	return 0 <= find_member_index(impl.reflection, name.data());
+}
+
 ShaderVariable ShaderStorage::accessVariable(std::string_view name)
 {
 	auto& impl = getImpl(this);

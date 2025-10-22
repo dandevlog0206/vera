@@ -67,8 +67,8 @@ struct WindowResizeArgs
 struct KeyboardArgs
 {
 	Window*  window;
+	char32_t character;
 	Key      key;
-	Scancode scancode;
 	Mod      mods;
 };
 

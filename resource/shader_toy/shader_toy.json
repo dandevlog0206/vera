@@ -1,0 +1,119 @@
+[
+  {
+    "id": 1,
+    "title": "Seascape",
+    "author": "TDM",
+    "licence": "CC BY-NC-SA 3.0",
+    "url": "https://www.shadertoy.com/view/Ms2SD1",
+    "tag": "procedural, noise, waves, sea, water, subsurface",
+    "description": "fully-prshaderocedural sea surface computing. without textures.",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy1.frag.glsl.spv",
+    "camera": {
+      "type": "flycam",
+      "position": [ 0.0, 3.5, 0.0 ],
+      "lookat": [ 0.0, 3.6, 0.8 ],
+      "speed": 3.0
+    }
+  },
+  {
+    "id": 2,
+    "title": "Heartfelt",
+    "author": "BigWIngs",
+    "licence": "CC BY-NC-SA 3.0",
+    "url": "https://www.shadertoy.com/view/ltffzl",
+    "tag": "glass, heart, rain, drop, sad, window, droplets, drops, raining, rainonwindow",
+    "description": "If you want to really get sad then be sure to watch with sound  ;)",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy2.frag.glsl.spv",
+    "channels": [
+      {
+        "type": "texture",
+        "name": "iChannel0",
+        "path": "resource/shader_toy/shader_toy2_channel0.png"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Cube lines",
+    "author": "morimea",
+    "licence": "CC BY-NC-SA 3.0",
+    "url": "https://www.shadertoy.com/view/NslGRN",
+    "tag": "3d, reflection, refraction, intersection, art, reflect, mirrors, cineshader",
+    "description": "art shader.",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy3.frag.glsl.spv",
+    "camera": {
+      "type": "arcball",
+      "position": [ 0.0, 3.0, 5.0 ],
+      "lookat": [ 0.0, 0.0, 0.0 ],
+      "min_distance": 1.5,
+      "max_distance": 10.0,
+      "min_longitude": "-5.0 deg"
+    }
+  },
+  {
+    "id": 4,
+    "title": "20221105_inercia intended one",
+    "author": "0b5vr",
+    "licence": "",
+    "url": "https://www.shadertoy.com/view/cs2GWD",
+    "tag": "3d, music, livecoding, soundcloud, dubstep2",
+    "description": "",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy4.frag.glsl.spv"
+  },
+  {
+    "id": 5,
+    "title": "2D Clouds",
+    "author": "drift",
+    "licence": "",
+    "url": "https://www.shadertoy.com/view/4tdSWr",
+    "tag": "fractal, noise, clouds, fbm",
+    "description": "",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy5.frag.glsl.spv"
+  },
+  {
+    "id": 6,
+    "title": "Wet stone",
+    "author": "TDM",
+    "licence": "CC BY-NC-SA 3.0",
+    "url": "https://www.shadertoy.com/view/ldSSzV",
+    "tag": "procedural, noise, rock, wet, stone",
+    "description": "stone generation",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy6.frag.glsl.spv",
+    "camera": {
+      "type": "arcball",
+      "position": [ 0.0, 3.0, 5.0 ],
+      "lookat": [ 0.0, 0.0, 0.0 ],
+      "min_distance": 1.1,
+      "max_distance": 3.0,
+      "min_longitude": "-5.0 deg"
+    }
+  },
+  {
+    "id": 7,
+    "title": "Favela",
+    "author": "duvengar",
+    "licence": "CC BY-NC-SA 3.0",
+    "url": "https://www.shadertoy.com/view/ldGcDh",
+    "tag": "2d, isometric, tiling, hexagons",
+    "description": "It's crazy how drawing into small hexagons, can be fun and obsessive! I hope you guys like it.",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy7.frag.glsl.spv"
+  },
+  {
+    "id": 8,
+    "title": "Accretion [312]",
+    "author": "Xor",
+    "licence": "",
+    "url": "https://www.shadertoy.com/view/WcKXDV",
+    "tag": "water, turbulence, golf",
+    "description": "",
+    "vert_path": "shader/shader_toy/shader_toy.vert.glsl.spv",
+    "frag_path": "shader/shader_toy/shader_toy8.frag.glsl.spv"
+  }
+]

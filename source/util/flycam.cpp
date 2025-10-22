@@ -83,46 +83,66 @@ void Flycam::updateEvent(const os::WindowEvent& e, float dt)
 
 void Flycam::updateAsync(float dt)
 {
-	if (os::Keyboard::isDown(os::Scancode::W) || os::Keyboard::isDown(os::Scancode::Up)) {
+	if (os::Keyboard::isDown(os::Key::W) || os::Keyboard::isDown(os::Key::Up)) {
 		float3 dir = normalize(float3(m_dir.x, 0.f, m_dir.z));
 
 		m_pos  = m_pos + dir * m_velocity * dt;
 		m_look = m_look + dir * m_velocity * dt;
 	}
-	if (os::Keyboard::isDown(os::Scancode::A) || os::Keyboard::isDown(os::Scancode::Left)) {
+	if (os::Keyboard::isDown(os::Key::A) || os::Keyboard::isDown(os::Key::Left)) {
 		float3 dir = normalize(cross(m_dir, m_up));
 
 		m_pos  = m_pos + dir * m_velocity * dt;
 		m_look = m_look + dir * m_velocity * dt;
 	}
-	if (os::Keyboard::isDown(os::Scancode::S) || os::Keyboard::isDown(os::Scancode::Down)) {
+	if (os::Keyboard::isDown(os::Key::S) || os::Keyboard::isDown(os::Key::Down)) {
 		float3 dir = -normalize(float3(m_dir.x, 0.f, m_dir.z));
 
 		m_pos  = m_pos + dir * m_velocity * dt;
 		m_look = m_look + dir * m_velocity * dt;
 	}
-	if (os::Keyboard::isDown(os::Scancode::D) || os::Keyboard::isDown(os::Scancode::Right)) {
+	if (os::Keyboard::isDown(os::Key::D) || os::Keyboard::isDown(os::Key::Right)) {
 		float3 dir = -normalize(cross(m_dir, m_up));
 
 		m_pos  = m_pos + dir * m_velocity * dt;
 		m_look = m_look + dir * m_velocity * dt;
 	}
-	if (os::Keyboard::isDown(os::Scancode::LShift)) {
+	if (os::Keyboard::isDown(os::Key::LShift)) {
 		m_pos  = m_pos - m_up * m_velocity * dt;
 		m_look = m_look - m_up * m_velocity * dt;
 	}
-	if (os::Keyboard::isDown(os::Scancode::Space)) {
+	if (os::Keyboard::isDown(os::Key::Space)) {
 		m_pos  = m_pos + m_up * m_velocity * dt;
 		m_look = m_look + m_up * m_velocity * dt;
 	}
 }
 
-float3 Flycam::getPosition() const
+float3 Flycam::getPosition() const VERA_NOEXCEPT
 {
 	return m_pos;
 }
 
-float4x4 Flycam::getMatrix() const
+float3 Flycam::getLook() const VERA_NOEXCEPT
+{
+	return m_look;
+}
+
+float3 Flycam::getDirection() const VERA_NOEXCEPT
+{
+	return m_dir;
+}
+
+float3 Flycam::getUp() const VERA_NOEXCEPT
+{
+	return m_up;
+}
+
+void Flycam::setVelocity(float velocity) VERA_NOEXCEPT
+{
+	m_velocity = velocity;
+}
+
+float4x4 Flycam::getMatrix() const VERA_NOEXCEPT
 {
 	return lookAt(m_pos, m_look, m_v);
 }

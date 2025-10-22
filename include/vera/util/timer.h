@@ -67,7 +67,7 @@ public:
 		return static_cast<float>(count);
 	}
 
-	VERA_NODISCARD VERA_INLINE float frame() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE float framerate() const VERA_NOEXCEPT
 	{
 		return 1e9f / dt_ns();
 	}

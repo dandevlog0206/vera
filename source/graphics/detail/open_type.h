@@ -1589,7 +1589,7 @@ static const char* otf_get_macintosh_glyph_names(OTFUint16 glyph_name_idx)
 		"Ugrave",
 		"dotlessi",
 		"circumflex",
-		"tilde",
+		"tilde"
 		"macron",
 		"breve",
 		"dotaccent",

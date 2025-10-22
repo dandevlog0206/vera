@@ -205,8 +205,8 @@ struct DepthStencilInfo
 VERA_VK_ABI_COMPATIBLE struct ColorBlendAttachmentState
 {
 	bool                blendEnable         = true;
-	BlendFactor         srcColorBlendFactor = BlendFactor::SrcColor;
-	BlendFactor         dstColorBlendFactor = BlendFactor::OneMinusSrcColor;
+	BlendFactor         srcColorBlendFactor = BlendFactor::SrcAlpha;
+	BlendFactor         dstColorBlendFactor = BlendFactor::OneMinusSrcAlpha;
 	BlendOp             colorBlendOp        = BlendOp::Add;
 	BlendFactor         srcAlphaBlendFactor = BlendFactor::SrcAlpha;
 	BlendFactor         dstAlphaBlendFactor = BlendFactor::OneMinusSrcAlpha;

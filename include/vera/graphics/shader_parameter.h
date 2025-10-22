@@ -26,6 +26,8 @@ public:
 	VERA_NODISCARD obj<PipelineLayout> getPipelineLayout() VERA_NOEXCEPT;
 	VERA_NODISCARD obj<ShaderStorage> getShaderStorage() VERA_NOEXCEPT;
 
+	VERA_NODISCARD bool hasVariable(std::string_view name) VERA_NOEXCEPT;
+
 	VERA_NODISCARD bool empty() const VERA_NOEXCEPT;
 
 private:

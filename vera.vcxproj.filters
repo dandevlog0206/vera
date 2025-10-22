@@ -462,6 +462,9 @@
     <ClInclude Include="include\vera\geometry\path.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\util\lookup_table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\os\window.cpp">
@@ -599,6 +602,9 @@
     <ClCompile Include="source\graphics\font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\os\mouse.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="include\vera\scene\sample_scene.txt" />
@@ -606,5 +612,9 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="vera.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="glsl shader\shader_toy\shader_toy3.frag.glsl" />
+    <None Include="glsl shader\shader_toy\shader_toy4.frag.glsl" />
   </ItemGroup>
 </Project>
