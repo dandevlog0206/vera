@@ -1,8 +1,13 @@
+#ifdef _WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#endif
+
 #include "../../include/vera/os/window.h"
 #include "../impl/window_impl.h"
 
 #include "../../include/vera/core/exception.h"
 #include <unordered_map>
+#include <GLFW/glfw3native.h> 
 
 VERA_NAMESPACE_BEGIN
 VERA_OS_NAMESPACE_BEGIN
@@ -542,6 +547,11 @@ bool Window::needClose() const VERA_NOEXCEPT
 bool Window::empty() VERA_NOEXCEPT
 {
 	return m_impl == nullptr;
+}
+
+void* Window::getNativeHandle() const VERA_NOEXCEPT
+{
+	return glfwGetWin32Window(m_impl->window);
 }
 
 PROPERTY_GET_IMPL(Window, Title)

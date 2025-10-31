@@ -23,3 +23,6 @@ layout(push_constant) uniform PCBlock
 	vec4  colors[3];
 } pc;
 
+void main()
+{
+}

@@ -6,6 +6,11 @@
 
 VERA_NAMESPACE_BEGIN
 
+const vk::BufferView& get_vk_buffer_view(const_ref<BufferView> buffer_view)
+{
+	return CoreObject::getImpl(buffer_view).bufferView;
+}
+
 vk::BufferView& get_vk_buffer_view(ref<BufferView> buffer_view)
 {
 	return CoreObject::getImpl(buffer_view).bufferView;

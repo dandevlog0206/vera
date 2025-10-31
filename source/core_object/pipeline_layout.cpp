@@ -8,50 +8,20 @@
 #include "../../include/vera/util/static_vector.h"
 
 #define VERA_MAX_SHADER_STAGE_COUNT 32
-#define VERA_MAX_SHADER_COUNT 8
+#define MAX_SHADER_COUNT 8
 #define VERA_MAX_SET_COUNT 64
 #define VERA_MAX_BINDING_COUNT 128
 
 #define UNSIZED_ARRAY_BINDING_FLAGS \
 	DescriptorSetLayoutBindingFlagBits::UpdateAfterBind | \
 	DescriptorSetLayoutBindingFlagBits::PartiallyBound | \
-	DescriptorSetLayoutBindingFlagBits::VariableBindingCount
+	DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount
 
 VERA_NAMESPACE_BEGIN
 
-typedef static_vector<ReflectionBlockDescPtr, VERA_MAX_SHADER_COUNT> BlockDescArray;
+typedef static_vector<ReflectionBlockDescPtr, MAX_SHADER_COUNT> BlockDescArray;
 typedef static_vector<const ReflectionResourceDesc*, VERA_MAX_SET_COUNT> SetDescArray;
 typedef static_vector<const ReflectionResourceDesc*, VERA_MAX_BINDING_COUNT> BindingReflectionArray;
-
-static uint32_t get_max_resource_count(const PipelineLayoutImpl& impl, DescriptorType resource_type)
-{
-	const auto& indexing_props = CoreObject::getImpl(impl.device).descriptorIndexingProperties;
-
-	switch (resource_type) {
-	case DescriptorType::Sampler:
-		return indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers;
-	case DescriptorType::CombinedImageSampler:
-		return std::min(
-			indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers,
-			indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages);
-	case DescriptorType::SampledImage:
-		return indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages;
-	case DescriptorType::StorageImage:
-		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageImages;
-	case DescriptorType::UniformTexelBuffer:
-	case DescriptorType::UniformBuffer:
-	case DescriptorType::UniformBufferDynamic:
-		return indexing_props.maxPerStageDescriptorUpdateAfterBindUniformBuffers;
-	case DescriptorType::StorageTexelBuffer:
-	case DescriptorType::StorageBuffer:
-	case DescriptorType::StorageBufferDynamic:
-		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageBuffers;
-	case DescriptorType::InputAttachment:
-		return indexing_props.maxPerStageDescriptorUpdateAfterBindInputAttachments;
-	default:
-		VERA_ASSERT_MSG(false, "invalid resource type");
-	}
-}
 
 static bool sort_name_map(const ReflectionNameMap& a, const ReflectionNameMap& b)
 {
@@ -504,7 +474,7 @@ static void merge_set(
 	std::vector<ReflectionRootMemberDescPtr>& out_root_descs,
 	std::vector<ReflectionNameMap>&           out_name_maps
 ) {
-	static_vector<uint32_t, VERA_MAX_SHADER_COUNT> indices(shader_bindings.size(), 0);
+	static_vector<uint32_t, MAX_SHADER_COUNT> indices(shader_bindings.size(), 0);
 
 	size_t   cmp_shader_idx;
 	uint32_t binding_id;
@@ -629,15 +599,15 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 	uint32_t       res_count    = 0;
 	uint32_t       pc_count     = 0;
 	
-	static_vector<const ShaderReflection*, VERA_MAX_SHADER_COUNT> shader_reflections;
+	static_vector<const ShaderReflection*, MAX_SHADER_COUNT> shader_reflections;
 
 	for (auto& shader : shaders)
 		shader_reflections.push_back(&CoreObject::getImpl(shader).reflection);
 
 	// check set compatibility and append resource reflection descriptors
 	for (uint32_t set_id = 0; set_id < set_count; ++set_id) {
-		static_vector<BindingReflectionArray, VERA_MAX_SHADER_COUNT>  shader_bindings;
-		static_vector<const ShaderReflection*, VERA_MAX_SHADER_COUNT> erased_reflections;
+		static_vector<BindingReflectionArray, MAX_SHADER_COUNT>  shader_bindings;
+		static_vector<const ShaderReflection*, MAX_SHADER_COUNT> erased_reflections;
 		
 		for (uint32_t shader_idx = 0; shader_idx < shader_count; ++shader_idx) {
 			const auto&   reflection = *shader_reflections[shader_idx];
@@ -683,7 +653,7 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 	res_count = static_cast<uint32_t>(root_descs.size());
 
 	// append push constant reflection descriptors
-	static_vector<bool, VERA_MAX_SHADER_COUNT> pc_pushed(shader_count, false);
+	static_vector<bool, MAX_SHADER_COUNT> pc_pushed(shader_count, false);
 	for (size_t i = 0; i < shader_count; ++i) {
 		if (pc_pushed[i]) continue;
 
@@ -779,7 +749,7 @@ static void create_resource_layout(PipelineLayoutImpl& impl)
 
 				if (array_desc.elementCount == UINT32_MAX) {
 					layout_binding.flags           = UNSIZED_ARRAY_BINDING_FLAGS;
-					layout_binding.descriptorCount = get_max_resource_count(impl, array_desc.descriptorType);
+					layout_binding.descriptorCount = UINT32_MAX;
 					layout_info.flags              = DescriptorSetLayoutCreateFlagBits::UpdateAfterBindPool;
 				} else {
 					layout_binding.descriptorCount = array_desc.elementCount;
@@ -1032,7 +1002,7 @@ uint32_t PipelineLayout::getResourceLayoutCount() const
 	return  static_cast<uint32_t>(getImpl(this).descriptorSetLayouts.size());
 }
 
-const_ref<DescriptorSetLayout> PipelineLayout::getDescriptorSetLayout(uint32_t set) const
+obj<DescriptorSetLayout> PipelineLayout::getDescriptorSetLayout(uint32_t set) const
 {
 	return getImpl(this).descriptorSetLayouts[set];
 }

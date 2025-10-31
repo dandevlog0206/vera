@@ -16,6 +16,9 @@ public:
 
 	VERA_CONSTEXPR vector_base() VERA_NOEXCEPT = default;
 
+	VERA_CONSTEXPR vector_base(T init) VERA_NOEXCEPT :
+		x(init), y(init), z(init) {}
+
 	VERA_CONSTEXPR vector_base(T x, T y, T z) VERA_NOEXCEPT :
 		x(x), y(y), z(z) {}
 	

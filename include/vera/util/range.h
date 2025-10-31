@@ -505,6 +505,13 @@ public:
 
 	VERA_CONSTEXPR basic_range() VERA_NOEXCEPT = default;
 
+	VERA_CONSTEXPR basic_range(T value) VERA_NOEXCEPT :
+		m_first(value),
+		m_last(value + 1)
+	{
+		VERA_ASSERT_MSG(m_first <= m_last, "cannot have reversed range on unsigned types");
+	}
+
 	VERA_CONSTEXPR basic_range(T first, T last) VERA_NOEXCEPT :
 		m_first(first),
 		m_last(last)

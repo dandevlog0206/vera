@@ -77,7 +77,7 @@ static void reallocate_descriptor_binding(DescriptorSetImpl& impl)
 
 	vk::DescriptorSetVariableDescriptorCountAllocateInfo var_count_info;
 
-	if (layout_impl.bindings.back().flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount)) {
+	if (layout_impl.bindings.back().flags.has(DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount)) {
 		var_count_info.descriptorSetCount = 1;
 		var_count_info.pDescriptorCounts  = &impl.arrayElementCount;
 		alloc_info.pNext                  = &var_count_info;
@@ -361,7 +361,8 @@ DescriptorSet::~DescriptorSet()
 	auto& impl      = getImpl(this);
 	auto& pool_impl = getImpl(impl.descriptorPool);
 
-	pool_impl.descriptorSetMap.erase(impl.hashValue);
+	// TODO: handle cached descriptor set removal
+	// pool_impl.descriptorSetMap.erase(impl.hashValue);
 
 	destroyObjectImpl(this);
 }

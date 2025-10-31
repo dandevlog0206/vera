@@ -110,6 +110,12 @@ VERA_NODISCARD VERA_CONSTEXPR T dot(const vector_base<4, T, Q>& lhs, const vecto
 }
 
 template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float cross(const vector_base<2, T, Q>& lhs, const vector_base<2, T, Q>& rhs) VERA_NOEXCEPT
+{
+	return lhs.x * rhs.y - lhs.y * rhs.x;
+}
+
+template <class T, MathQualifier Q>
 VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T, Q> cross(const vector_base<3, T, Q>& lhs, const vector_base<3, T, Q>& rhs) VERA_NOEXCEPT
 {
 	return {
@@ -122,6 +128,12 @@ template <size_t Dim, class T, MathQualifier Q>
 VERA_NODISCARD VERA_CONSTEXPR vector_base<Dim, T, Q> normalize(const vector_base<Dim, T, Q>& v) VERA_NOEXCEPT
 {
 	return v / length(v);
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR float shoelace(const vector_base<2, T, Q>& lhs, const vector_base<2, T, Q>& rhs) VERA_NOEXCEPT
+{
+	return (rhs.x - lhs.x) * (lhs.y + rhs.y);
 }
 
 template <class T, MathQualifier Q>

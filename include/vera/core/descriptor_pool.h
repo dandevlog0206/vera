@@ -20,15 +20,14 @@ public:
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 
 	// allocate a new empty DescriptorSet
-	VERA_NODISCARD obj<DescriptorSet> allocateDescriptorSet(
-		const_ref<DescriptorSetLayout> layout);
+	VERA_NODISCARD obj<DescriptorSet> allocate(const_ref<DescriptorSetLayout> layout);
 
-	VERA_NODISCARD obj<DescriptorSet> allocateDescriptorSet(
+	VERA_NODISCARD obj<DescriptorSet> allocate(
 		const_ref<DescriptorSetLayout> layout,
 		uint32_t                       variable_descriptor_count);
 
 	// request a cached DescriptorSet, if not exists, create a new one
-	// DescriptorSet from allocateDescriptorSet is not cached
+	// DescriptorSet from allocate is not cached
 	VERA_NODISCARD obj<DescriptorSet> requestDescriptorSet(
 		const_ref<DescriptorSetLayout>    layout,
 		array_view<DescriptorBindingInfo> binding_infos);

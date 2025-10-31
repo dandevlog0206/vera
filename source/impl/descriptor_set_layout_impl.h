@@ -40,7 +40,7 @@ static vk::DescriptorBindingFlags to_vk_descriptor_binding_flags(DescriptorSetLa
 		result |= vk::DescriptorBindingFlagBits::eUpdateUnusedWhilePending;
 	if (flags & DescriptorSetLayoutBindingFlagBits::PartiallyBound)
 		result |= vk::DescriptorBindingFlagBits::ePartiallyBound;
-	if (flags & DescriptorSetLayoutBindingFlagBits::VariableBindingCount)
+	if (flags & DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount)
 		result |= vk::DescriptorBindingFlagBits::eVariableDescriptorCount;
 	
 	return result;

@@ -3,7 +3,7 @@
 #include "../core/assertion.h"
 #include <type_traits>
 #include <limits>
-#include <map>
+#include <vector>
 
 VERA_NAMESPACE_BEGIN
 

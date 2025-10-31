@@ -9,6 +9,36 @@
 
 VERA_NAMESPACE_BEGIN
 
+static uint32_t get_max_resource_count(const DeviceImpl& impl, DescriptorType resource_type)
+{
+	const auto& indexing_props = impl.descriptorIndexingProperties;
+
+	switch (resource_type) {
+	case DescriptorType::Sampler:
+		return indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers;
+	case DescriptorType::CombinedImageSampler:
+		return std::min(
+			indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers,
+			indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages);
+	case DescriptorType::SampledImage:
+		return indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages;
+	case DescriptorType::StorageImage:
+		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageImages;
+	case DescriptorType::UniformTexelBuffer:
+	case DescriptorType::UniformBuffer:
+	case DescriptorType::UniformBufferDynamic:
+		return indexing_props.maxPerStageDescriptorUpdateAfterBindUniformBuffers;
+	case DescriptorType::StorageTexelBuffer:
+	case DescriptorType::StorageBuffer:
+	case DescriptorType::StorageBufferDynamic:
+		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageBuffers;
+	case DescriptorType::InputAttachment:
+		return indexing_props.maxPerStageDescriptorUpdateAfterBindInputAttachments;
+	default:
+		VERA_ASSERT_MSG(false, "invalid resource type");
+	}
+}
+
 static bool check_contiguous(array_view<DescriptorSetLayoutBinding> ordered_bindings)
 {
 	if (ordered_bindings.front().binding != 0)
@@ -88,6 +118,9 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 		vk_binding.descriptorCount    = binding.descriptorCount;
 		vk_binding.stageFlags         = to_vk_shader_stage_flags(binding.stageFlags);
 		vk_binding.pImmutableSamplers = nullptr;
+
+		if (vk_binding.descriptorCount == UINT32_MAX)
+			vk_binding.descriptorCount = get_max_resource_count(device_impl, binding.descriptorType);
 
 		binding_flags.push_back(to_vk_descriptor_binding_flags(binding.flags));
 	}

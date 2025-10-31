@@ -13,12 +13,12 @@ VERA_NODISCARD VERA_CONSTEXPR float circle(const float2& p, float r) VERA_NOEXCE
 
 VERA_NODISCARD VERA_CONSTEXPR float round_box(const float2& p, const float2& b, const float4& r) VERA_NOEXCEPT
 {
-
+	return 0.0;
 }
 
 VERA_NODISCARD VERA_CONSTEXPR float box(const float2& p, const float2& b) VERA_NOEXCEPT
 {
-
+	return 0.0;
 }
 
 VERA_SDF_NAMESPACE_END

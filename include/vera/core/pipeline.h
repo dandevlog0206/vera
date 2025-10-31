@@ -204,7 +204,7 @@ struct DepthStencilInfo
 
 VERA_VK_ABI_COMPATIBLE struct ColorBlendAttachmentState
 {
-	bool                blendEnable         = true;
+	bool                blendEnable         = false;
 	BlendFactor         srcColorBlendFactor = BlendFactor::SrcAlpha;
 	BlendFactor         dstColorBlendFactor = BlendFactor::OneMinusSrcAlpha;
 	BlendOp             colorBlendOp        = BlendOp::Add;
@@ -222,6 +222,11 @@ struct ColorBlendInfo
 	std::array<float, 4>                   blendConstants = {{ 0.f, 0.f, 0.f, 0.f }};
 };
 
+struct PipelineAttachmentInfo
+{
+	std::vector<ColorBlendAttachmentState> blendState;
+};
+
 struct GraphicsPipelineCreateInfo
 {
 	obj<Shader>                      vertexShader;
@@ -236,11 +241,24 @@ struct GraphicsPipelineCreateInfo
 	std::optional<uint32_t>          tessellationPatchControlPoints;
 	std::optional<DepthStencilInfo>  depthStencilInfo;
 	std::optional<ColorBlendInfo>    colorBlendInfo;
+	std::vector<Format>              colorAttachmentFormats;
+};
+
+struct MeshPipelineCreateInfo
+{
+	obj<Shader>                      taskShader;
+	obj<Shader>                      meshShader;
+	obj<Shader>                      fragmentShader;
+
+	std::optional<RasterizationInfo> rasterizationInfo;
+	std::optional<DepthStencilInfo>  depthStencilInfo;
+	std::optional<ColorBlendInfo>    colorBlendInfo;
+	std::vector<Format>              colorAttachmentFormats;
 };
 
 struct ComputePipelineCreateInfo
 {
-
+	obj<Shader> computeShader;
 };
 
 class Pipeline : protected CoreObject
@@ -248,6 +266,8 @@ class Pipeline : protected CoreObject
 	VERA_CORE_OBJECT_INIT(Pipeline)
 public:
 	static obj<Pipeline> create(obj<Device> device, const GraphicsPipelineCreateInfo& info);
+	static obj<Pipeline> create(obj<Device> device, const MeshPipelineCreateInfo& info);
+	static obj<Pipeline> create(obj<Device> device, const ComputePipelineCreateInfo& info);
 	~Pipeline();
 
 	obj<Device> getDevice();

@@ -3,6 +3,7 @@
 #include "format.h"
 #include "../math/matrix_types.h"
 #include "../math/vector_types.h"
+#include <span>
 
 #define VERA_VERTEX_DESCRIPTOR_BEGIN(vertex_name)                         \
 private:                                                                  \

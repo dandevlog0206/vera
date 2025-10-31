@@ -42,23 +42,35 @@ class Context;
 		class Texture;
 		class TextureView;
 
+const vk::Instance& get_vk_instance(const_ref<Context> context);
 vk::Instance& get_vk_instance(ref<Context> context);
 const vk::Device& get_vk_device(const_ref<Device> device);
 vk::Device& get_vk_device(ref<Device> device);
-vk::Fence& get_vk_fence(ref<Fence> fence);
+const vk::Pipeline& get_vk_pipeline(const_ref<Pipeline> pipeline);
+vk::Pipeline& get_vk_pipeline(ref<Pipeline> pipeline);
 const vk::PipelineLayout& get_vk_pipeline_layout(const_ref<PipelineLayout> pipeline_layout);
 vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout);
-vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> render_command);
+const vk::ShaderModule& get_vk_shader_module(const_ref<Shader> shader);
+vk::ShaderModule& get_vk_shader_module(ref<Shader> shader);
+const vk::CommandBuffer& get_vk_command_buffer(const_ref<CommandBuffer> cmd_buffer);
+vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> cmd_buffer);
 const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> descriptor_set_layout);
 vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<DescriptorSetLayout> descriptor_set_layout);
 const vk::DescriptorSet& get_vk_descriptor_set(const_ref<DescriptorSet> descriptor_set);
 vk::DescriptorSet& get_vk_descriptor_set(ref<DescriptorSet> descriptor_set);
+const vk::Sampler& get_vk_sampler(const_ref<Sampler> sampler);
 vk::Sampler& get_vk_sampler(ref<Sampler> sampler);
+const vk::Fence& get_vk_fence(const_ref<Fence> fence);
+vk::Fence& get_vk_fence(ref<Fence> fence);
 const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore);
 vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore);
+const vk::Buffer& get_vk_buffer(const_ref<Buffer> buffer);
 vk::Buffer& get_vk_buffer(ref<Buffer> buffer);
+const vk::BufferView& get_vk_buffer_view(const_ref<BufferView> buffer_view);
 vk::BufferView& get_vk_buffer_view(ref<BufferView> buffer_view);
+const vk::Image& get_vk_image(const_ref<Texture> texture);
 vk::Image& get_vk_image(ref<Texture> texture);
+const vk::ImageView& get_vk_image_view(const_ref<TextureView> texture_view);
 vk::ImageView& get_vk_image_view(ref<TextureView> texture_view);
 
 static vk::Format to_vk_format(Format format)

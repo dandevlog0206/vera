@@ -36,7 +36,7 @@ static void fill_binding_states(
 	for (const auto& layout_binding : layout_impl.bindings) {
 		auto& array_desc = desc_set_impl.bindingStates[layout_binding.binding];
 
-		if (layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount)) {
+		if (layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount)) {
 			array_desc.bindingDescs.resize(variable_binding_count);
 			break;
 		}
@@ -58,7 +58,7 @@ static void fill_binding_states_from_infos(
 	for (const auto& layout_binding : layout_impl.bindings) {
 		auto& array_desc = desc_set_impl.bindingStates[layout_binding.binding];
 
-		if (layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount)) {
+		if (layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount)) {
 			desc_set_impl.arrayElementCount = static_cast<uint32_t>(binding_infos.size() - n);
 
 			array_desc.bindingDescs.resize(desc_set_impl.arrayElementCount);
@@ -116,7 +116,7 @@ static bool check_layout_compatible(const_ref<DescriptorSetLayout> layout, array
 	}
 
 	if (last_layout_binding.descriptorCount != last_binding_count)
-		if (!last_layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount))
+		if (!last_layout_binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount))
 			return false;
 
 	return true;
@@ -143,6 +143,7 @@ obj<DescriptorPool> DescriptorPool::create(obj<Device> device)
 	};
 
 	vk::DescriptorPoolCreateInfo pool_info;
+	pool_info.flags       = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
 	pool_info.maxSets       = 10000;
 	pool_info.poolSizeCount = static_cast<uint32_t>(VERA_LENGTHOF(pool_sizes));
 	pool_info.pPoolSizes    = pool_sizes;
@@ -180,7 +181,7 @@ obj<Device> DescriptorPool::getDevice() VERA_NOEXCEPT
 	return impl.device;
 }
 
-obj<DescriptorSet> DescriptorPool::allocateDescriptorSet(
+obj<DescriptorSet> DescriptorPool::allocate(
 	const_ref<DescriptorSetLayout> layout
 ) {
 	VERA_ASSERT(layout, "empty resource layout");
@@ -218,13 +219,10 @@ obj<DescriptorSet> DescriptorPool::allocateDescriptorSet(
 	return obj;
 }
 
-obj<DescriptorSet> DescriptorPool::allocateDescriptorSet(
+obj<DescriptorSet> DescriptorPool::allocate(
 	const_ref<DescriptorSetLayout> layout,
 	uint32_t                       variable_descriptor_count
 ) {
-	if (variable_descriptor_count == 1)
-		return allocateDescriptorSet(layout);
-
 	VERA_ASSERT(layout, "empty resource layout");
 
 	auto  obj          = createNewCoreObject<DescriptorSet>();
@@ -234,7 +232,7 @@ obj<DescriptorSet> DescriptorPool::allocateDescriptorSet(
 	auto  vk_device    = get_vk_device(impl.device);
 
 	// TODO: consider using assert
-	if (!layout_impl.bindings.back().flags.has(DescriptorSetLayoutBindingFlagBits::VariableBindingCount))
+	if (!layout_impl.bindings.back().flags.has(DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount))
 		throw Exception("last binding of layout is not variable count");
 
 	vk::DescriptorSetVariableDescriptorCountAllocateInfo var_count_info;

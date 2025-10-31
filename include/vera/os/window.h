@@ -52,6 +52,8 @@ public:
 
 	VERA_NODISCARD bool empty() VERA_NOEXCEPT;
 
+	VERA_NODISCARD void* getNativeHandle() const VERA_NOEXCEPT;
+
 	PROPERTY(std::string, Title);
 	PROPERTY(int2, Position);
 	PROPERTY(extent2d, WindowSize);

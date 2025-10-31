@@ -7,10 +7,11 @@
 VERA_NAMESPACE_BEGIN
 
 template <class T, bool Integral>
-struct rect_base {
+struct rect_base
+{
 	using value_type  = T;
 	using size_type   = T;
-	using vector_type = vector_base<2, value_type, packed_mediump>;
+	using vector_type = vector_base<2, value_type, packed_highp>;
 	using extent_type = extent_base<2, size_type>; 
 
 	VERA_CONSTEXPR rect_base() VERA_NOEXCEPT = default;
@@ -28,10 +29,11 @@ struct rect_base {
 };
 
 template <class T>
-struct rect_base<T, true> {
+struct rect_base<T, true>
+{
 	using value_type  = T;
 	using size_type   = std::make_unsigned_t<T>;
-	using point_type  = vector_base<2, value_type, packed_mediump>;
+	using point_type  = vector_base<2, value_type, packed_highp>;
 	using extent_type = extent_base<2, size_type>; 
 
 	VERA_CONSTEXPR rect_base() VERA_NOEXCEPT = default;
@@ -49,7 +51,8 @@ struct rect_base<T, true> {
 };
 
 template <class T>
-struct rect : public rect_base<T, std::is_integral_v<T>> {
+struct rect : public rect_base<T, std::is_integral_v<T>>
+{
 	using base_type = rect_base<T, std::is_integral_v<T>>;
 
 	using value_type  = typename base_type::value_type;

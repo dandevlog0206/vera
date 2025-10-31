@@ -17,7 +17,7 @@ enum class DescriptorSetLayoutBindingFlagBits VERA_FLAG_BITS
 	UpdateAfterBind          = 1 << 0,
 	UpdateUnusedWhilePending = 1 << 1,
 	PartiallyBound           = 1 << 2,
-	VariableBindingCount     = 1 << 3
+	VariableDescriptorCount  = 1 << 3
 } VERA_ENUM_FLAGS(DescriptorSetLayoutBindingFlagBits, DescriptorSetLayoutBindingFlags)
 
 enum class DescriptorType VERA_ENUM

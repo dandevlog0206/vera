@@ -44,6 +44,11 @@ static size_t hash_sampler(const SamplerCreateInfo& info)
 	return seed;
 }
 
+const vk::Sampler& get_vk_sampler(const_ref<Sampler> sampler)
+{
+	return CoreObject::getImpl(sampler).sampler;
+}
+
 vk::Sampler& get_vk_sampler(ref<Sampler> sampler)
 {
 	return CoreObject::getImpl(sampler).sampler;

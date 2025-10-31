@@ -121,8 +121,9 @@ uint64_t Semaphore::value()
 
 bool Semaphore::wait(uint64_t timeout)
 {
-	auto& impl      = getImpl(this);
-	auto  vk_device = get_vk_device(impl.device);
+	auto&    impl      = getImpl(this);
+	auto     vk_device = get_vk_device(impl.device);
+	uint64_t value     = 1;
 
 	vk::SemaphoreWaitInfo wait_info;
 	wait_info.semaphoreCount = 1;

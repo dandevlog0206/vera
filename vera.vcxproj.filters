@@ -447,10 +447,10 @@
     <ClInclude Include="include\vera\pass\forward_pass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\graphics\font.h">
+    <ClInclude Include="include\vera\typography\font.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\graphics\detail\open_type.h">
+    <ClInclude Include="source\typography\open_type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\parse.h">
@@ -463,6 +463,33 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\lookup_table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\typography\font_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\typography\code_range.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\typography\language.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\typography\font_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\typography\glyph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\typography\font_atlas.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\rect_packer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\util\renderdoc_app.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\renderdoc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -599,10 +626,25 @@
     <ClCompile Include="source\impl\detail\shader_reflection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\graphics\font.cpp">
+    <ClCompile Include="source\typography\font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\os\mouse.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\typography\font_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\typography\open_type.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\typography\font_atlas.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\util\rect_packer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\util\renderdoc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -616,5 +658,7 @@
   <ItemGroup>
     <None Include="glsl shader\shader_toy\shader_toy3.frag.glsl" />
     <None Include="glsl shader\shader_toy\shader_toy4.frag.glsl" />
+    <None Include="glsl shader\font_atlas\mesh_sdf.mesh.glsl" />
+    <None Include="glsl shader\font_atlas\mesh_sdf.frag.glsl" />
   </ItemGroup>
 </Project>

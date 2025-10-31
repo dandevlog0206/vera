@@ -13,13 +13,15 @@ VERA_NAMESPACE_BEGIN
 struct GraphicsPassCreateInfo
 {
 	obj<Shader>     vertexShader;
+	obj<Shader>     geometryShader;
 	obj<Shader>     fragmentShader;
 
-	VertexInputInfo vertexInput;
-	uint32_t        vertexCount;
-	IndexType       indexType   = IndexType::Unknown;
-	uint32_t        indexCount;
-	DepthFormat     depthFormat = DepthFormat::Unknown;
+	VertexInputInfo   vertexInput;
+	uint32_t          vertexCount;
+	IndexType         indexType         = IndexType::Unknown;
+	uint32_t          indexCount;
+	PrimitiveTopology primitiveTopology = PrimitiveTopology::TriangleList;
+	DepthFormat       depthFormat       = DepthFormat::Unknown;
 };
 
 class GraphicsPass

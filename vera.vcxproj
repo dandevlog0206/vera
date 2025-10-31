@@ -157,6 +157,8 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\util\rect_packer.cpp" />
+    <ClCompile Include="source\util\renderdoc.cpp" />
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
     <ClInclude Include="include\vera\core\framebuffer.h" />
@@ -175,7 +177,7 @@
     <ClInclude Include="include\vera\geometry\path.h" />
     <ClInclude Include="include\vera\geometry\plane.h" />
     <ClInclude Include="include\vera\geometry\sphere.h" />
-    <ClInclude Include="include\vera\graphics\font.h" />
+    <ClInclude Include="include\vera\typography\font.h" />
     <ClInclude Include="include\vera\math\constant.h" />
     <ClInclude Include="include\vera\math\detail\config.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x2.h" />
@@ -202,6 +204,11 @@
     <ClInclude Include="include\vera\scene\scene.h" />
     <ClInclude Include="include\vera\scene\attribute.h" />
     <ClInclude Include="include\vera\scene\node.h" />
+    <ClInclude Include="include\vera\typography\font_atlas.h" />
+    <ClInclude Include="include\vera\typography\font_manager.h" />
+    <ClInclude Include="include\vera\typography\code_range.h" />
+    <ClInclude Include="include\vera\typography\glyph.h" />
+    <ClInclude Include="include\vera\typography\language.h" />
     <ClInclude Include="include\vera\util\arcball.h" />
     <ClInclude Include="include\vera\graphics\format_traits.h" />
     <ClInclude Include="include\vera\graphics\image.h" />
@@ -224,6 +231,8 @@
     <ClInclude Include="include\vera\util\lookup_table.h" />
     <ClInclude Include="include\vera\util\range.h" />
     <ClInclude Include="include\vera\util\ranged_set.h" />
+    <ClInclude Include="include\vera\util\rect_packer.h" />
+    <ClInclude Include="include\vera\util\renderdoc.h" />
     <ClInclude Include="include\vera\util\result_message.h" />
     <ClInclude Include="include\vera\util\ring_vector.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
@@ -231,7 +240,9 @@
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
-    <ClInclude Include="source\graphics\detail\open_type.h" />
+    <ClInclude Include="source\util\renderdoc_app.h" />
+    <ClInclude Include="source\typography\font_impl.h" />
+    <ClInclude Include="source\typography\open_type.h" />
     <ClInclude Include="source\impl\detail\resource_binding_desc.h" />
     <ClInclude Include="source\impl\detail\shader_reflection.h" />
     <ClInclude Include="source\graphics\pixel.h" />
@@ -308,7 +319,7 @@
     <ClInclude Include="source\impl\window_impl.h" />
     <ClCompile Include="source\core\command_buffer_sync.cpp" />
     <ClCompile Include="source\core\exception.cpp" />
-    <ClCompile Include="source\graphics\font.cpp" />
+    <ClCompile Include="source\typography\font.cpp" />
     <ClCompile Include="source\impl\detail\shader_reflection.cpp" />
     <ClCompile Include="source\core_object\descriptor_pool.cpp" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
@@ -351,6 +362,9 @@
     <ClCompile Include="source\graphics\shader_parameter.cpp" />
     <ClCompile Include="source\core_object\swapchain.cpp" />
     <ClCompile Include="source\core_object\texture.cpp" />
+    <ClCompile Include="source\typography\font_atlas.cpp" />
+    <ClCompile Include="source\typography\font_manager.cpp" />
+    <ClCompile Include="source\typography\open_type.cpp" />
     <ClCompile Include="source\util\arcball.cpp" />
     <ClCompile Include="source\asset\asset_loader.cpp" />
     <ClCompile Include="source\util\flycam.cpp" />
@@ -364,6 +378,8 @@
     <Natvis Include="vera.natvis" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="glsl shader\font_atlas\mesh_sdf.frag.glsl" />
+    <None Include="glsl shader\font_atlas\mesh_sdf.mesh.glsl" />
     <None Include="glsl shader\shader_toy\shader_toy3.frag.glsl" />
     <None Include="glsl shader\shader_toy\shader_toy4.frag.glsl" />
   </ItemGroup>

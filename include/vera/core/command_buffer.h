@@ -115,8 +115,8 @@ public:
 
 	void setViewport(const Viewport& viewport);
 	void setScissor(const Scissor& scissor);
-	void bindVertexBuffer(ref<Buffer> buffer);
-	void bindIndexBuffer(ref<Buffer> buffer);
+	void bindVertexBuffer(ref<Buffer> buffer, size_t offset = 0);
+	void bindIndexBuffer(ref<Buffer> buffer, size_t offset = 0);
 	void bindPipeline(ref<Pipeline> pipeline);
 	
 	void pushConstant(
@@ -155,6 +155,11 @@ public:
 		uint32_t idx_offset,
 		uint32_t vtx_offset,
 		uint32_t instance_offset);
+
+	void drawMeshTask(
+		uint32_t group_count_x,
+		uint32_t group_count_y,
+		uint32_t group_count_z);
 
 	void endRendering();
 

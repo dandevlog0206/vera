@@ -45,22 +45,8 @@ static vk::ShaderStageFlagBits to_vk_shader_stage(ShaderStageFlagBits flags)
 
 static vk::ShaderStageFlags to_vk_shader_stage_flags(ShaderStageFlags flags)
 {
-	vk::ShaderStageFlags result;
-
-	if (flags.has(ShaderStageFlagBits::Vertex))
-		result |= vk::ShaderStageFlagBits::eVertex;
-	if (flags.has(ShaderStageFlagBits::TessellationControl))
-		result |= vk::ShaderStageFlagBits::eTessellationControl;
-	if (flags.has(ShaderStageFlagBits::TessellationEvaluation))
-		result |= vk::ShaderStageFlagBits::eTessellationEvaluation;
-	if (flags.has(ShaderStageFlagBits::Geometry))
-		result |= vk::ShaderStageFlagBits::eGeometry;
-	if (flags.has(ShaderStageFlagBits::Fragment))
-		result |= vk::ShaderStageFlagBits::eFragment;
-	if (flags.has(ShaderStageFlagBits::Compute))
-		result |= vk::ShaderStageFlagBits::eCompute;
-
-	return result;
+	// vr::ShaderStageFlags is VERA_VK_ABI_COMPATIBLE with vk::ShaderStageFlags
+	return std::bit_cast<vk::ShaderStageFlags>(flags);
 }
 
 VERA_NAMESPACE_END

@@ -8,20 +8,43 @@
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/util/static_vector.h"
 
-#define VERA_MAX_SHADER_COUNT 8
+#define MAX_SHADER_COUNT 8
 
 VERA_NAMESPACE_BEGIN
 
+static const vk::PipelineViewportStateCreateInfo* get_default_viewport_state_info()
+{
+	static const vk::Viewport temp_viewport{
+		0.f,    // x
+		0.f,    // y
+		1080.f, // width
+		-720.f, // height
+		0.f,    // minDepth
+		1.f     // maxDepth
+	};
+
+	static const vk::Rect2D temp_scissor{
+		{ 0, 0 },     // offset
+		{ 1080, 720 } // extent
+	};
+
+	static const vk::PipelineViewportStateCreateInfo info{
+		{},             // flags
+		1,              // viewportCount
+		&temp_viewport, // pViewports
+		1,              // scissorCount
+		&temp_scissor   // pScissors
+	};
+
+	return &info;
+}
+
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
-	static_vector<const_ref<Shader>, VERA_MAX_SHADER_COUNT> shaders;
+	static_vector<const_ref<Shader>, MAX_SHADER_COUNT> shaders;
 	
 	shaders.push_back(info.vertexShader);
-	
-	if (!info.vertexShader)
-		throw Exception("Graphics pipeline must have a vertex shader");
-	if (!info.fragmentShader)
-		throw Exception("Graphics pipeline must have a fragment shader");
+	shaders.push_back(info.fragmentShader);
 
 	if (info.tessellationControlShader)
 		shaders.push_back(info.tessellationControlShader);
@@ -30,13 +53,33 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Gr
 	if (info.geometryShader)
 		shaders.push_back(info.geometryShader);
 
+	return PipelineLayout::create(device, shaders);
+}
+
+static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const MeshPipelineCreateInfo& info)
+{
+	static_vector<const_ref<Shader>, MAX_SHADER_COUNT> shaders;
+
+	shaders.push_back(info.meshShader);
 	shaders.push_back(info.fragmentShader);
+
+	if (info.taskShader)
+		shaders.push_back(info.taskShader);
 
 	return PipelineLayout::create(device, shaders);
 }
 
-static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShaderStageCreateInfo, 10>& shader_infos, const GraphicsPipelineCreateInfo& info)
+static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const ComputePipelineCreateInfo& info)
 {
+	auto shader = const_ref<Shader>(info.computeShader);
+	return PipelineLayout::create(device, shader);
+}
+
+static void fill_shader_info(
+	PipelineImpl&                                                       impl,
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT>& shader_infos,
+	const GraphicsPipelineCreateInfo&                                   info
+) {
 	vk::PipelineShaderStageCreateInfo shader_info;
 
 	if (info.vertexShader) {
@@ -51,6 +94,32 @@ static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShade
 		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Vertex, info.vertexShader));
 	}
 
+	if (info.tessellationControlShader) {
+		auto& shader_impl = CoreObject::getImpl(info.tessellationControlShader);
+
+		shader_info.stage               = vk::ShaderStageFlagBits::eTessellationControl;
+		shader_info.module              = shader_impl.shader;
+		shader_info.pName               = shader_impl.entryPointName.data();
+		shader_info.pSpecializationInfo = nullptr;
+
+		shader_infos.push_back(shader_info);
+		impl.shaders.push_back(std::make_pair(
+			ShaderStageFlagBits::TessellationControl, info.tessellationControlShader));
+	}
+
+	if (info.tessellationEvaluationShader) {
+		auto& shader_impl = CoreObject::getImpl(info.tessellationEvaluationShader);
+
+		shader_info.stage               = vk::ShaderStageFlagBits::eTessellationEvaluation;
+		shader_info.module              = shader_impl.shader;
+		shader_info.pName               = shader_impl.entryPointName.data();
+		shader_info.pSpecializationInfo = nullptr;
+
+		shader_infos.push_back(shader_info);
+		impl.shaders.push_back(std::make_pair(
+			ShaderStageFlagBits::TessellationEvaluation, info.tessellationEvaluationShader));
+	}
+
 	if (info.geometryShader) {
 		auto& shader_impl = CoreObject::getImpl(info.geometryShader);
 
@@ -63,6 +132,47 @@ static void fill_shader_info(PipelineImpl& impl, static_vector<vk::PipelineShade
 		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Geometry, info.geometryShader));
 	}
 
+	if (info.fragmentShader) {
+		auto& shader_impl = CoreObject::getImpl(info.fragmentShader);
+
+		shader_info.stage               = vk::ShaderStageFlagBits::eFragment;
+		shader_info.module              = shader_impl.shader;
+		shader_info.pName               = shader_impl.entryPointName.data();
+		shader_info.pSpecializationInfo = nullptr;
+
+		shader_infos.push_back(shader_info);
+		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Fragment, info.fragmentShader));
+	}
+}
+
+static void fill_shader_info(
+	PipelineImpl&                                                       impl,
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT>& shader_infos,
+	const MeshPipelineCreateInfo&                                       info
+) {
+	vk::PipelineShaderStageCreateInfo shader_info;
+	if (info.taskShader) {
+		auto& shader_impl = CoreObject::getImpl(info.taskShader);
+
+		shader_info.stage               = vk::ShaderStageFlagBits::eTaskEXT;
+		shader_info.module              = shader_impl.shader;
+		shader_info.pName               = shader_impl.entryPointName.data();
+		shader_info.pSpecializationInfo = nullptr;
+
+		shader_infos.push_back(shader_info);
+		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Task, info.taskShader));
+	}
+	if (info.meshShader) {
+		auto& shader_impl = CoreObject::getImpl(info.meshShader);
+
+		shader_info.stage               = vk::ShaderStageFlagBits::eMeshEXT;
+		shader_info.module              = shader_impl.shader;
+		shader_info.pName               = shader_impl.entryPointName.data();
+		shader_info.pSpecializationInfo = nullptr;
+
+		shader_infos.push_back(shader_info);
+		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Mesh, info.meshShader));
+	}
 	if (info.fragmentShader) {
 		auto& shader_impl = CoreObject::getImpl(info.fragmentShader);
 
@@ -166,6 +276,99 @@ static void fill_vertex_input_attributes(
 	}
 }
 
+static void fill_rasterizer_state_info(
+	vk::PipelineRasterizationStateCreateInfo& rs_info,
+	const RasterizationInfo&                  info
+) {
+	rs_info.depthClampEnable        = info.depthClampEnable;
+	rs_info.rasterizerDiscardEnable = info.rasterizerDiscardEnable;
+	rs_info.polygonMode             = static_cast<vk::PolygonMode>(info.polygonMode);
+	rs_info.cullMode                = static_cast<vk::CullModeFlags>(info.cullMode);
+	rs_info.frontFace               = static_cast<vk::FrontFace>(info.frontFace);
+	rs_info.depthBiasEnable         = info.depthBiasEnable;
+	rs_info.depthBiasConstantFactor = info.depthBiasConstantFactor;
+	rs_info.depthBiasClamp          = info.depthBiasClamp;
+	rs_info.depthBiasSlopeFactor    = info.depthBiasSlopeFactor;
+	rs_info.lineWidth               = info.lineWidth;
+}
+
+//static void fill_multi_sample_state_info(
+//	vk::PipelineMultisampleStateCreateInfo& multi_sample_info,
+//	const MultiSampleStateCreateInfo&      info
+//) {
+//	multi_sample_info.rasterizationSamples = static_cast<vk::SampleCountFlagBits>(info.rasterizationSamples);
+//	multi_sample_info.sampleShadingEnable   = info.sampleShadingEnable;
+//	multi_sample_info.minSampleShading      = info.minSampleShading;
+//	multi_sample_info.pSampleMask           = info.sampleMask.data();
+//	multi_sample_info.alphaToCoverageEnable = info.alphaToCoverageEnable;
+//	multi_sample_info.alphaToOneEnable     = info.alphaToOneEnable;
+//}
+
+static void fill_depth_stencil_state_info(
+	vk::PipelineDepthStencilStateCreateInfo& ds_info,
+	const DepthStencilInfo&                  info
+) {
+	ds_info.depthTestEnable       = info.depthFormat != DepthFormat::Unknown;
+	ds_info.depthWriteEnable      = info.depthWriteEnable;
+	ds_info.depthCompareOp        = to_vk_compare_op(info.depthCompareOp);
+	ds_info.depthBoundsTestEnable = info.depthBoundsTestEnable;
+	ds_info.stencilTestEnable     = info.stencilFormat != StencilFormat::Unknown;
+	ds_info.front                 = to_vk_stencil_op_state(info.front);
+	ds_info.back                  = to_vk_stencil_op_state(info.back);
+	ds_info.minDepthBounds        = info.minDepthBounds;
+	ds_info.maxDepthBounds        = info.maxDepthBounds;
+}
+
+static void fill_color_blend_state_info(
+	vk::PipelineColorBlendStateCreateInfo& cb_info,
+	const ColorBlendInfo&                  info
+) {
+	const auto* p_attachments = reinterpret_cast<
+		const vk::PipelineColorBlendAttachmentState*>(info.attachments.data());
+
+	cb_info.logicOpEnable     = info.enableLogicOp;
+	cb_info.logicOp           = static_cast<vk::LogicOp>(info.logicOp);
+	cb_info.attachmentCount   = static_cast<uint32_t>(info.attachments.size());
+	cb_info.pAttachments      = p_attachments;
+	cb_info.blendConstants[0] = info.blendConstants[0];
+	cb_info.blendConstants[1] = info.blendConstants[1];
+	cb_info.blendConstants[2] = info.blendConstants[2];
+	cb_info.blendConstants[3] = info.blendConstants[3];
+}
+
+static void fill_default_color_blend_state_info(
+	vk::PipelineColorBlendStateCreateInfo& cb_info,
+	uint32_t                               attachment_count
+) {
+	static const vk::PipelineColorBlendAttachmentState attachment_state{
+		false,                           // blendEnable
+		vk::BlendFactor::eOne,           // srcColorBlendFactor
+		vk::BlendFactor::eZero,          // dstColorBlendFactor
+		vk::BlendOp::eAdd,               // colorBlendOp
+		vk::BlendFactor::eOne,           // srcAlphaBlendFactor
+		vk::BlendFactor::eZero,          // dstAlphaBlendFactor
+		vk::BlendOp::eAdd,               // alphaBlendOp
+		vk::ColorComponentFlagBits::eR | // colorWriteMask
+		vk::ColorComponentFlagBits::eG |
+		vk::ColorComponentFlagBits::eB |
+		vk::ColorComponentFlagBits::eA
+	};
+
+	static std::vector<vk::PipelineColorBlendAttachmentState> attachment_states;
+
+	if (attachment_states.size() < attachment_count)
+		attachment_states.resize(attachment_count, attachment_state);
+
+	cb_info.logicOpEnable     = false;
+	cb_info.logicOp           = vk::LogicOp::eCopy;
+	cb_info.attachmentCount   = attachment_count;
+	cb_info.pAttachments      = attachment_states.data();
+	cb_info.blendConstants[0] = 0.f;
+	cb_info.blendConstants[1] = 0.f;
+	cb_info.blendConstants[2] = 0.f;
+	cb_info.blendConstants[3] = 0.f;
+}
+
 static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, const GraphicsPipelineCreateInfo& info)
 {
 	states = {
@@ -212,21 +415,96 @@ static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, con
 	}
 }
 
-static size_t hash_graphics_pipeline(const GraphicsPipelineCreateInfo& info)
+static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, const MeshPipelineCreateInfo& info)
 {
-	size_t seed = 0;
+	states = {
+		// viewport
+		vk::DynamicState::eViewport,
+		vk::DynamicState::eScissor
+	};
+
+	if (!info.rasterizationInfo) {
+		states.push_back(vk::DynamicState::eDepthClampEnableEXT);
+		states.push_back(vk::DynamicState::eRasterizerDiscardEnable);
+		states.push_back(vk::DynamicState::ePolygonModeEXT);
+		states.push_back(vk::DynamicState::eCullMode);
+		states.push_back(vk::DynamicState::eFrontFace);
+		states.push_back(vk::DynamicState::eDepthBiasEnable);
+		states.push_back(vk::DynamicState::eDepthBias);
+		states.push_back(vk::DynamicState::eLineWidth);
+	}
+
+	if (!info.depthStencilInfo) {
+		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
+		states.push_back(vk::DynamicState::eLogicOpEXT);
+		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
+		states.push_back(vk::DynamicState::eColorBlendEquationEXT);
+		states.push_back(vk::DynamicState::eColorWriteMaskEXT);
+		states.push_back(vk::DynamicState::eBlendConstants);
+	}
+
+	if (!info.colorBlendInfo) {
+		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
+		states.push_back(vk::DynamicState::eLogicOpEXT);
+		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
+		states.push_back(vk::DynamicState::eColorBlendEquationEXT);
+		states.push_back(vk::DynamicState::eColorWriteMaskEXT);
+		states.push_back(vk::DynamicState::eBlendConstants);
+	}
+}
+
+static hash_t hash_pipeline_info(const GraphicsPipelineCreateInfo& info)
+{
+	hash_t seed = 0;
 
 	hash_combine(seed, info.vertexShader->hash());
+	hash_combine(seed, info.tessellationControlShader ? info.tessellationControlShader->hash() : 0);
+	hash_combine(seed, info.tessellationEvaluationShader ? info.tessellationEvaluationShader->hash() : 0);
 	hash_combine(seed, info.geometryShader ? info.geometryShader->hash() : 0);
 	hash_combine(seed, info.fragmentShader->hash());
 
 	return seed;
 }
 
+static hash_t hash_pipeline_info(const MeshPipelineCreateInfo& info)
+{
+	hash_t seed = 0;
+
+	hash_combine(seed, info.taskShader ? info.taskShader->hash() : 0);
+	hash_combine(seed, info.meshShader->hash());
+	hash_combine(seed, info.fragmentShader->hash());
+
+	return seed;
+}
+
+static hash_t hash_pipeline_info(const ComputePipelineCreateInfo& info)
+{
+	hash_t seed = 0;
+	
+	hash_combine(seed, info.computeShader->hash());
+
+	return seed;
+}
+
+const vk::Pipeline& get_vk_pipeline(const_ref<Pipeline> pipeline)
+{
+	return CoreObject::getImpl(pipeline).pipeline;
+}
+
+vk::Pipeline& get_vk_pipeline(ref<Pipeline> pipeline)
+{
+	return CoreObject::getImpl(pipeline).pipeline;
+}
+
 obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
+	if (!info.vertexShader)
+		throw Exception("Graphics pipeline must have a vertex shader");
+	if (!info.fragmentShader)
+		throw Exception("Graphics pipeline must have a fragment shader");
+
 	auto&  device_impl = getImpl(device);
-	size_t hash_value  = hash_graphics_pipeline(info);
+	hash_t hash_value  = hash_pipeline_info(info);
 
 	if (auto it = device_impl.pipelineCacheMap.find(hash_value);
 		it != device_impl.pipelineCacheMap.end()) {
@@ -238,7 +516,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 	impl.pipelineLayout = register_pipeline_layout(device, info);
 
-	static_vector<vk::PipelineShaderStageCreateInfo, 10> shader_infos;
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT> shader_infos;
 	fill_shader_info(impl, shader_infos, info);
 
 	std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
@@ -300,32 +578,9 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	if (info.tessellationPatchControlPoints)
 		ts_info.patchControlPoints = *info.tessellationPatchControlPoints;
 
-	vk::Viewport temp_viewport;
-	temp_viewport.width  = 1080.f;
-	temp_viewport.height = -720.f;
-	
-	vk::Rect2D temp_scissor;
-	temp_scissor.extent = vk::Extent2D{ 1080, 720 };
-
-	vk::PipelineViewportStateCreateInfo vp_info;
-	vp_info.viewportCount = 1;
-	vp_info.pViewports    = &temp_viewport;
-	vp_info.scissorCount  = 1;
-	vp_info.pScissors     = &temp_scissor;
-
 	vk::PipelineRasterizationStateCreateInfo rs_info;
-	if (info.rasterizationInfo) {
-		rs_info.depthClampEnable        = info.rasterizationInfo->depthClampEnable;
-		rs_info.rasterizerDiscardEnable = info.rasterizationInfo->rasterizerDiscardEnable;
-		rs_info.polygonMode             = to_vk_polygon_mode(info.rasterizationInfo->polygonMode);
-		rs_info.cullMode                = to_vk_cull_mode(info.rasterizationInfo->cullMode);
-		rs_info.frontFace               = to_vk_front_face(info.rasterizationInfo->frontFace);
-		rs_info.depthBiasEnable         = info.rasterizationInfo->depthBiasEnable;
-		rs_info.depthBiasConstantFactor = info.rasterizationInfo->depthBiasConstantFactor;
-		rs_info.depthBiasClamp          = info.rasterizationInfo->depthBiasClamp;
-		rs_info.depthBiasSlopeFactor    = info.rasterizationInfo->depthBiasConstantFactor;
-		rs_info.lineWidth               = info.rasterizationInfo->lineWidth;
-	}
+	if (info.rasterizationInfo)
+		fill_rasterizer_state_info(rs_info, *info.rasterizationInfo);
 
 	vk::PipelineMultisampleStateCreateInfo ms_info;
 	ms_info.rasterizationSamples  = vk::SampleCountFlagBits::e1;
@@ -336,31 +591,14 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	ms_info.alphaToOneEnable      = false;
 
 	vk::PipelineDepthStencilStateCreateInfo ds_info;
-	if (info.depthStencilInfo) {
-		ds_info.depthTestEnable       = info.depthStencilInfo->depthFormat != DepthFormat::Unknown;
-		ds_info.depthWriteEnable      = info.depthStencilInfo->depthWriteEnable;
-		ds_info.depthCompareOp        = to_vk_compare_op(info.depthStencilInfo->depthCompareOp);
-		ds_info.depthBoundsTestEnable = info.depthStencilInfo->depthBoundsTestEnable;
-		ds_info.stencilTestEnable     = info.depthStencilInfo->stencilFormat != StencilFormat::Unknown;
-		ds_info.front                 = to_vk_stencil_op_state(info.depthStencilInfo->front);
-		ds_info.back                  = to_vk_stencil_op_state(info.depthStencilInfo->back);
-		ds_info.minDepthBounds        = info.depthStencilInfo->minDepthBounds;
-		ds_info.maxDepthBounds        = info.depthStencilInfo->maxDepthBounds;
-	}
+	if (info.depthStencilInfo)
+		fill_depth_stencil_state_info(ds_info, *info.depthStencilInfo);
 
 	vk::PipelineColorBlendStateCreateInfo cb_info;
-	if (info.colorBlendInfo) {
-		const auto* attachment_ptr = info.colorBlendInfo->attachments.data();
-
-		cb_info.logicOpEnable     = false;
-		cb_info.logicOp           = vk::LogicOp::eCopy;
-		cb_info.attachmentCount   = static_cast<uint32_t>(info.colorBlendInfo->attachments.size());
-		cb_info.pAttachments      = reinterpret_cast<const vk::PipelineColorBlendAttachmentState*>(attachment_ptr);
-		cb_info.blendConstants[0] = info.colorBlendInfo->blendConstants[0];
-		cb_info.blendConstants[1] = info.colorBlendInfo->blendConstants[1];
-		cb_info.blendConstants[2] = info.colorBlendInfo->blendConstants[2];
-		cb_info.blendConstants[3] = info.colorBlendInfo->blendConstants[3];
-	}
+	if (info.colorBlendInfo)
+		fill_color_blend_state_info(cb_info, *info.colorBlendInfo);
+	else
+		fill_default_color_blend_state_info(cb_info, 0);
 
 	static_vector<vk::DynamicState, 64> dynamic_states;
 	fill_dynamic_states(dynamic_states, info);
@@ -369,18 +607,26 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	dynamic_info.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
 	dynamic_info.pDynamicStates    = dynamic_states.data();
 
-	auto color_format = to_vk_format(device_impl.colorFormat);
+	Format depth_format   = Format::Unknown;
+	Format stencil_format = Format::Unknown;
+
+	if (info.depthStencilInfo) {
+		depth_format   = static_cast<Format>(info.depthStencilInfo->depthFormat);
+		stencil_format = static_cast<Format>(info.depthStencilInfo->stencilFormat);
+	}
+
+	static_vector<vk::Format, 32> vk_color_formats;
+	for (const auto& format : info.colorAttachmentFormats) {
+		vk_color_formats.push_back(format == Format::Unknown ?
+								   to_vk_format(device_impl.colorFormat) :
+								   to_vk_format(format));
+	}
+
 	vk::PipelineRenderingCreateInfoKHR rendering_info;
-	rendering_info.colorAttachmentCount    = 1;
-	rendering_info.pColorAttachmentFormats = &color_format;
-	if (info.depthStencilInfo && info.depthStencilInfo->depthFormat != DepthFormat::Unknown) {
-		auto format = to_vk_format(static_cast<Format>(info.depthStencilInfo->depthFormat));
-		rendering_info.depthAttachmentFormat = format;
-	}
-	if (info.depthStencilInfo && info.depthStencilInfo->stencilFormat != StencilFormat::Unknown) {
-		auto format = to_vk_format(static_cast<Format>(info.depthStencilInfo->stencilFormat));
-		rendering_info.stencilAttachmentFormat = format;
-	}
+	rendering_info.colorAttachmentCount    = static_cast<uint32_t>(vk_color_formats.size());
+	rendering_info.pColorAttachmentFormats = vk_color_formats.data();
+	rendering_info.depthAttachmentFormat   = to_vk_format(depth_format);
+	rendering_info.stencilAttachmentFormat = to_vk_format(stencil_format);
 
 	vk::GraphicsPipelineCreateInfo pipeline_info;
 	pipeline_info.stageCount          = static_cast<uint32_t>(shader_infos.size());
@@ -388,7 +634,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	pipeline_info.pVertexInputState   = &vi_info;
 	pipeline_info.pInputAssemblyState = info.primitiveInfo ? &ia_info : nullptr;
 	pipeline_info.pTessellationState  = info.tessellationPatchControlPoints ? &ts_info : nullptr;
-	pipeline_info.pViewportState      = &vp_info;
+	pipeline_info.pViewportState      = get_default_viewport_state_info();
 	pipeline_info.pRasterizationState = info.rasterizationInfo ? &rs_info : nullptr;
 	pipeline_info.pMultisampleState   = &ms_info;
 	pipeline_info.pDepthStencilState  = info.depthStencilInfo ? &ds_info : nullptr;
@@ -409,6 +655,155 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	impl.device            = std::move(device);
 	impl.pipeline          = result.value;
 	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
+	impl.hashValue         = hash_value;
+
+	device_impl.pipelineCacheMap.insert({ hash_value, obj });
+
+	return obj;
+}
+
+obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo& info)
+{
+	if (!info.meshShader)
+		throw Exception("Mesh pipeline must have a mesh shader");
+	if (!info.fragmentShader)
+		throw Exception("Mesh pipeline must have a fragment shader");
+
+	auto&  device_impl = getImpl(device);
+	size_t hash_value  = hash_pipeline_info(info);
+
+	if (auto it = device_impl.pipelineCacheMap.find(hash_value);
+		it != device_impl.pipelineCacheMap.end()) {
+		return obj<Pipeline>(it->second.get());
+	}
+
+	auto  obj  = createNewCoreObject<Pipeline>();
+	auto& impl = getImpl(obj);
+
+	impl.pipelineLayout = register_pipeline_layout(device, info);
+
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT> shader_infos;
+	fill_shader_info(impl, shader_infos, info);
+
+	vk::PipelineRasterizationStateCreateInfo rs_info;
+	if (info.rasterizationInfo)
+		fill_rasterizer_state_info(rs_info, *info.rasterizationInfo);
+
+	vk::PipelineMultisampleStateCreateInfo ms_info;
+	ms_info.rasterizationSamples  = vk::SampleCountFlagBits::e1;
+	ms_info.sampleShadingEnable   = false;
+	ms_info.minSampleShading      = 1.f;
+	ms_info.pSampleMask           = nullptr;
+	ms_info.alphaToCoverageEnable = false;
+	ms_info.alphaToOneEnable      = false;
+
+	vk::PipelineDepthStencilStateCreateInfo ds_info;
+	if (info.depthStencilInfo)
+		fill_depth_stencil_state_info(ds_info, *info.depthStencilInfo);
+
+	vk::PipelineColorBlendStateCreateInfo cb_info;
+	if (info.colorBlendInfo)
+		fill_color_blend_state_info(cb_info, *info.colorBlendInfo);
+	else
+		fill_default_color_blend_state_info(cb_info, 0);
+
+	static_vector<vk::DynamicState, 64> dynamic_states;
+	fill_dynamic_states(dynamic_states, info);
+
+	vk::PipelineDynamicStateCreateInfo dynamic_info;
+	dynamic_info.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
+	dynamic_info.pDynamicStates    = dynamic_states.data();
+
+	Format depth_format    = Format::Unknown;
+	Format stencil_format  = Format::Unknown;
+
+	if (info.depthStencilInfo) {
+		depth_format   = static_cast<Format>(info.depthStencilInfo->depthFormat);
+		stencil_format = static_cast<Format>(info.depthStencilInfo->stencilFormat);
+	}
+
+	static_vector<vk::Format, 32> vk_color_formats;
+	for (const auto& format : info.colorAttachmentFormats) {
+		vk_color_formats.push_back(format == Format::Unknown ?
+								   to_vk_format(device_impl.colorFormat) :
+								   to_vk_format(format));
+	}
+
+	vk::PipelineRenderingCreateInfoKHR rendering_info;
+	rendering_info.colorAttachmentCount    = static_cast<uint32_t>(vk_color_formats.size());
+	rendering_info.pColorAttachmentFormats = vk_color_formats.data();
+	rendering_info.depthAttachmentFormat   = to_vk_format(depth_format);
+	rendering_info.stencilAttachmentFormat = to_vk_format(stencil_format);
+
+	vk::GraphicsPipelineCreateInfo pipeline_info;
+	pipeline_info.stageCount          = static_cast<uint32_t>(shader_infos.size());
+	pipeline_info.pStages             = shader_infos.data();
+	pipeline_info.pViewportState      = get_default_viewport_state_info();
+	pipeline_info.pRasterizationState = info.rasterizationInfo ? &rs_info : nullptr;
+	pipeline_info.pMultisampleState   = &ms_info;
+	pipeline_info.pDepthStencilState  = info.depthStencilInfo ? &ds_info : nullptr;
+	pipeline_info.pColorBlendState    = &cb_info;
+	pipeline_info.pDynamicState       = &dynamic_info;
+	pipeline_info.layout              = get_vk_pipeline_layout(impl.pipelineLayout);
+	pipeline_info.renderPass          = nullptr;
+	pipeline_info.subpass             = 0;
+	pipeline_info.basePipelineHandle  = nullptr;
+	pipeline_info.basePipelineIndex   = 0;
+	pipeline_info.pNext               = &rendering_info;
+
+	auto result = device_impl.device.createGraphicsPipeline(device_impl.pipelineCache, pipeline_info);
+
+	if (result.result != vk::Result::eSuccess)
+		throw Exception("failed to create graphics pipeline");
+
+	impl.device            = std::move(device);
+	impl.pipeline          = result.value;
+	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
+	impl.hashValue         = hash_value;
+
+	device_impl.pipelineCacheMap.insert({ hash_value, obj });
+
+	return obj;
+}
+
+obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateInfo& info)
+{
+	if (!info.computeShader)
+		throw Exception("Compute pipeline must have a compute shader");
+
+	auto&  device_impl = getImpl(device);
+	size_t hash_value  = hash_pipeline_info(info);
+
+	if (auto it = device_impl.pipelineCacheMap.find(hash_value);
+		it != device_impl.pipelineCacheMap.end()) {
+		return obj<Pipeline>(it->second.get());
+	}
+
+	auto  obj         = createNewCoreObject<Pipeline>();
+	auto& impl        = getImpl(obj);
+	auto& shader_impl = getImpl(info.computeShader);
+
+	if (!shader_impl.stageFlags.has(ShaderStageFlagBits::Compute))
+		throw Exception("compute pipeline requires a compute shader");
+
+	auto pipeline_layout = register_pipeline_layout(device, info);
+
+	vk::ComputePipelineCreateInfo pipeline_info;
+	pipeline_info.stage.stage  = vk::ShaderStageFlagBits::eCompute;
+	pipeline_info.stage.module = shader_impl.shader;
+	pipeline_info.stage.pName  = shader_impl.entryPointName.data();
+	pipeline_info.layout       = get_vk_pipeline_layout(pipeline_layout);
+
+	auto result = device_impl.device.createComputePipeline(device_impl.pipelineCache, pipeline_info);
+
+	if (result.result != vk::Result::eSuccess)
+		throw Exception("failed to create compute pipeline");
+
+	impl.device            = std::move(device);
+	impl.pipelineLayout    = std::move(pipeline_layout);
+	impl.pipeline          = result.value;
+	impl.shaders           = { std::make_pair(ShaderStageFlagBits::Compute, info.computeShader) };
+	impl.pipelineBindPoint = PipelineBindPoint::Compute;
 	impl.hashValue         = hash_value;
 
 	device_impl.pipelineCacheMap.insert({ hash_value, obj });

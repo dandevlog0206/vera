@@ -97,7 +97,7 @@ class const_ref;
 template <class Object>
 class ref;
 
-class ManangedObject abstract
+class ManagedObject abstract
 {
 	template <class Object>
 	friend class obj;
@@ -109,7 +109,7 @@ class ManangedObject abstract
 	friend class ref;
 
 protected:
-	VERA_INLINE ManangedObject() VERA_NOEXCEPT :
+	VERA_INLINE ManagedObject() VERA_NOEXCEPT :
 		m_atomic(0),
 		m_weak_chain(nullptr) {}
 
@@ -232,14 +232,26 @@ public:
 		return static_cast<bool>(m_ptr);
 	}
 
-	VERA_NODISCARD VERA_INLINE operator const_ref<Object>() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE const_ref<Object> cref() const VERA_NOEXCEPT
 	{
+		VERA_ASSERT_MSG(m_ptr, "dereferencing null obj<>");
 		return const_ref<Object>(m_ptr);
 	}
 
-	VERA_NODISCARD VERA_INLINE operator ref<Object>() VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE ref<Object> ref() VERA_NOEXCEPT
 	{
-		return ref<Object>(m_ptr);
+		VERA_ASSERT_MSG(m_ptr, "dereferencing null obj<>");
+		return ::vr::ref<Object>(m_ptr);
+	}
+
+	VERA_NODISCARD VERA_INLINE operator const_ref<Object>() const VERA_NOEXCEPT
+	{
+		return cref();
+	}
+
+	VERA_NODISCARD VERA_INLINE operator ::vr::ref<Object>() VERA_NOEXCEPT
+	{
+		return ref();
 	}
 
 	VERA_INLINE void reset() VERA_NOEXCEPT
@@ -358,22 +370,22 @@ public:
 
 	VERA_NODISCARD VERA_INLINE Object* operator*() VERA_NOEXCEPT
 	{
-		return m_node.ptr;
+		return reinterpret_cast<Object*>(m_node.ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE const Object* operator*() const VERA_NOEXCEPT
 	{
-		return m_node.ptr;
+		return reinterpret_cast<const Object*>(m_node.ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* operator->() VERA_NOEXCEPT
 	{
-		return m_node.ptr;
+		return reinterpret_cast<Object*>(m_node.ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE const Object* operator->() const VERA_NOEXCEPT
 	{
-		return m_node.ptr;
+		return reinterpret_cast<const Object*>(m_node.ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE bool operator==(const weak_obj& rhs) const VERA_NOEXCEPT
@@ -391,9 +403,14 @@ public:
 		return static_cast<bool>(m_node.ptr);
 	}
 
+	VERA_NODISCARD VERA_INLINE operator obj<Object>() const VERA_NOEXCEPT
+	{
+		return obj<Object>(reinterpret_cast<Object*>(m_node.ptr));
+	}
+
 	VERA_NODISCARD VERA_INLINE operator const_ref<Object>() const VERA_NOEXCEPT
 	{
-		return const_ref<Object>(m_node.ptr);
+		return const_ref<Object>(reinterpret_cast<const Object*>(m_node.ptr));
 	}
 
 	VERA_NODISCARD VERA_INLINE operator ref<Object>() VERA_NOEXCEPT
@@ -580,7 +597,7 @@ public:
 template <class T, class... Args>
 VERA_NODISCARD VERA_CONSTEXPR obj<T> make_obj(Args&&... params)
 {
-	static_assert(std::is_base_of_v<ManangedObject, T>);
+	static_assert(std::is_base_of_v<ManagedObject, T>);
 
 	return obj<T>(new T(std::forward<Args>(params)...));
 }
@@ -588,7 +605,7 @@ VERA_NODISCARD VERA_CONSTEXPR obj<T> make_obj(Args&&... params)
 template <class Target, class T>
 VERA_NODISCARD VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT
 {
-	static_assert(std::is_base_of_v<ManangedObject, Target> || std::is_base_of_v<ManangedObject, T>);
+	static_assert(std::is_base_of_v<ManagedObject, Target> || std::is_base_of_v<ManagedObject, T>);
 
 	obj<Target> result;
 	result.m_ptr = static_cast<Target*>(std::exchange(source.m_ptr, nullptr));
@@ -599,7 +616,7 @@ VERA_NODISCARD VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT
 template <class Target, class T>
 VERA_NODISCARD VERA_CONSTEXPR weak_obj<Target> weak_cast(weak_obj<T>& source) VERA_NOEXCEPT
 {
-	static_assert(std::is_base_of_v<ManangedObject, Target> || std::is_base_of_v<ManangedObject, T>);
+	static_assert(std::is_base_of_v<ManagedObject, Target> || std::is_base_of_v<ManagedObject, T>);
 
 	if (!source.m_node.ptr) return nullptr;
 

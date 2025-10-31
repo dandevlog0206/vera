@@ -89,6 +89,11 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
+const vk::Image& get_vk_image(const_ref<Texture> texture)
+{
+	return CoreObject::getImpl(texture).image;
+}
+
 vk::Image& get_vk_image(ref<Texture> texture)
 {
 	return CoreObject::getImpl(texture).image;

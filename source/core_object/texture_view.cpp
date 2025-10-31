@@ -6,6 +6,11 @@
 
 VERA_NAMESPACE_BEGIN
 
+const vk::ImageView& get_vk_image_view(const_ref<TextureView> texture_view)
+{
+	return CoreObject::getImpl(texture_view).imageView;
+}
+
 vk::ImageView& get_vk_image_view(ref<TextureView> texture_view)
 {
 	return CoreObject::getImpl(texture_view).imageView;

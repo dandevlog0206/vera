@@ -16,19 +16,30 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 {
 	GraphicsPipelineCreateInfo pipeline_info = {
 		.vertexShader                   = info.vertexShader,
+		.geometryShader                 = info.geometryShader,
 		.fragmentShader                 = info.fragmentShader,
 		.primitiveInfo                  = PrimitiveInfo{
 			.enableRestart = false,
-			.topology      = PrimitiveTopology::TriangleList
+			.topology      = info.primitiveTopology
 		},
 		.rasterizationInfo              = RasterizationInfo{},
 		.tessellationPatchControlPoints = 0,
 		.depthStencilInfo               = DepthStencilInfo{},
 		.colorBlendInfo                 = ColorBlendInfo{
-			.attachments = { 
-				ColorBlendAttachmentState{} // default attachment state
+			.attachments = {
+				ColorBlendAttachmentState{
+					.blendEnable         = true,
+					.srcColorBlendFactor = BlendFactor::SrcAlpha,
+					.dstColorBlendFactor = BlendFactor::OneMinusSrcAlpha,
+					.colorBlendOp        = BlendOp::Add,
+					.srcAlphaBlendFactor = BlendFactor::SrcAlpha,
+					.dstAlphaBlendFactor = BlendFactor::OneMinusSrcAlpha,
+					.alphaBlendOp        = BlendOp::Add,
+					.colorWriteMask      = ColorComponentFlagBits::RGBA
+				}
 			}
-		}
+		},
+		.colorAttachmentFormats          = { Format::Unknown } // use default color
 	};
 
 	if (!info.vertexInput.vertexInputDescriptor.empty()) {

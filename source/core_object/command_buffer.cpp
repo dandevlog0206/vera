@@ -390,9 +390,14 @@ static vk::ImageView get_vk_image_view(ref<Texture> texture)
 	return get_vk_image_view(texture->getTextureView());
 }
 
-vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> render_command)
+const vk::CommandBuffer& get_vk_command_buffer(const_ref<CommandBuffer> cmd_buffer)
 {
-	return CoreObject::getImpl(render_command).commandBuffer;
+	return CoreObject::getImpl(cmd_buffer).commandBuffer;
+}
+
+vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> cmd_buffer)
+{
+	return CoreObject::getImpl(cmd_buffer).commandBuffer;
 }
 
 obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
@@ -590,20 +595,20 @@ void CommandBuffer::setScissor(const Scissor& scissor)
 	impl.currentScissor = scissor;
 }
 
-void CommandBuffer::bindVertexBuffer(ref<Buffer> buffer)
+void CommandBuffer::bindVertexBuffer(ref<Buffer> buffer, size_t offset)
 {
 	auto& impl        = getImpl(this);
 	auto& buffer_impl = getImpl(buffer);
-	auto  offset      = vk::DeviceSize{0};
+	auto  offsets     = vk::DeviceSize{ offset };
 
 	if (!buffer_impl.usage.has(BufferUsageFlagBits::VertexBuffer))
 		throw Exception("buffer is not for vertex");
 
-	impl.commandBuffer.bindVertexBuffers(0, 1, &buffer_impl.buffer, &offset);
+	impl.commandBuffer.bindVertexBuffers(0, 1, &buffer_impl.buffer, &offsets);
 	impl.currentVertexBuffer = buffer;
 }
 
-void CommandBuffer::bindIndexBuffer(ref<Buffer> buffer)
+void CommandBuffer::bindIndexBuffer(ref<Buffer> buffer, size_t offset)
 {
 	auto& impl        = getImpl(this);
 	auto& buffer_impl = getImpl(buffer);
@@ -611,7 +616,7 @@ void CommandBuffer::bindIndexBuffer(ref<Buffer> buffer)
 	if (!buffer_impl.usage.has(BufferUsageFlagBits::IndexBuffer))
 		throw Exception("buffer is not for index");
 
-	impl.commandBuffer.bindIndexBuffer(buffer_impl.buffer, 0, to_vk_index_type(buffer_impl.indexType));
+	impl.commandBuffer.bindIndexBuffer(buffer_impl.buffer, offset, to_vk_index_type(buffer_impl.indexType));
 	impl.currentIndexBuffer = buffer;
 }
 
@@ -634,7 +639,6 @@ void CommandBuffer::pushConstant(
 	uint32_t                  size)
 {
 	auto& impl = getImpl(this);
-
 	impl.commandBuffer.pushConstants(
 		get_vk_pipeline_layout(pipeline_layout),
 		to_vk_shader_stage_flags(stage_flags),
@@ -842,18 +846,34 @@ void CommandBuffer::beginRendering(const RenderingInfo& info)
 	impl.currentRenderingInfo = info;
 }
 
-void CommandBuffer::draw(uint32_t vtx_count, uint32_t instance_count, uint32_t vtx_offset, uint32_t instance_offset)
-{
+void CommandBuffer::draw(
+	uint32_t vtx_count,
+	uint32_t instance_count,
+	uint32_t vtx_offset,
+	uint32_t instance_offset
+) {
 	auto& impl = getImpl(this);
-
 	impl.commandBuffer.draw(vtx_count, instance_count, vtx_offset, instance_offset);
 }
 
-void CommandBuffer::drawIndexed(uint32_t idx_count, uint32_t instance_count, uint32_t idx_offset, uint32_t vtx_offset, uint32_t instance_offset)
-{
+void CommandBuffer::drawIndexed(
+	uint32_t idx_count,
+	uint32_t instance_count,
+	uint32_t idx_offset,
+	uint32_t vtx_offset,
+	uint32_t instance_offset
+) {
 	auto& impl = getImpl(this);
-
 	impl.commandBuffer.drawIndexed(idx_count, instance_count, idx_offset, vtx_offset, instance_offset);
+}
+
+void CommandBuffer::drawMeshTask(
+	uint32_t group_count_x,
+	uint32_t group_count_y,
+	uint32_t group_count_z
+) {
+	auto& impl = getImpl(this);
+	impl.commandBuffer.drawMeshTasksEXT(group_count_x, group_count_y, group_count_z);
 }
 
 void CommandBuffer::endRendering()

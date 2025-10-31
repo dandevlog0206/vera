@@ -53,6 +53,11 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
+const vk::Buffer& get_vk_buffer(const_ref<Buffer> buffer)
+{
+	return CoreObject::getImpl(buffer).buffer;
+}
+
 vk::Buffer& get_vk_buffer(ref<Buffer> buffer)
 {
 	return CoreObject::getImpl(buffer).buffer;
@@ -187,6 +192,9 @@ obj<Buffer> Buffer::create(obj<Device> device, const BufferCreateInfo& info)
 	auto& memory_impl   = getImpl(memory_obj);
 	auto& device_impl   = getImpl(device);
 
+	if (info.size == 0)
+		throw Exception("cannot create a buffer which size is zero");
+
 	vk::BufferCreateInfo buffer_info;
 	buffer_info.size        = info.size;
 	buffer_info.usage       = to_vk_buffer_usage_flags(info.usage);
@@ -268,7 +276,7 @@ void Buffer::resize(size_t new_size)
 	auto& binding     = memory_impl.resourceBind[idx];
 
 	vk::BufferCreateInfo buffer_info;
-	buffer_info.size        = impl.size;
+	buffer_info.size        = new_size;
 	buffer_info.usage       = to_vk_buffer_usage_flags(impl.usage);
 	buffer_info.sharingMode = vk::SharingMode::eExclusive;
 
@@ -276,8 +284,10 @@ void Buffer::resize(size_t new_size)
 	impl.buffer = vk_device.createBuffer(buffer_info);
 	impl.size   = new_size;
 
+	auto req = vk_device.getBufferMemoryRequirements(impl.buffer);
+
 	if (memory_impl.allocated < binding.offset + new_size)
-		impl.memory->resize(binding.offset + new_size);
+		impl.memory->resize(binding.offset + req.size);
 
 	binding.size = new_size;
 }

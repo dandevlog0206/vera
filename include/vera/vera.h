@@ -4,7 +4,11 @@
 #include "asset/asset_loader.h"
 
 // core
+#include "core/assertion.h"
+#include "core/buffer.h"
+#include "core/buffer_view.h"
 #include "core/command_buffer.h"
+#include "core/command_buffer_sync.h"
 #include "core/context.h"
 #include "core/core_object.h"
 #include "core/coredefs.h"
@@ -15,6 +19,8 @@
 #include "core/device_memory.h"
 #include "core/exception.h"
 #include "core/fence.h"
+#include "core/framebuffer.h"
+#include "core/intrusive_ptr.h"
 #include "core/logger.h"
 #include "core/pipeline.h"
 #include "core/pipeline_layout.h"
@@ -22,14 +28,25 @@
 #include "core/sampler.h"
 #include "core/semaphore.h"
 #include "core/shader.h"
+#include "core/shader_storage.h"
 #include "core/swapchain.h"
 #include "core/texture.h"
 #include "core/texture_view.h"
 
+// geometry
+#include "geometry/aabb.h"
+#include "geometry/bezier.h"
+#include "geometry/frustum.h"
+#include "geometry/geometry.h"
+#include "geometry/line.h"
+#include "geometry/line_segment.h"
+#include "geometry/path.h"
+#include "geometry/plane.h"
+#include "geometry/sphere.h"
+
 // graphics
 #include "graphics/color.h"
 #include "graphics/colormap.h"
-#include "graphics/font.h"
 #include "graphics/format.h"
 #include "graphics/format_traits.h"
 #include "graphics/graphics_state.h"
@@ -48,8 +65,10 @@
 #include "math/matrix_types.h"
 #include "math/quaternion.h"
 #include "math/radian.h"
-#include "math/vector_types.h"
+#include "math/sdf2d.h"
+#include "math/sdf3d.h"
 #include "math/vector_math.h"
+#include "math/vector_types.h"
 
 // os
 #include "os/keyboard.h"
@@ -58,6 +77,7 @@
 #include "os/window_event.h"
 
 // pass
+#include "pass/forward_pass.h"
 #include "pass/graphics_pass.h"
 
 // scene
@@ -67,18 +87,38 @@
 #include "scene/node.h"
 #include "scene/scene.h"
 
+// typography
+#include "typography/code_range.h"
+#include "typography/font.h"
+#include "typography/font_atlas.h"
+#include "typography/font_manager.h"
+#include "typography/glyph.h"
+#include "typography/language.h"
+
 // util
 #include "util/arcball.h"
+#include "util/array_view.h"
+#include "util/camera.h"
+#include "util/direction.h"
 #include "util/enum_traits.h"
 #include "util/extent.h"
 #include "util/flag.h"
 #include "util/flycam.h"
 #include "util/hash.h"
+#include "util/index_map.h"
+#include "util/lookup_table.h"
 #include "util/property.h"
+#include "util/range.h"
+#include "util/ranged_set.h"
 #include "util/rect.h"
+#include "util/rect_packer.h"
+#include "util/renderdoc.h"
 #include "util/result_message.h"
+#include "util/ring_vector.h"
 #include "util/small_vector.h"
+#include "util/stack_allocator.h"
 #include "util/static_vector.h"
+#include "util/string_pool.h"
 #include "util/timer.h"
 #include "util/uuid.h"
 #include "util/version.h"

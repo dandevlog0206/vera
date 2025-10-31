@@ -2,6 +2,7 @@
 
 #include "device.h"
 #include "../util/flag.h"
+#include "../util/array_view.h"
 #include <bitset>
 
 VERA_NAMESPACE_BEGIN
@@ -52,9 +53,19 @@ public:
 	void bindBuffer(obj<Buffer> buffer, size_t offset);
 	void bindTexture(obj<Texture> texture, size_t offset);
 
-	void* map();
+	VERA_NODISCARD void* map();
 	void unmap();
 	void flush();
+
+	template <class T>
+	void upload(array_view<T> arr, size_t offset = 0);
+	void upload(const void* data, size_t size, size_t offset = 0);
 };
+
+template <class T>
+void DeviceMemory::upload(array_view<T> arr, size_t offset)
+{
+	upload(arr.data(), arr.size() * sizeof(T), offset);
+}
 
 VERA_NAMESPACE_END

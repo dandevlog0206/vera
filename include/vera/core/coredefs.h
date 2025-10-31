@@ -91,7 +91,7 @@
 
 // defines
 #define VERA_ENUM : uint32_t
-#define VERA_ENUM64 : uint32_t
+#define VERA_ENUM64 : uint64_t
 #define VERA_FLAG_BITS : uint32_t
-#define VERA_FLAG_BITS64 : uint32_t
+#define VERA_FLAG_BITS64 : uint64_t
 #define VERA_VK_ABI_COMPATIBLE

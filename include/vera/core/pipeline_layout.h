@@ -42,7 +42,7 @@ public:
 	VERA_NODISCARD obj<Device> getDevice();
 
 	VERA_NODISCARD uint32_t getResourceLayoutCount() const;
-	VERA_NODISCARD const_ref<DescriptorSetLayout> getDescriptorSetLayout(uint32_t set) const;
+	VERA_NODISCARD obj<DescriptorSetLayout> getDescriptorSetLayout(uint32_t set) const;
 	VERA_NODISCARD array_view<ref<DescriptorSetLayout>> getDescriptorSetLayouts() const;
 
 	VERA_NODISCARD array_view<PushConstantRange> getPushConstantRanges() const;

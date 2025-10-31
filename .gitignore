@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Renderdoc capture Files
+renderdoc/
+
 # Private image files
 resource/pjw.png
 resource/lsm.png

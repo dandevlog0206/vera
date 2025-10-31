@@ -10,7 +10,7 @@
 VERA_NAMESPACE_BEGIN
 VERA_SCENE_NAMESPACE_BEGIN
 
-class Node : public ManangedObject
+class Node : public ManagedObject
 {
 	Node(std::string_view name);
 public:

@@ -134,17 +134,30 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	device_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 	device_extensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);
+	device_extensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+	device_extensions.push_back(VK_KHR_MAINTENANCE_4_EXTENSION_NAME);
+	device_extensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	
 	// Check physical device features
 	vk::PhysicalDeviceDynamicRenderingFeatures dynamic_rendering;
 	dynamic_rendering.pNext = nullptr;
 	vk::PhysicalDeviceDescriptorIndexingFeatures descriptor_indexing;
 	descriptor_indexing.pNext = &dynamic_rendering;
+	vk::PhysicalDeviceMaintenance4Features maintenance4_features;
+	maintenance4_features.pNext = &descriptor_indexing;
+	vk::PhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features;
+	mesh_shader_features.pNext = &maintenance4_features;
+	vk::PhysicalDeviceFeatures2 device_features2;
+	device_features2.pNext = &mesh_shader_features;
 
-	vk::PhysicalDeviceFeatures2 device_features;
-	device_features.pNext = &descriptor_indexing;
+	physical_device.getFeatures2(&device_features2);
 
-	physical_device.getFeatures2(&device_features);
+	mesh_shader_features.multiviewMeshShader                    = VK_FALSE;
+	mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
+	
+	vk::PhysicalDeviceFeatures device_features;
+	device_features.geometryShader           = true;
+	device_features.fragmentStoresAndAtomics = true;
 
 	if (!dynamic_rendering.dynamicRendering)
 		throw Exception("dynamic rendering feature is not supported");
@@ -166,8 +179,8 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	device_info.ppEnabledLayerNames     = device_layers.data();
 	device_info.enabledExtensionCount   = static_cast<uint32_t>(device_extensions.size());
 	device_info.ppEnabledExtensionNames = device_extensions.data();
-	device_info.pEnabledFeatures        = nullptr;
-	device_info.pNext                   = &descriptor_indexing;
+	device_info.pEnabledFeatures        = &device_features;
+	device_info.pNext                   = &mesh_shader_features;
 
 	impl.physicalDevice         = physical_device;
 	impl.deviceProperties       = physical_device.getProperties();

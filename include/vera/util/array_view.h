@@ -30,7 +30,7 @@ public:
 		m_size(size) {}
 
 	template <size_t C>
-	VERA_CONSTEXPR array_view(T(&ptr)[C]) VERA_NOEXCEPT :
+	VERA_CONSTEXPR array_view(const T(&ptr)[C]) VERA_NOEXCEPT :
 		m_ptr(ptr),
 		m_size(C) {}
 
@@ -64,14 +64,16 @@ public:
 		return *(m_ptr + idx);
 	}
 
-	VERA_NODISCARD VERA_CONSTEXPR const T* begin() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_CONSTEXPR array_view subview(size_t offset) const VERA_NOEXCEPT
 	{
-		return m_ptr;
+		VERA_ASSERT(m_ptr && offset <= m_size);
+		return array_view<T>(m_ptr + offset, m_size - offset);
 	}
 
-	VERA_NODISCARD VERA_CONSTEXPR const T* end() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_CONSTEXPR array_view subview(size_t offset, size_t count) const VERA_NOEXCEPT
 	{
-		return m_ptr + m_size;
+		VERA_ASSERT(m_ptr && offset + count <= m_size);
+		return array_view<T>(m_ptr + offset, count);
 	}
 
 	VERA_NODISCARD VERA_CONSTEXPR const T& front() const VERA_NOEXCEPT
@@ -99,6 +101,16 @@ public:
 	VERA_NODISCARD VERA_CONSTEXPR const T* data() const VERA_NOEXCEPT
 	{
 		return m_ptr;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const T* begin() const VERA_NOEXCEPT
+	{
+		return m_ptr;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const T* end() const VERA_NOEXCEPT
+	{
+		return m_ptr + m_size;
 	}
 
 private:

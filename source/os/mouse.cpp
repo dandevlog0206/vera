@@ -1,6 +1,14 @@
 #include "../../include/vera/os/mouse.h"
 
+#include "../../include/vera/core/exception.h"
 #include "../impl/window_impl.h"
+
+///////////////////////////////////////////////////////////////////////////////
+// Windows ////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 VERA_NAMESPACE_BEGIN
@@ -8,12 +16,16 @@ VERA_OS_NAMESPACE_BEGIN
 
 void Mouse::setPosition(const int2& pos, const Window& rel_wnd)
 {
-	VERA_ASSERT_MSG(false, "not implemented");
+	double pos_x = static_cast<double>(pos.x);
+	double pos_y = static_cast<double>(pos.y);
+
+	glfwSetCursorPos(rel_wnd.m_impl->window, pos_x, pos_y);
 }
 
 void Mouse::setPosition(const int2& pos)
 {
-	VERA_ASSERT_MSG(false, "not implemented");
+	if (!SetCursorPos(pos.x, pos.y))
+		throw Exception("Failed to set mouse position");
 }
 
 int2 Mouse::getPosition(const Window& rel_wnd)
@@ -30,8 +42,12 @@ int2 Mouse::getPosition(const Window& rel_wnd)
 
 int2 Mouse::getPosition()
 {
-	VERA_ASSERT_MSG(false, "not implemented");
-	return int2{0, 0};
+	POINT p;
+
+	if (!GetCursorPos(&p))
+		throw Exception("Failed to get mouse position");
+
+	return int2{ p.x, p.y };
 }
 
 bool Mouse::isDown(Button button)
@@ -53,3 +69,16 @@ bool Mouse::isUp(Button button)
 
 VERA_OS_NAMESPACE_END
 VERA_NAMESPACE_END
+#endif // _Win32
+
+///////////////////////////////////////////////////////////////////////////////
+// Another Platform ///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef ANOTHER_PLATFORM
+VERA_NAMESPACE_BEGIN
+VERA_OS_NAMESPACE_BEGIN
+
+VERA_OS_NAMESPACE_END
+VERA_NAMESPACE_END
+#endif // ANOTHER_PLATFORM

@@ -246,6 +246,25 @@ public:
 		return it != m_ranges.end() && it->contain(range);
 	}
 
+	// TODO: implement ranged_set::make_union()
+	VERA_NODISCARD VERA_CONSTEXPR ranged_set<T> make_union(const ranged_set<T>& rhs) const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(false, "not implemented yet");
+		return {};
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR ranged_set<T> make_intersect(const ranged_set<T>& rhs) const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(false, "not implemented yet");
+		return {};
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR ranged_set<T> make_difference(const ranged_set<T>& rhs) const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(false, "not implemented yet");
+		return {};
+	}
+
 	VERA_CONSTEXPR void operator+=(const T value) VERA_NOEXCEPT
 	{
 		insert(value);

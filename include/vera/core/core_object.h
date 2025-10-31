@@ -28,7 +28,7 @@ struct compressed_pair : public Type1
 
 VERA_PRIV_NAMESPACE_END
 
-class CoreObject : public ManangedObject
+class CoreObject : public ManagedObject
 {
 	VERA_NOCOPY(CoreObject)
 	VERA_NOMOVE(CoreObject)

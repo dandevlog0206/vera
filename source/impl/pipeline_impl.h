@@ -13,14 +13,14 @@ struct PipelineImpl
 {
 	using shader_pair = std::pair<ShaderStageFlagBits, obj<Shader>>;
 
-	obj<Device>              device;
-	obj<PipelineLayout>      pipelineLayout;
+	obj<Device>              device            = {};
+	obj<PipelineLayout>      pipelineLayout    = {};
 
-	vk::Pipeline             pipeline;
+	vk::Pipeline             pipeline          = {};
 
-	std::vector<shader_pair> shaders;
-	PipelineBindPoint        pipelineBindPoint;
-	hash_t                   hashValue;
+	std::vector<shader_pair> shaders           = {};
+	PipelineBindPoint        pipelineBindPoint = {};
+	hash_t                   hashValue         = {};
 };
 
 static vk::PrimitiveTopology to_vk_primitive_topology(PrimitiveTopology topology)

@@ -403,7 +403,7 @@ static void append_shader_storage_frame(
 		auto& subframe   = set.subFrames.emplace_back();
 
 		subframe.descriptorSet = new_frame.descriptorPool->
-			allocateDescriptorSet(set_layout, set.variableArrayCount);
+			allocate(set_layout, set.variableArrayCount);
 		subframe.lastSubFrameIDs.resize(set_range.size(), 0);
 	}
 

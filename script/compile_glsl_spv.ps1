@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    Recursively compiles GLSL shaders (.vert, .frag) to Vulkan SPIR-V (.spv) using glslangValidator.
+    Recursively compiles GLSL shaders to Vulkan SPIR-V (.spv) using glslangValidator.
 
 .DESCRIPTION
     This PowerShell script should be placed inside the root directory for your shader source files.
-    It recursively scans for all .vert and .frag files and compiles them to a sibling 'spv' directory,
+    It recursively scans for all glsl shader files and compiles them to a sibling 'spv' directory,
     preserving the original subdirectory structure.
 
     The script is efficient and will only compile a shader if:
@@ -51,8 +51,8 @@ Write-Host ""
 $filesCompiled = 0
 $filesSkipped = 0
 
-# 3. Get all .vert and .frag files in the script's directory and all subdirectories.
-$shaderFiles = Get-ChildItem -Path $scriptPath -File -Recurse -Include *.vert.glsl, *.frag.glsl, *.vert, *.frag
+# 3. Get all glsl shader files in the script's directory and all subdirectories.
+$shaderFiles = Get-ChildItem -Path $scriptPath -File -Recurse -Include *glsl, *.vert, *geom, *.frag, *.comp
 
 # 4. Loop through each shader file to check if it needs compilation.
 foreach ($sourceFile in $shaderFiles) {
@@ -83,7 +83,7 @@ foreach ($sourceFile in $shaderFiles) {
         Write-Host "[COMPILE] Compiling $relativePath..." -ForegroundColor Green
         
         # We use Start-Process to get reliable exit codes and suppress output.
-        $process = Start-Process -FilePath "glslangValidator.exe" -ArgumentList "-V -o `"$destFile`" `"$($sourceFile.FullName)`"" -Wait -PassThru -NoNewWindow
+        $process = Start-Process -FilePath "glslangValidator.exe" -ArgumentList "-gVS --target-env vulkan1.3 -V -o `"$destFile`" `"$($sourceFile.FullName)`"" -Wait -PassThru -NoNewWindow
         
         if ($process.ExitCode -ne 0) {
             Write-Host "[ERROR] Failed to compile $relativePath. Halting script." -ForegroundColor Red

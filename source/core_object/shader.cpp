@@ -50,9 +50,6 @@ static PipelineBindPoint get_pipeline_bind_point(SpvReflectShaderStageFlagBits s
 	case SPV_REFLECT_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
 	case SPV_REFLECT_SHADER_STAGE_GEOMETRY_BIT:
 	case SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT:
-		return PipelineBindPoint::Graphics;
-	case SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT:
-		return PipelineBindPoint::Compute;
 	case SPV_REFLECT_SHADER_STAGE_TASK_BIT_EXT:
 	case SPV_REFLECT_SHADER_STAGE_MESH_BIT_EXT:
 	case SPV_REFLECT_SHADER_STAGE_RAYGEN_BIT_KHR:
@@ -61,7 +58,9 @@ static PipelineBindPoint get_pipeline_bind_point(SpvReflectShaderStageFlagBits s
 	case SPV_REFLECT_SHADER_STAGE_MISS_BIT_KHR:
 	case SPV_REFLECT_SHADER_STAGE_INTERSECTION_BIT_KHR:
 	case SPV_REFLECT_SHADER_STAGE_CALLABLE_BIT_KHR:
-		return PipelineBindPoint::Unknown; // not supported yet
+		return PipelineBindPoint::Graphics;
+	case SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT:
+		return PipelineBindPoint::Compute;
 	}
 
 	VERA_ASSERT_MSG(false, "unsupported shader stage for pipeline bind point");
@@ -83,6 +82,22 @@ static ShaderStageFlagBits to_shader_stage(SpvReflectShaderStageFlagBits stage)
 		return ShaderStageFlagBits::Fragment;
 	case SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT:
 		return ShaderStageFlagBits::Compute;
+	case SPV_REFLECT_SHADER_STAGE_TASK_BIT_EXT:
+		return ShaderStageFlagBits::Task;
+	case SPV_REFLECT_SHADER_STAGE_MESH_BIT_EXT:
+		return ShaderStageFlagBits::Mesh;
+	case SPV_REFLECT_SHADER_STAGE_RAYGEN_BIT_KHR:
+		return ShaderStageFlagBits::RayGen;
+	case SPV_REFLECT_SHADER_STAGE_ANY_HIT_BIT_KHR:
+		return ShaderStageFlagBits::AnyHit;
+	case SPV_REFLECT_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
+		return ShaderStageFlagBits::ClosestHit;
+	case SPV_REFLECT_SHADER_STAGE_MISS_BIT_KHR:
+		return ShaderStageFlagBits::Miss;
+	case SPV_REFLECT_SHADER_STAGE_INTERSECTION_BIT_KHR:
+		return ShaderStageFlagBits::Intersection;
+	case SPV_REFLECT_SHADER_STAGE_CALLABLE_BIT_KHR:
+		return ShaderStageFlagBits::Callable;
 	}
 
 	VERA_ASSERT_MSG(false, "invalid shader stage");
@@ -528,8 +543,6 @@ static void parse_shader_reflection_info(ShaderImpl& impl, const uint32_t* spirv
 		for (uint32_t i = 0; i < set.binding_count; ++i, ++resource_idx) {
 			auto& binding = *set.bindings[i];
 
-			if (binding.binding != i)
-				throw Exception("binding numbers must be sequentially defined starting from 0");
 			if (i != set.binding_count - 1 && is_unsized_array(binding.array))
 				throw Exception("only last binding of descriptor set can be unsized array");
 
@@ -578,6 +591,16 @@ static size_t hash_shader_code(const uint32_t* spirv_code, size_t size_in_byte)
 		hash_combine(seed, spirv_code[i]);
 
 	return seed;
+}
+
+const vk::ShaderModule& get_vk_shader_module(const_ref<Shader> shader)
+{
+	return CoreObject::getImpl(shader).shader;
+}
+
+vk::ShaderModule& get_vk_shader_module(ref<Shader> shader)
+{
+	return CoreObject::getImpl(shader).shader;
 }
 
 obj<Shader> Shader::create(obj<Device> device, std::string_view path)

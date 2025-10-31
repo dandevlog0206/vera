@@ -19,7 +19,7 @@ private:
 	AxisSystem m_axis_system;
 };
 
-class Scene : public ManangedObject
+class Scene : public ManagedObject
 {
 	Scene(std::string_view name);
 public:

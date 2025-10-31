@@ -128,9 +128,12 @@ void* DeviceMemory::map()
 	if (impl.mapPtr) 
 		return impl.mapPtr;
 
-	auto& device_impl = getImpl(impl.device);
+	if (!impl.propertyFlags.has(MemoryPropertyFlagBits::HostVisible))
+		throw Exception("attempt to map non-host-visible memory");
 
-	return impl.mapPtr = device_impl.device.mapMemory(impl.memory, 0, VK_WHOLE_SIZE);
+	auto vk_device = get_vk_device(impl.device);
+
+	return impl.mapPtr = vk_device.mapMemory(impl.memory, 0, VK_WHOLE_SIZE);
 }
 
 void DeviceMemory::unmap()
@@ -139,23 +142,45 @@ void DeviceMemory::unmap()
 
 	if (!impl.mapPtr) return;
 
-	auto& device_impl = getImpl(impl.device);
+	auto vk_device = get_vk_device(impl.device);
 
-	device_impl.device.unmapMemory(impl.memory);
+	vk_device.unmapMemory(impl.memory);
 	impl.mapPtr = nullptr;
 }
 
 void DeviceMemory::flush()
 {
-	auto& impl        = getImpl(this);
-	auto& device_impl = getImpl(impl.device);
+	auto& impl = getImpl(this);
+
+	if (!impl.mapPtr) return;
+
+	auto vk_device = get_vk_device(impl.device);
 
 	vk::MappedMemoryRange range;
 	range.memory = impl.memory;
 	range.offset = 0;
 	range.size   = VK_WHOLE_SIZE;
 
-	device_impl.device.flushMappedMemoryRanges(range);
+	vk_device.flushMappedMemoryRanges(range);
+}
+
+void DeviceMemory::upload(const void* data, size_t size, size_t offset)
+{
+	auto& impl = getImpl(this);
+	void* dst  = reinterpret_cast<uint8_t*>(map()) + offset;
+
+	if (impl.allocated < offset + size)
+		throw Exception("attempt to upload more data than allocated memory size");
+
+	auto  vk_device = get_vk_device(impl.device);
+	
+	vk::MappedMemoryRange range;
+	range.memory = impl.memory;
+	range.offset = offset;
+	range.size   = size;
+
+	std::memcpy(dst, data, size);
+	vk_device.flushMappedMemoryRanges(range);
 }
 
 VERA_NAMESPACE_END

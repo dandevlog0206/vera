@@ -15,7 +15,7 @@ enum class AttributeType VERA_ENUM
 	Mesh,
 };
 
-class Attribute : public ManangedObject
+class Attribute : public ManagedObject
 {
 public:
 	virtual ~Attribute() {};
