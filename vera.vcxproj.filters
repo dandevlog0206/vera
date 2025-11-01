@@ -474,7 +474,7 @@
     <ClInclude Include="include\vera\typography\language.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\typography\font_impl.h">
+    <ClInclude Include="source\typography\font_impl_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\typography\glyph.h">

@@ -1,24 +1,34 @@
 #include "open_type.h"
 
+#include "../../include/vera/core/exception.h"
+#include "../../include/vera/util/static_vector.h"
+#include "../parse.h"
+#include <algorithm>
+
+#define MAX_CONTOUR_COUNT 128
+
+#define CHECK(expression)                          \
+	do {                                               \
+		OTFResult result = expression;                 \
+		if (result.result() != OTFResultType::Success) \
+			return result;                             \
+	} while (0)
+
 VERA_NAMESPACE_BEGIN
-VERA_PRIV_NAMESPACE_BEGIN
 
-static float shoelace(const float2& a, const float2& b)
-{
-	return (b.x - a.x) * (a.y + b.y);
-}
+typedef float (*OTFVectorParser)(const uint8_t*, uint32_t&);
 
-static bool otf_has_flag(OTFGlyphFlagBits a, OTFGlyphFlagBits b)
+static bool has_flag(OTFGlyphFlagBits a, OTFGlyphFlagBits b)
 {
 	return static_cast<bool>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
 
-static bool otf_has_flag(OTFComponentGlyphFlagBits a, OTFComponentGlyphFlagBits b)
+static bool has_flag(OTFComponentGlyphFlagBits a, OTFComponentGlyphFlagBits b)
 {
 	return static_cast<bool>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
 }
 
-static OTFEncodingID otf_parse_encoding_id(const uint8_t* data, uint32_t& offset, OTFPlatformID platform_id)
+static OTFEncodingID parse_encoding_id(const uint8_t* data, uint32_t& offset, OTFPlatformID platform_id)
 {
 	uint16_t encoding_id     = parse_u16_be(data, offset);
 	uint16_t platform_offset = static_cast<uint16_t>(OTFEncodingID::__Platform_Offset__);
@@ -27,7 +37,7 @@ static OTFEncodingID otf_parse_encoding_id(const uint8_t* data, uint32_t& offset
 	return static_cast<OTFEncodingID>(encoding_id + encoding_offset);
 }
 
-static OTFLanguageID otf_parse_language_id(const uint8_t* data, uint32_t& offset, OTFPlatformID platform_id)
+static OTFLanguageID parse_language_id(const uint8_t* data, uint32_t& offset, OTFPlatformID platform_id)
 {
 	uint16_t language_id     = parse_u16_be(data, offset);
 	uint16_t platform_offset = static_cast<uint16_t>(OTFLanguageID::__Platform_Offset__);
@@ -35,7 +45,7 @@ static OTFLanguageID otf_parse_language_id(const uint8_t* data, uint32_t& offset
 	return static_cast<OTFLanguageID>(language_id + language_offset);
 }
 
-static void otf_decode_utf16be_to_utf8(std::string& str_buf)
+static void decode_utf16be_to_utf8(std::string& str_buf)
 {
 	size_t new_buf_size = str_buf.size() / 2;
 
@@ -45,76 +55,51 @@ static void otf_decode_utf16be_to_utf8(std::string& str_buf)
 	str_buf.resize(new_buf_size);
 }
 
-static OTFNameEntry* otf_find_name_entry_linear(
-	OTFNAMETable& name_table,
-	OTFPlatformID platform_id,
-	OTFEncodingID encoding_id,
-	OTFLanguageID language_id
-) {
-	for (auto& entry : name_table.names) {
-		if (entry.platformID == platform_id &&
-			entry.encodingID == encoding_id &&
-			entry.languageID == language_id) {
-			return &entry;
-		}
-	}
-
-	return nullptr;
-}
-
-static bool otf_compare_name_entry(const OTFNameEntry& a, const OTFNameEntry& b) {
-	if (a.platformID != b.platformID)
-		return a.platformID < b.platformID;
-	if (a.encodingID != b.encodingID)
-		return a.encodingID < b.encodingID;
-	return a.languageID < b.languageID;
-}
-
-static float otf_fixed_to_float(OTFFixed value)
+static float fixed_to_float(OTFFixed value)
 {
 	int16_t  integer  = static_cast<int16_t>((value >> 16) & 0xFFFF);
 	uint16_t fraction = static_cast<uint16_t>(value & 0xFFFF);
 	return static_cast<float>(integer) + static_cast<float>(fraction) / 65536.0f;
 }
 
-static OTFFixed otf_float_to_fixed(float value)
+static OTFFixed float_to_fixed(float value)
 {
 	int16_t  integer  = static_cast<int16_t>(value);
 	uint16_t fraction = static_cast<uint16_t>((value - static_cast<float>(integer)) * 65536.0f);
 	return (static_cast<OTFFixed>(integer) << 16) | static_cast<OTFFixed>(fraction);
 }
 
-static float otf_f2dot14_to_float(OTFF2DOT14 value)
+static float f2dot14_to_float(OTFF2DOT14 value)
 {
 	int16_t  integer  = static_cast<int16_t>((value >> 14) & 0x3);
 	uint16_t fraction = static_cast<uint16_t>(value & 0x3FFF);
 	return static_cast<float>(integer) + static_cast<float>(fraction) / 16384.0f;
 }
 
-static OTFF2DOT14 otf_float_to_f2dot14(float value)
+static OTFF2DOT14 float_to_f2dot14(float value)
 {
 	int16_t  integer  = static_cast<int16_t>(value);
 	uint16_t fraction = static_cast<uint16_t>((value - static_cast<float>(integer)) * 16384.0f);
 	return (static_cast<OTFF2DOT14>(integer) << 14) | static_cast<OTFF2DOT14>(fraction);
 }
 
-static uint16_t otf_get_version_major(OTFVersion version)
+static uint16_t get_version_major(OTFVersion version)
 {
 	return static_cast<uint16_t>((version >> 8) & 0xFF);
 }
 
-static uint16_t otf_get_version_minor(OTFVersion version)
+static uint16_t get_version_minor(OTFVersion version)
 {
 	return static_cast<uint16_t>(version & 0xFF);
 }
 
-static OTFVersion otf_make_version(uint16_t major, uint16_t minor)
+static OTFVersion make_version(uint16_t major, uint16_t minor)
 {
 	return static_cast<OTFVersion>(major) << 8 |
 		   static_cast<OTFVersion>(minor);
 }
 
-static uint32_t otf_parse_ttc_header(TTCHeader& header, const uint8_t* data, uint32_t offset)
+static uint32_t parse_ttc_header(TTCHeader& header, const uint8_t* data, uint32_t offset)
 {
 	header.magic        = parse_enum_be<OTFTTCTag>(data, offset);
 	header.majorVersion = parse_u16_be(data, offset);
@@ -123,7 +108,7 @@ static uint32_t otf_parse_ttc_header(TTCHeader& header, const uint8_t* data, uin
 	return offset;
 }
 
-static uint32_t otf_parse_ttf_header(TTFHeader& header, const uint8_t* data, uint32_t offset)
+static uint32_t parse_ttf_header(TTFHeader& header, const uint8_t* data, uint32_t offset)
 {
 	header.sfntVersion   = parse_enum_be<OTFSFNTVersion>(data, offset);
 	header.numTables     = parse_u16_be(data, offset);
@@ -133,7 +118,7 @@ static uint32_t otf_parse_ttf_header(TTFHeader& header, const uint8_t* data, uin
 	return offset;
 }
 
-static uint32_t otf_parse_table_record(OTFTableRecord& record, const uint8_t* data, uint32_t offset)
+static uint32_t parse_table_record(OTFTableRecord& record, const uint8_t* data, uint32_t offset)
 {
 	record.tableTag = parse_enum_be<OTFTableTag>(data, offset);
 	record.checkSum = parse_u32_be(data, offset);
@@ -142,22 +127,22 @@ static uint32_t otf_parse_table_record(OTFTableRecord& record, const uint8_t* da
 	return offset;
 }
 
-static uint32_t otf_parse_cmap_table_header(OTFCMAPTableHeader& header, const uint8_t* data, uint32_t offset)
+static uint32_t parse_cmap_table_header(OTFCMAPTableHeader& header, const uint8_t* data, uint32_t offset)
 {
 	header.version      = parse_u16_be(data, offset);
 	header.numSubtables = parse_u16_be(data, offset);
 	return offset;
 }
 
-static uint32_t otf_parse_encoding_record(OTFEncodingRecord& record, const uint8_t* data, uint32_t offset)
+static uint32_t parse_encoding_record(OTFEncodingRecord& record, const uint8_t* data, uint32_t offset)
 {
 	record.platformID     = parse_enum_be<OTFPlatformID>(data, offset);
-	record.encodingID     = otf_parse_encoding_id(data, offset, record.platformID);
+	record.encodingID     = parse_encoding_id(data, offset, record.platformID);
 	record.subtableOffset = parse_u32_be(data, offset);
 	return offset;
 }
 
-static uint32_t otf_parse_sequential_map_group(OTFSequentialMapGroup& group, const uint8_t* data, uint32_t offset)
+static uint32_t parse_sequential_map_group(OTFSequentialMapGroup& group, const uint8_t* data, uint32_t offset)
 {
 	group.startCharCode = parse_u32_be(data, offset);
 	group.endCharCode   = parse_u32_be(data, offset);
@@ -165,14 +150,14 @@ static uint32_t otf_parse_sequential_map_group(OTFSequentialMapGroup& group, con
 	return offset;
 }
 
-static uint32_t otf_parse_long_hor_metric(OTFLongHorMetric& metric, const uint8_t* data, uint32_t offset)
+static uint32_t parse_long_hor_metric(OTFLongHorMetric& metric, const uint8_t* data, uint32_t offset)
 {
 	metric.advanceWidth    = parse_u16_be(data, offset);
 	metric.leftSideBearing = parse_i16_be(data, offset);
 	return offset;
 }
 
-static uint32_t otf_parse_name_table_header(OTFNAMETableHeader& header, const uint8_t* data, uint32_t offset)
+static uint32_t parse_name_table_header(OTFNAMETableHeader& header, const uint8_t* data, uint32_t offset)
 {
 	header.version       = parse_u16_be(data, offset);
 	header.count         = parse_u16_be(data, offset);
@@ -180,18 +165,18 @@ static uint32_t otf_parse_name_table_header(OTFNAMETableHeader& header, const ui
 	return offset;
 }
 
-static uint32_t otf_parse_name_record(OTFNameRecord& record, const uint8_t* data, uint32_t offset)
+static uint32_t parse_name_record(OTFNameRecord& record, const uint8_t* data, uint32_t offset)
 {
 	record.platformID   = parse_enum_be<OTFPlatformID>(data, offset);
-	record.encodingID   = otf_parse_encoding_id(data, offset, record.platformID);
-	record.languageID   = otf_parse_language_id(data, offset, record.platformID);
+	record.encodingID   = parse_encoding_id(data, offset, record.platformID);
+	record.languageID   = parse_language_id(data, offset, record.platformID);
 	record.nameID       = parse_enum_be<OTFNameID>(data, offset);
 	record.length       = parse_u16_be(data, offset);
 	record.stringOffset = parse_u16_be(data, offset);
 	return offset;
 }
 
-static uint32_t otf_parse_post_table_header(OTFPOSTTableHeader& header, const uint8_t* data, uint32_t offset)
+static uint32_t parse_post_table_header(OTFPOSTTableHeader& header, const uint8_t* data, uint32_t offset)
 {
 	header.version            = parse_u32_be(data, offset);
 	header.italicAngle        = parse_u32_be(data, offset);
@@ -205,7 +190,7 @@ static uint32_t otf_parse_post_table_header(OTFPOSTTableHeader& header, const ui
 	return offset;
 }
 
-static uint32_t otf_parse_glyph_header(OTFGlyphHeader& header, const uint8_t* data, uint32_t offset)
+static uint32_t parse_glyph_header(OTFGlyphHeader& header, const uint8_t* data, uint32_t offset)
 {
 	header.numberOfContours = parse_i16_be(data, offset);
 	header.xMin             = parse_i16_be(data, offset);
@@ -215,86 +200,53 @@ static uint32_t otf_parse_glyph_header(OTFGlyphHeader& header, const uint8_t* da
 	return offset;
 }
 
-static OTFResult otf_parse_head_table(OTFHEADTable& head_table, const uint8_t* data, uint32_t offset)
-{
-	head_table.version            = parse_u32_be(data, offset);
-	head_table.fontRevision       = parse_u32_be(data, offset);
-	head_table.checkSumAdjustment = parse_u32_be(data, offset);
-	head_table.magicNumber        = parse_u32_be(data, offset);
-	head_table.flags              = parse_u16_be(data, offset);
-	head_table.unitsPerEm         = parse_u16_be(data, offset);
-	head_table.created            = parse_u64_be(data, offset);
-	head_table.modified           = parse_u64_be(data, offset);
-	head_table.xMin               = parse_i16_be(data, offset);
-	head_table.yMin               = parse_i16_be(data, offset);
-	head_table.xMax               = parse_i16_be(data, offset);
-	head_table.yMax               = parse_i16_be(data, offset);
-	head_table.macStyle           = parse_u16_be(data, offset);
-	head_table.lowestRecPPEM      = parse_u16_be(data, offset);
-	head_table.fontDirectionHint  = parse_i16_be(data, offset);
-	head_table.indexToLocFormat   = parse_enum_be<OTFIndexFormat>(data, offset);
-	head_table.glyphDataFormat    = parse_i16_be(data, offset);
-
-	if (head_table.magicNumber != 0x5f0f3cf5)
-		return { OTFResultType::InvalidMagic, "invalid 'head' table magic number" };
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_maxp_table(OTFMAXPTable& maxp_table, const uint8_t* data, uint32_t offset)
-{
-	maxp_table.version               = parse_u32_be(data, offset);
-	maxp_table.numGlyphs             = parse_u16_be(data, offset);
-
-	if (maxp_table.version == otf_make_version(0, 5))
-		return OTFResultType::Success;
-
-	maxp_table.maxPoints             = parse_u16_be(data, offset);
-	maxp_table.maxContours           = parse_u16_be(data, offset);
-	maxp_table.maxCompositePoints    = parse_u16_be(data, offset);
-	maxp_table.maxCompositeContours  = parse_u16_be(data, offset);
-	maxp_table.maxZones              = parse_u16_be(data, offset);
-	maxp_table.maxTwilightPoints     = parse_u16_be(data, offset);
-	maxp_table.maxStorage            = parse_u16_be(data, offset);
-	maxp_table.maxFunctionDefs       = parse_u16_be(data, offset);
-	maxp_table.maxInstructionDefs    = parse_u16_be(data, offset);
-	maxp_table.maxStackElements      = parse_u16_be(data, offset);
-	maxp_table.maxSizeOfInstructions = parse_u16_be(data, offset);
-	maxp_table.maxComponentElements  = parse_u16_be(data, offset);
-	maxp_table.maxComponentDepth     = parse_u16_be(data, offset);
-
-	return OTFResultType::Success;
-}
-
-static void fill_glyph_map_segment(OTFCMAPTable& cmap_table, char32_t start_code, char32_t end_code, int16_t id_delta)
-{
-	for (char32_t i = start_code; i <= end_code; ++i) {
-		auto glyph_idx = static_cast<OTFUint16>(i + id_delta);
-		cmap_table.charToGlyphMap[i] = glyph_idx;
-	}
-}
-
-static void fill_glyph_map_segment_with_id_range(
-	OTFCMAPTable&  cmap_table,
-	const uint8_t* data,
-	char32_t       start_code,
-	char32_t       end_code,
-	uint32_t       array_offset,
-	uint32_t       id_range_offset,
-	int16_t        id_delta
+static void make_vector_parser(
+	OTFGlyphFlagBits flags,
+	OTFVectorParser& x_vector_func,
+	OTFVectorParser& y_vector_func
 ) {
-	for (char32_t i = start_code; i <= end_code; ++i) {
-		uint32_t  idx_offset = id_range_offset + 2 * (i - start_code) + array_offset;
-		OTFUint16 glyph_idx  = parse_u16_be(data, idx_offset);
+	static const auto short_positive_vector = [](const uint8_t* data, uint32_t& offset) {
+		return static_cast<float>(parse_u8_be(data, offset));
+	};
 
-		if (glyph_idx != 0)
-			glyph_idx += id_delta;
+	static const auto short_negative_vector = [](const uint8_t* data, uint32_t& offset) {
+		return -static_cast<float>(parse_u8_be(data, offset));
+	};
 
-		cmap_table.charToGlyphMap[i] = glyph_idx;
+	static const auto long_vector = [](const uint8_t* data, uint32_t& offset) {
+		return static_cast<float>(parse_i16_be(data, offset));
+	};
+
+	static const auto zero_vector = [](const uint8_t* data, uint32_t& offset) {
+		return 0.f;
+	};
+
+	if (has_flag(flags, OTFGlyphFlagBits::XShortVector)) {
+		if (has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
+			x_vector_func = short_positive_vector;
+		else
+			x_vector_func = short_negative_vector;
+	} else {
+		if (has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
+			x_vector_func = zero_vector;
+		else
+			x_vector_func = long_vector;
+	}
+
+	if (has_flag(flags, OTFGlyphFlagBits::YShortVector)) {
+		if (has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive))
+			y_vector_func = short_positive_vector;
+		else
+			y_vector_func = short_negative_vector;
+	} else {
+		if (has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive))
+			y_vector_func = zero_vector;
+		else
+			y_vector_func = long_vector;
 	}
 }
 
-static bool otf_supported_cmap_encoding_format4(OTFEncodingID encoding_id) {
+static bool supported_cmap_encoding_format4(OTFEncodingID encoding_id) {
 	switch (encoding_id) {
 	case OTFEncodingID::Unicode_1_0_Semantics:
 	case OTFEncodingID::Unicode_1_1_Semantics:
@@ -309,343 +261,15 @@ static bool otf_supported_cmap_encoding_format4(OTFEncodingID encoding_id) {
 	}
 }
 
-static OTFResult otf_parse_cmap_format4(
-	OTFCMAPTable&            cmap_table,
-	const OTFEncodingRecord& encoding_record,
-	const uint8_t*           data,
-	uint32_t                 offset
-) {
-	OTFUint16     length         = parse_u16_be(data, offset);
-	OTFLanguageID language       = otf_parse_language_id(data, offset, encoding_record.platformID);
-	OTFUint16     seg_count      = parse_u16_be(data, offset) / 2;
-/*  OTFUint16     search_range   = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
-/*  OTFUint16     entry_selector = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
-/*  OTFUint16     range_shift    = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
-	
-	uint32_t seg_count_size      = seg_count * sizeof(OTFUint16);
-	uint32_t start_code_offset   = offset + seg_count_size + sizeof(uint16_t);
-	uint32_t end_code_offset     = offset;
-	uint32_t id_delta_offset     = start_code_offset + seg_count_size;
-	uint32_t id_range_off_offset = id_delta_offset + seg_count_size;
-
-	if (!otf_supported_cmap_encoding_format4(encoding_record.encodingID))
-		return { OTFResultType::Unsupported, "unsupported cmap format4 encoding" };
-
-	for (uint16_t i = 0; i < seg_count; ++i) {
-		char32_t start_code      = static_cast<char32_t>(parse_u16_be(data, start_code_offset));
-		char32_t end_code        = static_cast<char32_t>(parse_u16_be(data, end_code_offset));
-		uint32_t array_offset    = id_range_off_offset;
-		uint32_t id_range_offset = static_cast<uint32_t>(parse_u16_be(data, id_range_off_offset));
-		int16_t  id_delta        = parse_i16_be(data, id_delta_offset);
-
-		if (id_range_offset == 0) {
-			fill_glyph_map_segment(cmap_table, start_code, end_code, id_delta);
-		} else {
-			fill_glyph_map_segment_with_id_range(
-				cmap_table,
-				data,
-				start_code,
-				end_code,
-				array_offset,
-				id_range_offset,
-				id_delta
-			);
-		}
-	}
-
-	return OTFResultType::Success;
+static bool compare_name_entry(const OTFNameEntry& a, const OTFNameEntry& b) {
+	if (a.platformID != b.platformID)
+		return a.platformID < b.platformID;
+	if (a.encodingID != b.encodingID)
+		return a.encodingID < b.encodingID;
+	return a.languageID < b.languageID;
 }
 
-static OTFResult otf_parse_cmap_format6(
-	OTFCMAPTable&            cmap_table,
-	const OTFEncodingRecord& encoding_record,
-	const uint8_t*           data,
-	uint32_t                 offset
-) {
-	OTFUint16     length      = parse_u16_be(data, offset);
-	OTFLanguageID language    = otf_parse_language_id(data, offset, encoding_record.platformID);
-	OTFUint16     first_code  = parse_u16_be(data, offset);
-	OTFUint16     entry_count = parse_u16_be(data, offset);
-
-	for (uint16_t i = 0; i < entry_count; ++i) {
-		char32_t  code     = static_cast<char32_t>(first_code + i);
-		OTFUint16 glyph_id = parse_u16_be(data, offset);
-
-		cmap_table.charToGlyphMap[code] = glyph_id;
-	}
-
-	return OTFResultType::Success;
-}
-
-static void otf_fill_glyph_map_sequential(OTFCMAPTable& cmap_table, const OTFSequentialMapGroup& group) {
-	uint32_t code_count      = group.endCharCode - group.startCharCode + 1;
-	uint32_t first_glyph_idx = group.startGlyphID;
-	uint32_t last_glyph_idx  = first_glyph_idx + code_count;
-	char32_t code            = static_cast<char32_t>(group.startCharCode);
-
-	for (uint32_t i = first_glyph_idx; i < last_glyph_idx; ++i, ++ code)
-		cmap_table.charToGlyphMap[code] = i;
-}
-
-static OTFResult otf_parse_cmap_format12(
-	OTFCMAPTable&            cmap_table,
-	const OTFEncodingRecord& encoding_record,
-	const uint8_t*           data,
-	uint32_t                 offset
-) {
-	OTFSequentialMapGroup map_group;
-
-/*  OTFUint16 reserved   = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
-	OTFUint32 length     = parse_u32_be(data, offset);
-	OTFUint32 language   = parse_u32_be(data, offset);
-	OTFUint32 num_groups = parse_u32_be(data, offset);
-
-	for (uint32_t i = 0; i < num_groups; ++i) {
-		offset = otf_parse_sequential_map_group(map_group, data, offset);
-		otf_fill_glyph_map_sequential(cmap_table, map_group);
-	}
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_cmap_table(OTFCMAPTable& cmap_table, const uint8_t* data, uint32_t offset)
-{
-	OTFCMAPTableHeader header;
-	OTFEncodingRecord  encoding_record;
-	
-	uint32_t encoding_offset = otf_parse_cmap_table_header(header, data, offset);
-
-	cmap_table.version	    = header.version;
-	cmap_table.numSubtables = header.numSubtables;
-
-	for (uint16_t i = 0; i < header.numSubtables; ++i) {
-		encoding_offset = otf_parse_encoding_record(encoding_record, data, encoding_offset);
-
-		uint32_t      subtable_offset = offset + encoding_record.subtableOffset;
-		OTFCMAPFormat format          = parse_enum_be<OTFCMAPFormat>(data, subtable_offset);
-
-		switch (format) {
-		case OTFCMAPFormat::ByteEncodingTable:
-			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
-		case OTFCMAPFormat::HighByteMappingThroughTable:
-			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
-		case OTFCMAPFormat::SegmentMappingToDeltaValues:
-			OTF_CHECK(otf_parse_cmap_format4(cmap_table, encoding_record, data, subtable_offset));
-			break;
-		case OTFCMAPFormat::TrimmedTableMapping:
-			OTF_CHECK(otf_parse_cmap_format6(cmap_table, encoding_record, data, subtable_offset));
-			break;
-		case OTFCMAPFormat::Mixed16And32BitMapping:
-			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
-		case OTFCMAPFormat::TrimmedArray:
-			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
-		case OTFCMAPFormat::SegmentedCoverage:
-			OTF_CHECK(otf_parse_cmap_format12(cmap_table, encoding_record, data, subtable_offset));
-			break;
-		case OTFCMAPFormat::ManyToOneRangeMappings:
-			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
-		case OTFCMAPFormat::UnicodeVariationSequences:
-			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
-		default:
-			return { OTFResultType::InvalidFormat, "invalid cmap subtable format" };
-		}
-	}
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_hhea_table(OTFHHEATable& hhea_table, const uint8_t* data, uint32_t offset)
-{
-	hhea_table.majorVersion        = parse_u16_be(data, offset);
-	hhea_table.minorVersion        = parse_u16_be(data, offset);
-	hhea_table.ascender            = parse_i16_be(data, offset);
-	hhea_table.descender           = parse_i16_be(data, offset);
-	hhea_table.lineGap             = parse_i16_be(data, offset);
-	hhea_table.advanceWidthMax     = parse_u16_be(data, offset);
-	hhea_table.minLeftSideBearing  = parse_i16_be(data, offset);
-	hhea_table.minRightSideBearing = parse_i16_be(data, offset);
-	hhea_table.xMaxExtent          = parse_i16_be(data, offset);
-	hhea_table.caretSlopeRise      = parse_i16_be(data, offset);
-	hhea_table.caretSlopeRun       = parse_i16_be(data, offset);
-	hhea_table.caretOffset         = parse_i16_be(data, offset);
-	hhea_table.reserved0           = parse_i16_be(data, offset);
-	hhea_table.reserved1           = parse_i16_be(data, offset);
-	hhea_table.reserved2           = parse_i16_be(data, offset);
-	hhea_table.reserved3           = parse_i16_be(data, offset);
-	hhea_table.metricDataFormat    = parse_i16_be(data, offset);
-	hhea_table.numberOfHMetrics    = parse_u16_be(data, offset);
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_hmtx_table(
-	OTFHMTXTable&       hmtx_table,
-	const OTFMAXPTable& maxp_table,
-	const OTFHHEATable& hhea_table,
-	const uint8_t*      data,
-	uint32_t            offset
-) {
-	OTFLongHorMetric metric;
-	OTFFWORD         bearing;
-	uint16_t         num_metrics = hhea_table.numberOfHMetrics;
-	uint16_t         num_glyphs  = maxp_table.numGlyphs;
-	
-	for (uint16_t i = 0; i < num_metrics; ++i) {
-		offset = otf_parse_long_hor_metric(metric, data, offset);
-		hmtx_table.longHorMetrics.push_back(metric);
-	}
-
-	for (uint16_t i = num_metrics; i < num_glyphs; ++i) {
-		bearing = parse_i16_be(data, offset);
-		hmtx_table.leftSideBearings.push_back(bearing);
-	}
-
-	return OTFResultType::Success;
-}
-
-static OTFNameEntry* otf_find_name_entry(
-	OTFNAMETable& name_table,
-	OTFPlatformID platform_id,
-	OTFEncodingID encoding_id,
-	OTFLanguageID language_id
-) {
-	auto cmp_entry = OTFNameEntry{ platform_id, encoding_id, language_id, {} };
-	auto it        = std::lower_bound(VERA_SPAN(name_table.names), cmp_entry, otf_compare_name_entry);
-
-	return
-		it != name_table.names.end()&&
-		it->platformID == platform_id &&
-		it->encodingID == encoding_id &&
-		it->languageID == language_id ?
-		&(*it) : nullptr;
-}
-
-static OTFResult otf_parse_name_table(OTFNAMETable& name_table, const uint8_t* data, uint32_t offset)
-{
-	OTFNAMETableHeader header;
-	OTFNameRecord      name_record;
-	std::string        str_buf;
-	uint32_t           start_offset = offset;
-
-	offset = otf_parse_name_table_header(header, data, offset);
-
-	name_table.version       = header.version;
-	name_table.count         = header.count;
-	name_table.storageOffset = header.storageOffset;
-
-	uint32_t storage_offset = start_offset + header.storageOffset;
-
-	for (uint16_t i = 0; i < header.count; ++i) {
-		offset = otf_parse_name_record(name_record, data, offset);
-
-		if (name_record.nameID >= OTFNameID::__Count__)
-			return { OTFResultType::InvalidID, "invalid name id" };
-
-		uint32_t str_offset = storage_offset + name_record.stringOffset;
-
-		str_buf.resize(name_record.length);
-		memcpy(str_buf.data(), data + str_offset, str_buf.size());
-
-		if (str_buf[0] == '\0')
-			otf_decode_utf16be_to_utf8(str_buf);
-
-		OTFNameEntry* name_entry = otf_find_name_entry_linear(
-			name_table,
-			name_record.platformID,
-			name_record.encodingID,
-			name_record.languageID);
-
-		if (name_entry == nullptr) {
-			OTFNameEntry& new_entry = name_table.names.emplace_back();
-			new_entry.platformID = name_record.platformID;
-			new_entry.encodingID = name_record.encodingID;
-			new_entry.languageID = name_record.languageID;
-			new_entry.names.resize(static_cast<size_t>(OTFNameID::__Count__));
-			new_entry.names[static_cast<size_t>(name_record.nameID)] = str_buf;
-		} else {
-			name_entry->names[static_cast<size_t>(name_record.nameID)] = str_buf;
-		}
-	}
-
-	if (name_table.version == 1) {
-		OTFLangTagRecord lang_tag;
-		OTFUint16 lang_tag_count = parse_u16_be(data, offset);
-
-		for (uint16_t i = 0; i < lang_tag_count; ++i) {
-			lang_tag.length        = parse_u16_be(data, offset);
-			lang_tag.langTagOffset = parse_u16_be(data, offset);
-
-			uint32_t str_offset = storage_offset + lang_tag.langTagOffset;
-
-			str_buf.resize(lang_tag.length);
-			memcpy(str_buf.data(), data + str_offset, str_buf.size());
-
-			otf_decode_utf16be_to_utf8(str_buf);
-
-			name_table.languageTags.push_back(str_buf);
-		}
-	}
-
-	std::sort(VERA_SPAN(name_table.names), otf_compare_name_entry);
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_os2_table(OTFOS2Table& os2_table, const uint8_t* data, uint32_t offset)
-{
-	os2_table.version             = parse_u16_be(data, offset);
-	os2_table.xAvgCharWidth       = parse_i16_be(data, offset);
-	os2_table.usWeightClass       = parse_u16_be(data, offset);
-	os2_table.usWidthClass        = parse_u16_be(data, offset);
-	os2_table.fsType              = parse_u16_be(data, offset);
-	os2_table.ySubscriptXSize     = parse_i16_be(data, offset);
-	os2_table.ySubscriptYSize     = parse_i16_be(data, offset);
-	os2_table.ySubscriptXOffset   = parse_i16_be(data, offset);
-	os2_table.ySubscriptYOffset   = parse_i16_be(data, offset);
-	os2_table.ySuperscriptXSize   = parse_i16_be(data, offset);
-	os2_table.ySuperscriptYSize   = parse_i16_be(data, offset);
-	os2_table.ySuperscriptXOffset = parse_i16_be(data, offset);
-	os2_table.ySuperscriptYOffset = parse_i16_be(data, offset);
-	os2_table.yStrikeoutSize      = parse_i16_be(data, offset);
-	os2_table.yStrikeoutPosition  = parse_i16_be(data, offset);
-	os2_table.sFamilyClass        = parse_i16_be(data, offset);
-	parse_array_be(os2_table.panose, 10, data, offset);
-	os2_table.ulUnicodeRange1     = parse_u32_be(data, offset);
-	os2_table.ulUnicodeRange2     = parse_u32_be(data, offset);
-	os2_table.ulUnicodeRange3     = parse_u32_be(data, offset);
-	os2_table.ulUnicodeRange4     = parse_u32_be(data, offset);
-	parse_array_be(os2_table.achVendID, 4, data, offset);
-	os2_table.fsSelection         = parse_u16_be(data, offset);
-	os2_table.usFirstCharIndex    = parse_u16_be(data, offset);
-	os2_table.usLastCharIndex     = parse_u16_be(data, offset);
-	os2_table.sTypoAscender       = parse_i16_be(data, offset);
-	os2_table.sTypoDescender      = parse_i16_be(data, offset);
-	os2_table.sTypoLineGap        = parse_i16_be(data, offset);
-	os2_table.usWinAscent         = parse_u16_be(data, offset);
-	os2_table.usWinDescent        = parse_u16_be(data, offset);
-	
-	if (os2_table.version >= 1) {
-		os2_table.ulCodePageRange1 = parse_u32_be(data, offset);
-		os2_table.ulCodePageRange2 = parse_u32_be(data, offset);
-	}
-	
-	if (os2_table.version >= 2) {
-		os2_table.sxHeight      = parse_i16_be(data, offset);
-		os2_table.sCapHeight    = parse_i16_be(data, offset);
-		os2_table.usDefaultChar = parse_u16_be(data, offset);
-		os2_table.usBreakChar   = parse_u16_be(data, offset);
-		os2_table.usMaxContext  = parse_u16_be(data, offset);
-	}
-	
-	if (os2_table.version >= 5) {
-		os2_table.usLowerOpticalPointSize = parse_u16_be(data, offset);
-		os2_table.usUpperOpticalPointSize = parse_u16_be(data, offset);
-	}
-
-	return OTFResultType::Success;
-}
-
-static const char* otf_get_macintosh_glyph_names(OTFUint16 glyph_name_idx)
+static const char* get_macintosh_glyph_names(OTFUint16 glyph_name_idx)
 {
 	static const char* macintosh_glyph_names[258] = {
 		".notdef",
@@ -911,207 +535,223 @@ static const char* otf_get_macintosh_glyph_names(OTFUint16 glyph_name_idx)
 	return macintosh_glyph_names[glyph_name_idx];
 }
 
-static uint16_t otf_get_glyph_name_count(OTFUint16 num_glyphs, const uint8_t* data, uint32_t offset)
+std::vector<uint32_t> OpenTypeImpl::getTTCFontOffsets(const uint8_t* data, const size_t size)
 {
-	OTFUint16 max_count = 0;
+	if (size < sizeof(TTCHeader))
+		throw Exception("data size too small for TTC header");
 
-	for (uint16_t i = 0; i < num_glyphs; ++i) {
-		OTFUint16 glyph_name_idx = parse_u16_be(data, offset);
-		max_count = std::max<OTFUint16>(max_count, glyph_name_idx + 1);
-	}
+	TTCHeader header;
+	uint32_t  offset = 0;
+	
+	offset = parse_ttc_header(header, data, 0);
 
-	return max_count;
+	if (header.magic != OTFTTCTag::Value)
+		throw Exception("invalid TTC header magic");
+	if (size < sizeof(TTCHeader) + header.numFonts * sizeof(OTFUint32))
+		throw Exception("data size too small for TTC font offsets");
+
+	std::vector<uint32_t> result(header.numFonts);
+
+	for (size_t i = 0; i < header.numFonts; ++i)
+		result[i] = parse_u32_be(data, offset);
+
+	return result;
 }
 
-static OTFResult otf_parse_post_table(OTFPOSTTable& post_table, const uint8_t* data, uint32_t offset)
+OpenTypeImpl::OpenTypeImpl(const uint8_t* data, size_t size, uint32_t offset)
 {
-	auto& header = reinterpret_cast<OTFPOSTTableHeader&>(post_table);
+	const uint8_t* ttc_data = data;
 
-	offset = otf_parse_post_table_header(header, data, offset);
+	data += offset;
+	size -= offset;
 
-	if (otf_get_version_major(header.version) < 2)
+	if (size < sizeof(TTFHeader))
+		throw Exception("data size too small for TTF header");
+
+	TTFHeader      header;
+	OTFTableRecord record;
+
+	offset = parse_ttf_header(header, data, 0);
+
+	if (size < sizeof(TTFHeader) + header.numTables * sizeof(OTFTableRecord))
+		throw Exception("data size too small for TTF table records");
+
+	for (uint16_t i = 0; i < header.numTables; ++i) {
+		offset = parse_table_record(record, data, offset);
+		tableMap[record.tableTag] = record;
+	}
+
+	if (OTFResult result = parseTable(ttc_data, size); result != OTFResultType::Success) {
+		postScript.glyphNames.clear();
+		tableMap.clear();
+		charToGlyphMap.clear();
+		glyphs.clear();
+		nameEntries.clear();
+		languageTags.clear();
+		glyphOffsets.clear();
+		glyphBinary.clear();
+		controlValues.clear();
+		programData.clear();
+
+		throw Exception("failed to parse OpenType tables: " + std::string(result.what()));
+	}
+
+	unitsPerEM = static_cast<float>(this->header.unitsPerEm);
+}
+
+OpenTypeImpl::~OpenTypeImpl()
+{
+	// nothing to do
+}
+
+std::string_view OpenTypeImpl::getName() const VERA_NOEXCEPT
+{
+	for (const auto& entry : nameEntries)
+#ifdef _WIN32
+		if (entry.platformID == OTFPlatformID::Windows)
+			return entry.names[static_cast<size_t>(OTFNameID::FullFontName)];
+#else
+	VERA_ASSERT_MSG(false, "not implemented");
+#endif // _WIN32
+
+	return {};
+}
+
+void OpenTypeImpl::loadAllGlyphs()
+{
+	for (GlyphID glyph_id = 0; glyph_id < maxProfile.numGlyphs; ++glyph_id)
+		if (OTFResult result = loadGlyph(glyph_id); result != OTFResultType::Success)
+			throw Exception("failed to load glyph ID {}: {}", glyph_id, result.what());
+}
+
+void OpenTypeImpl::loadGlyphRange(const basic_range<GlyphID>& range)
+{
+	if (maxProfile.numGlyphs < range.last())
+		throw Exception("glyph ID range out of bounds");
+
+	for (GlyphID glyph_id : range)
+		if (OTFResult result = loadGlyph(glyph_id); result != OTFResultType::Success)
+			throw Exception("failed to load glyph ID {}: {}", glyph_id, result.what());
+}
+
+void OpenTypeImpl::loadCodeRange(const CodeRange& range)
+{
+	if (range == CodeRange(UnicodeRange::ALL))
+
+	if (range.end() > 0x10FFFF)
+		throw Exception("codepoint range out of bounds");
+
+	for (char32_t codepoint : range) {
+		auto it = charToGlyphMap.find(codepoint);
+
+		if (it == charToGlyphMap.cend())
+			throw Exception("codepoint not found in character map");
+		
+		if (OTFResult result = loadGlyph(it->second); result != OTFResultType::Success)
+			throw Exception("failed to load glyph for codepoint U+{:04X}: {}",
+				static_cast<uint32_t>(codepoint), result.what());
+	}
+}
+
+uint32_t OpenTypeImpl::getGlyphCount() const VERA_NOEXCEPT
+{
+	return maxProfile.numGlyphs;
+}
+
+GlyphID OpenTypeImpl::getGlyphID(char32_t codepoint) const
+{
+	auto it = charToGlyphMap.find(codepoint);
+	
+	if (it == charToGlyphMap.cend())
+		throw Exception("codepoint not found in character map");
+	
+	return it->second;
+}
+
+const Glyph& OpenTypeImpl::findGlyph(GlyphID glyph_id) const
+{
+	if (glyph_id >= maxProfile.numGlyphs)
+		throw Exception("glyph ID out of bounds");
+
+	auto it = glyphs.find(glyph_id);
+
+	if (it == glyphs.cend())
+		throw Exception("glyph not loaded");
+
+	return it->second;
+}
+
+const Glyph& OpenTypeImpl::getGlyph(GlyphID glyph_id)
+{
+	if (glyph_id >= maxProfile.numGlyphs)
+		throw Exception("glyph ID out of bounds");
+
+	auto it = glyphs.find(glyph_id);
+
+	if (it == glyphs.cend()) {
+		auto result = loadGlyph(glyph_id);
+
+		if (result != OTFResultType::Success)
+			throw Exception("failed to load glyph: " + std::string(result.what()));
+		
+		return glyphs.find(glyph_id)->second;
+	}
+
+	return it->second;
+}
+
+const Glyph& OpenTypeImpl::findGlyphByCodepoint(char32_t codepoint) const
+{
+	return findGlyph(getGlyphID(codepoint));
+}
+
+const Glyph& OpenTypeImpl::getGlyphByCodepoint(char32_t codepoint)
+{
+	return getGlyph(getGlyphID(codepoint));
+}
+
+OTFResult OpenTypeImpl::loadGlyph(uint32_t glyph_id)
+{
+	auto glyph_it = glyphs.find(glyph_id);
+	if (glyph_it != glyphs.cend())
 		return OTFResultType::Success;
 
-	std::vector<std::string> glyph_names;
-	OTFUint16                num_glyphs    = parse_u16_be(data, offset);
-	uint16_t                 string_count  = otf_get_glyph_name_count(num_glyphs, data, offset);
-	uint32_t                 string_offset = offset + num_glyphs * sizeof(OTFUint16);
+	glyph_it = glyphs.emplace(glyph_id, Glyph{}).first;
 
-	glyph_names.resize(string_count);
-	
-	for (uint16_t i = 0; i < string_count; ++i) {
-		uint8_t        string_length = parse_u8_be(data, string_offset);
-		const uint8_t* data_ptr      = &data[string_offset];
+	OTFGlyphHeader glyph_header;
+	uint32_t       glyph_offset = glyphOffsets[glyph_id];
 
-		glyph_names[i].assign(reinterpret_cast<const char*>(data_ptr), string_length);
-		string_offset += string_length;
-	}
+	glyph_offset = parse_glyph_header(glyph_header, glyphBinary.data(), glyph_offset);
 
-	for (uint16_t i = 0; i < num_glyphs; ++i) {
-		OTFUint16 glyph_name_idx = parse_u16_be(data, offset);
-		
-		if (glyph_name_idx < 258) {
-			const char* glyph_name = otf_get_macintosh_glyph_names(glyph_name_idx);
-			post_table.glyphNames.push_back(glyph_name);
-		} else {
-			std::string& glyph_name = glyph_names[glyph_name_idx - 258];
-			post_table.glyphNames.push_back(glyph_name);
-		}
-	}
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_cvt_table(
-	std::vector<OTFFWORD>& control_values,
-	const uint8_t*         data,
-	const OTFTableRecord&  table_record
-) {
-	if (table_record.length % sizeof(OTFUint16) != 0)
-		return { OTFResultType::InvalidSize, "invalid 'cvt' table size" };
-
-	uint32_t offset = table_record.offset;
-	uint32_t count  = table_record.length / sizeof(OTFUint16);
-
-	control_values.resize(count);
-
-	for (uint32_t i = 0; i < count; ++i)
-		control_values[i] = parse_u16_be(data, offset);
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_fpgm_table(
-	std::vector<uint8_t>&  program_data,
-	const uint8_t*         data,
-	const OTFTableRecord&  table_record
-) {
-	uint32_t offset = table_record.offset;
-	uint32_t count  = table_record.length;
-
-	program_data.resize(count);
-	memcpy(program_data.data(), data + offset, count);
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_parse_loca_table(
-	std::vector<uint32_t>& glyph_offsets,
-	const OTFHEADTable&    head_table,
-	const OTFMAXPTable&    maxp_table,
-	const uint8_t*         data,
-	const OTFTableRecord&  table_record
-) {
-	uint32_t offset = table_record.offset;
-	uint32_t count  = maxp_table.numGlyphs + 1;
-
-	glyph_offsets.resize(count);
-
-	if (head_table.indexToLocFormat == OTFIndexFormat::ShortOffsets) {
-		for (uint32_t i = 0; i < count; ++i)
-			glyph_offsets[i] = parse_u16_be(data, offset) * 2;
-	} else if (head_table.indexToLocFormat == OTFIndexFormat::LongOffsets) {
-		for (uint32_t i = 0; i < count; ++i)
-			glyph_offsets[i] = parse_u32_be(data, offset);
+	if (glyph_header.numberOfContours >= 0) {
+		CHECK(parseSimpleGlyph(
+			glyph_it->second,
+			glyph_header,
+			glyph_offset));
 	} else {
-		return { OTFResultType::InvalidFormat, "invalid 'loca' table index format" };
+		CHECK(parseCompositeGlyph(
+			glyph_it->second,
+			glyph_header,
+			glyph_offset));
 	}
+
+	glyph_it->second.glyphID = glyph_id;
+	glyph_it->second.aabb    = AABB2D{
+		static_cast<float>(glyph_header.xMin),
+		static_cast<float>(glyph_header.yMin),
+		static_cast<float>(glyph_header.xMax),
+		static_cast<float>(glyph_header.yMax)
+	};
 
 	return OTFResultType::Success;
 }
 
-static void otf_make_vector_parser(
-	OTFGlyphFlagBits flags,
-	OTFVectorParser& x_vector_func,
-	OTFVectorParser& y_vector_func
-) {
-	static const auto short_positive_vector = [](const uint8_t* data, uint32_t& offset) {
-		return static_cast<float>(parse_u8_be(data, offset));
-	};
+OTFResult OpenTypeImpl::parseSimpleGlyph(Glyph& glyph, const OTFGlyphHeader& glyph_header, uint32_t offset)
+{
+	static_vector<OTFUint16, MAX_CONTOUR_COUNT> end_indicies;
 
-	static const auto short_negative_vector = [](const uint8_t* data, uint32_t& offset) {
-		return -static_cast<float>(parse_u8_be(data, offset));
-	};
-
-	static const auto long_vector = [](const uint8_t* data, uint32_t& offset) {
-		return static_cast<float>(parse_i16_be(data, offset));
-	};
-
-	static const auto zero_vector = [](const uint8_t* data, uint32_t& offset) {
-		return 0.f;
-	};
-
-	if (otf_has_flag(flags, OTFGlyphFlagBits::XShortVector)) {
-		if (otf_has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
-			x_vector_func = short_positive_vector;
-		else
-			x_vector_func = short_negative_vector;
-	} else {
-		if (otf_has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
-			x_vector_func = zero_vector;
-		else
-			x_vector_func = long_vector;
-	}
-
-	if (otf_has_flag(flags, OTFGlyphFlagBits::YShortVector)) {
-		if (otf_has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive))
-			y_vector_func = short_positive_vector;
-		else
-			y_vector_func = short_negative_vector;
-	} else {
-		if (otf_has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive))
-			y_vector_func = zero_vector;
-		else
-			y_vector_func = long_vector;
-	}
-}
-
-static void otf_get_simple_glyph_point_offset(
-	const uint8_t* data,
-	uint32_t       offset,
-	uint32_t       point_count,
-	uint32_t&      x_point_offset,
-	uint32_t&      y_point_offset
-) {
-	OTFGlyphFlagBits flags;
-	uint32_t         repeat_count;
-	uint32_t         x_point_size = 0;
-
-	while (0 < point_count) {
-		flags = parse_enum_be<OTFGlyphFlagBits>(data, offset);
-
-		if (otf_has_flag(flags, OTFGlyphFlagBits::RepeatFlag)) {
-			repeat_count = static_cast<uint32_t>(parse_u8_be(data, offset) + 1);
-
-			point_count -= repeat_count;
-
-			if (otf_has_flag(flags, OTFGlyphFlagBits::XShortVector))
-				x_point_size += repeat_count;
-			else if (!otf_has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
-				x_point_size += repeat_count * sizeof(OTFInt16);
-		} else {
-			point_count -= 1;
-
-			if (otf_has_flag(flags, OTFGlyphFlagBits::XShortVector))
-				x_point_size += 1;
-			else if (!otf_has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
-				x_point_size += sizeof(OTFInt16);
-		}
-	}
-
-	x_point_offset = offset;
-	y_point_offset = x_point_offset + x_point_size;
-}
-
-static OTFResult otf_parse_simple_glyph(
-	Glyph&                glyph,
-	const OTFGlyphHeader& glyph_header,
-	const uint8_t*        data,
-	uint32_t              offset
-) {
-	static std::vector<OTFUint16> end_indicies;
-
-	uint32_t num_contours = glyph_header.numberOfContours;
+	uint32_t       num_contours = glyph_header.numberOfContours;
+	const uint8_t* data         = glyphBinary.data();
 
 	glyph.contours.resize(num_contours);
 	end_indicies.resize(num_contours);
@@ -1122,21 +762,43 @@ static OTFResult otf_parse_simple_glyph(
 	glyph.instructions = array_view<uint8_t>(data + offset, inst_length);
 	offset            += inst_length;
 
-	uint32_t x_point_offset;
-	uint32_t y_point_offset;
-	uint32_t point_count = end_indicies.back() + 1;
+	uint32_t point_count    = static_cast<uint32_t>(end_indicies.back() + 1);
+	uint32_t x_point_offset = offset;
+	uint32_t y_point_offset = 0;
+	uint32_t x_point_size   = 0;
 
-	otf_get_simple_glyph_point_offset(
-		data,
-		offset,
-		point_count,
-		x_point_offset,
-		y_point_offset);
+	while (0 < point_count) {
+		OTFGlyphFlagBits flags = parse_enum_be<OTFGlyphFlagBits>(data, x_point_offset);
 
-	float2   curr_point;
-	float2   prev_point;
-	float    delta_x;
-	float    delta_y;
+		if (has_flag(flags, OTFGlyphFlagBits::RepeatFlag)) {
+			uint32_t repeat_count = static_cast<uint32_t>(parse_u8_be(data, x_point_offset) + 1);
+
+			if (point_count < repeat_count)
+				return { OTFResultType::InvalidFormat, "glyph data is corrupted" };
+
+			point_count -= repeat_count;
+
+			if (has_flag(flags, OTFGlyphFlagBits::XShortVector))
+				x_point_size += repeat_count;
+			else if (!has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
+				x_point_size += repeat_count * sizeof(OTFInt16);
+		} else {
+			point_count -= 1;
+
+			if (has_flag(flags, OTFGlyphFlagBits::XShortVector))
+				x_point_size += 1;
+			else if (!has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
+				x_point_size += sizeof(OTFInt16);
+		}
+	}
+
+	y_point_offset = x_point_offset + x_point_size;
+	point_count    = static_cast<uint32_t>(end_indicies.back() + 1);
+
+	float2 curr_point;
+	float2 prev_point;
+	float  delta_x;
+	float  delta_y;
 
 	auto     curr_path    = glyph.contours.begin();
 	auto     curr_end     = end_indicies.begin();
@@ -1153,14 +815,14 @@ static OTFResult otf_parse_simple_glyph(
 		if (repeat_count == 0) {
 			auto flags = parse_enum_be<OTFGlyphFlagBits>(data, offset);
 
-			if (otf_has_flag(flags, OTFGlyphFlagBits::RepeatFlag))
+			if (has_flag(flags, OTFGlyphFlagBits::RepeatFlag))
 				repeat_count = parse_u8_be(data, offset) + 1;
 			else
 				repeat_count = 1;
 
-			on_curve = otf_has_flag(flags, OTFGlyphFlagBits::OnCurvePoint);
+			on_curve = has_flag(flags, OTFGlyphFlagBits::OnCurvePoint);
 
-			otf_make_vector_parser(flags, x_vector_func, y_vector_func);
+			make_vector_parser(flags, x_vector_func, y_vector_func);
 		}
 
 		delta_x = x_vector_func(data, x_point_offset);
@@ -1184,17 +846,8 @@ static OTFResult otf_parse_simple_glyph(
 	return OTFResultType::Success;
 }
 
-// forward declaration
-OTFResult otf_load_glyph_impl(OTFFont& font, uint32_t glyph_id, const OTFTableRecord& table_record);
-
-static OTFResult otf_parse_composite_glyph(
-	Glyph&                glyph,
-	OTFFont&              font,
-	const OTFGlyphHeader& glyph_header,
-	const uint8_t*        data,
-	uint32_t              offset,
-	const OTFTableRecord& table_record
-) {
+OTFResult OpenTypeImpl::parseCompositeGlyph(Glyph& glyph, const OTFGlyphHeader& glyph_header, uint32_t offset)
+{
 	OTFComponentGlyphFlagBits flags;
 	OTFGlyphID                glyph_id;
 
@@ -1202,12 +855,14 @@ static OTFResult otf_parse_composite_glyph(
 	float arg1;
 	float arg2;
 
+	const uint8_t* data = glyphBinary.data();
+
 	do {
 		flags    = parse_enum_be<OTFComponentGlyphFlagBits>(data, offset);
 		glyph_id = parse_u16_be(data, offset);
 
-		if (otf_has_flag(flags, OTFComponentGlyphFlagBits::Arg1And2AreWords)) {
-			if (otf_has_flag(flags, OTFComponentGlyphFlagBits::ArgsAreXYValues)) {
+		if (has_flag(flags, OTFComponentGlyphFlagBits::Arg1And2AreWords)) {
+			if (has_flag(flags, OTFComponentGlyphFlagBits::ArgsAreXYValues)) {
 				arg1 = static_cast<float>(parse_i16_be(data, offset));
 				arg2 = static_cast<float>(parse_i16_be(data, offset));
 			} else {
@@ -1215,7 +870,7 @@ static OTFResult otf_parse_composite_glyph(
 				arg2 = static_cast<float>(parse_u16_be(data, offset));
 			}
 		} else {
-			if (otf_has_flag(flags, OTFComponentGlyphFlagBits::ArgsAreXYValues)) {
+			if (has_flag(flags, OTFComponentGlyphFlagBits::ArgsAreXYValues)) {
 				arg1 = static_cast<float>(parse_i8_be(data, offset));
 				arg2 = static_cast<float>(parse_i8_be(data, offset));
 			} else {
@@ -1224,64 +879,56 @@ static OTFResult otf_parse_composite_glyph(
 			}
 		}
 
-		if (otf_has_flag(flags, OTFComponentGlyphFlagBits::WeHaveAScale)) {
-			float scale = otf_f2dot14_to_float(parse_i16_be(data, offset));
+		if (has_flag(flags, OTFComponentGlyphFlagBits::WeHaveAScale)) {
+			float scale = f2dot14_to_float(parse_i16_be(data, offset));
 
 			transform[0] = scale;
 			transform[1] = 0.f;
 			transform[2] = 0.f;
 			transform[3] = scale;
-		} else if (otf_has_flag(flags, OTFComponentGlyphFlagBits::WeHaveAnXAndYScale)) {
-			float x_scale = otf_f2dot14_to_float(parse_i16_be(data, offset));
-			float y_scale = otf_f2dot14_to_float(parse_i16_be(data, offset));
+		} else if (has_flag(flags, OTFComponentGlyphFlagBits::WeHaveAnXAndYScale)) {
+			float x_scale = f2dot14_to_float(parse_i16_be(data, offset));
+			float y_scale = f2dot14_to_float(parse_i16_be(data, offset));
 
 			transform[0] = x_scale;
 			transform[1] = 0.f;
 			transform[2] = 0.f;
 			transform[3] = y_scale;
-		} else if (otf_has_flag(flags, OTFComponentGlyphFlagBits::WeHaveATwoByTwo)) {
-			transform[0] = otf_f2dot14_to_float(parse_i16_be(data, offset));
-			transform[1] = otf_f2dot14_to_float(parse_i16_be(data, offset));
-			transform[2] = otf_f2dot14_to_float(parse_i16_be(data, offset));
-			transform[3] = otf_f2dot14_to_float(parse_i16_be(data, offset));
+		} else if (has_flag(flags, OTFComponentGlyphFlagBits::WeHaveATwoByTwo)) {
+			transform[0] = f2dot14_to_float(parse_i16_be(data, offset));
+			transform[1] = f2dot14_to_float(parse_i16_be(data, offset));
+			transform[2] = f2dot14_to_float(parse_i16_be(data, offset));
+			transform[3] = f2dot14_to_float(parse_i16_be(data, offset));
 		}
 
-		if (otf_has_flag(flags, OTFComponentGlyphFlagBits::ArgsAreXYValues)) {
+		if (has_flag(flags, OTFComponentGlyphFlagBits::ArgsAreXYValues)) {
 			transform[4] = arg1;
 			transform[5] = arg2;
 
-			if (otf_has_flag(flags, OTFComponentGlyphFlagBits::ScaledComponentOffset)) {
+			if (has_flag(flags, OTFComponentGlyphFlagBits::ScaledComponentOffset)) {
 				transform[4] *= transform[0];
 				transform[5] *= transform[3];
 			}
 		}
 
-		if (otf_has_flag(flags, OTFComponentGlyphFlagBits::WeHaveInstructions)) {
+		if (has_flag(flags, OTFComponentGlyphFlagBits::WeHaveInstructions)) {
 			OTFUint16 inst_length = parse_u16_be(data, offset);
 
 			glyph.instructions = array_view<uint8_t>(data + offset, inst_length);
 			offset            += inst_length;
 		}
 
-		auto it = font.glyphs.find(glyph_id);
-		if (it == font.glyphs.end()) {
-			OTF_CHECK(otf_load_glyph_impl(font, glyph_id, table_record));
-			it = font.glyphs.find(glyph_id);
+		auto it = glyphs.find(glyph_id);
+
+		if (it == glyphs.end()) {
+			CHECK(loadGlyph(glyph_id));
+			it = glyphs.find(glyph_id);
 		}
 
 		const Glyph& composite_glyph = it->second;
 
 		if (composite_glyph.contours.empty())
 			return { OTFResultType::InvalidFormat, "invalid composite glyph component format" };
-
-		auto transform_point = [&](const GlyphPoint& p) {
-			GlyphPoint result;
-			result.position.x = transform[0] * p.position.x + transform[1] * p.position.y + transform[4];
-			result.position.y = transform[2] * p.position.x + transform[3] * p.position.y + transform[5];
-			result.onCurve    = p.onCurve;
-
-			return result;
-		};
 
 		// TODO: optimize transform
 
@@ -1293,263 +940,594 @@ static OTFResult otf_parse_composite_glyph(
 			curr_path.reserve(contour.size());
 
 			for (const auto& p : contour) {
-				curr_path.push_back(transform_point(p));
+				float x = transform[0] * p.position.x + transform[1] * p.position.y + transform[4];
+				float y = transform[2] * p.position.x + transform[3] * p.position.y + transform[5];
+
+				curr_path.emplace_back(float2{ x, y }, p.onCurve);
 			}
 		}
-	} while (otf_has_flag(flags, OTFComponentGlyphFlagBits::MoreComponents));
+	} while (has_flag(flags, OTFComponentGlyphFlagBits::MoreComponents));
 
 	return OTFResultType::Success;
 }
 
-static OTFResult otf_parse_table(
-	OTFFont&                                        font,
-	std::unordered_map<OTFTableTag, OTFTableRecord> table_map,
-	const uint8_t*                                  data
-) {
-	if (auto it = table_map.find(OTFTableTag::HEAD); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_head_table(font.head, data, it->second.offset));
+OTFResult OpenTypeImpl::parseTable(const uint8_t* data, const size_t size)
+{
+	if (auto it = tableMap.find(OTFTableTag::HEAD); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'head' table" };
+
+		CHECK(parseHeadTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'head' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::MAXP); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_maxp_table(font.maxProfile, data, it->second.offset));
+	if (auto it = tableMap.find(OTFTableTag::MAXP); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'maxp' table" };
+
+		CHECK(parseMaxpTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'maxp' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::CMAP); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_cmap_table(font.characterMap, data, it->second.offset));
+	if (auto it = tableMap.find(OTFTableTag::CMAP); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'cmap' table" };
+
+		CHECK(parseCmapTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'cmap' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::HHEA); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_hhea_table(font.horizontalHeader, data, it->second.offset));
+	if (auto it = tableMap.find(OTFTableTag::HHEA); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'hhea' table" };
+
+		CHECK(parseHheaTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'hhea' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::HMTX); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_hmtx_table(
-			font.horizontalMetrics,
-			font.maxProfile,
-			font.horizontalHeader,
-			data,
-			it->second.offset));
+	if (auto it = tableMap.find(OTFTableTag::HMTX); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'hmtx' table" };
+
+		CHECK(parseHmtxTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'hmtx' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::NAME); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_name_table(font.nameTable, data, it->second.offset));
+	if (auto it = tableMap.find(OTFTableTag::NAME); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'name' table" };
+
+		CHECK(parseNameTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'name' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::OS2); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_os2_table(font.os2Metrics, data, it->second.offset));
+	if (auto it = tableMap.find(OTFTableTag::OS2); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'os/2' table" };
+
+		CHECK(parseOs2Table(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'os/2' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::POST); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_post_table(font.postScript, data, it->second.offset));
+	if (auto it = tableMap.find(OTFTableTag::POST); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'post' table" };
+
+		CHECK(parsePostTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'post' table" };
 	}
 
-	if (auto it = table_map.find(OTFTableTag::CVT); it != table_map.cend())
-		OTF_CHECK(otf_parse_cvt_table(font.controlValues, data, it->second));
+	if (auto it = tableMap.find(OTFTableTag::CVT); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'cvt' table" };
+		if (it->second.length % sizeof(OTFUint16) != 0)
+			return { OTFResultType::InvalidSize, "invalid 'cvt' table size" };
 
-	if (auto it = table_map.find(OTFTableTag::FPGM); it != table_map.cend())
-		OTF_CHECK(otf_parse_fpgm_table(font.programData, data, it->second));
+		CHECK(parseCvtTable(data + it->second.offset, it->second.length));
+	}
 
-	if (auto it = table_map.find(OTFTableTag::LOCA); it != table_map.cend()) {
-		OTF_CHECK(otf_parse_loca_table(font.glyphOffsets, font.head, font.maxProfile, data, it->second));
+	if (auto it = tableMap.find(OTFTableTag::FPGM); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'fpgm' table" };
+
+		CHECK(parseFpgmTable(data + it->second.offset, it->second.length));
+	}
+
+	if (auto it = tableMap.find(OTFTableTag::LOCA); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'loca' table" };
+
+		CHECK(parseLocaTable(data + it->second.offset, it->second.length));
 	} else {
 		return { OTFResultType::MissingTable, "missing 'loca' table" };
 	}
 
-	return OTFResultType::Success;
-}
+	if (auto it = tableMap.find(OTFTableTag::GLYF); it != tableMap.cend()) {
+		if (size < it->second.offset + it->second.length)
+			return { OTFResultType::InvalidSize, "data size too small for 'glyf' table" };
 
-static OTFResult otf_load_font(OTFFont& font, const uint8_t* data, uint32_t offset)
-{
-	TTFHeader      header;
-	OTFTableRecord record;
+		uint32_t offset = it->second.offset;
+		uint32_t length = it->second.length;
 
-	offset = otf_parse_ttf_header(header, data, offset);
-
-	for (uint16_t i = 0; i < header.numTables; ++i) {
-		offset = otf_parse_table_record(record, data, offset);
-		font.tableMap[record.tableTag] = record;
-	}
-
-	OTF_CHECK(otf_parse_table(font, font.tableMap, data));
-
-	return OTFResultType::Success;
-}
-
-static OTFResult otf_load_glyph_impl(OTFFont& font, uint32_t glyph_id, const OTFTableRecord& table_record)
-{
-	auto glyph_it = font.glyphs.find(glyph_id);
-	if (glyph_it != font.glyphs.cend())
-		return OTFResultType::Success;
-
-	glyph_it = font.glyphs.emplace(glyph_id, Glyph{}).first;
-
-	OTFGlyphHeader glyph_header;
-	uint32_t       start_offset = table_record.offset;
-	uint32_t       glyph_offset = start_offset + font.glyphOffsets[glyph_id];
-
-	glyph_offset = otf_parse_glyph_header(glyph_header, font.binaryData.data(), glyph_offset);
-
-	if (glyph_header.numberOfContours >= 0) {
-		OTF_CHECK(otf_parse_simple_glyph(
-			glyph_it->second,
-			glyph_header,
-			font.binaryData.data(),
-			glyph_offset));
+		glyphBinary.assign(data + offset, data + offset + length);
 	} else {
-		OTF_CHECK(otf_parse_composite_glyph(
-			glyph_it->second,
-			font,
-			glyph_header,
-			font.binaryData.data(),
-			glyph_offset,
-			table_record));
-	}
-
-	glyph_it->second.glyphID = glyph_id;
-	glyph_it->second.aabb    = AABB2D{
-		static_cast<float>(glyph_header.xMin),
-		static_cast<float>(glyph_header.yMin),
-		static_cast<float>(glyph_header.xMax),
-		static_cast<float>(glyph_header.yMax)
-	};
-
-	return OTFResultType::Success;
-}
-
-VERA_PRIV_NAMESPACE_END
-
-OTFResult otf_load_ttc(OTFFontCollection& font_collection, const uint8_t* data, const size_t size)
-{
-	TTCHeader header;
-	uint32_t  offset = 0;
-	
-	offset = priv::otf_parse_ttc_header(header, data, offset);
-
-	if (header.magic != OTFTTCTag::Value)
-		return { OTFResultType::InvalidMagic, "invalid TTC header magic" };
-
-	font_collection.fonts.resize(header.numFonts);
-
-	for (uint32_t i = 0; i < header.numFonts; ++i) {
-		uint32_t font_offset = parse_u32_be(data, offset);
-		auto&    font        = font_collection.fonts[i];
-
-		OTF_CHECK(priv::otf_load_font(font, data, font_offset));
-
-		// TODO: copy binary datas that is only related to the font
-		font.binaryData.assign(VERA_SPAN_ARRAY(data, size));
-	}
-
-	return OTFResultType::Success;
-}
-
-OTFResult otf_get_ttc_font_count(const uint8_t* data, const size_t size, uint32_t* font_count)
-{
-	TTCHeader header;
-
-	priv::otf_parse_ttc_header(header, data, 0);
-
-	*font_count = 0;
-
-	if (header.magic != OTFTTCTag::Value)
-		return { OTFResultType::InvalidMagic, "invalid TTC header magic" };
-
-	*font_count = header.numFonts;
-
-	return OTFResultType::Success;
-}
-
-OTFResult otf_load_ttf(OTFFont& font, const uint8_t* data, const size_t size)
-{
-	OTF_CHECK(priv::otf_load_font(font, data, 0));
-
-	font.binaryData.assign(VERA_SPAN_ARRAY(data, size));
-
-	return OTFResultType::Success;
-}
-
-OTFResult otf_load_glyph_range(OTFFont& font, GlyphID start, GlyphID end)
-{
-	auto it = font.tableMap.find(OTFTableTag::GLYF);
-
-	if (it == font.tableMap.cend())
 		return { OTFResultType::MissingTable, "missing 'glyf' table" };
-	if (end < start)
-		return { OTFResultType::InvalidRange, "invalid glyph ID range" };
-	if (font.maxProfile.numGlyphs <= end)
-		return { OTFResultType::OutOfBounds, "glyph ID out of bounds" };
+	}
+}
 
-	for (GlyphID glyph_id = start; glyph_id <= end; ++glyph_id)
-		OTF_CHECK(priv::otf_load_glyph_impl(font, glyph_id, it->second));
+OTFResult OpenTypeImpl::parseHeadTable(const uint8_t* data, const size_t size)
+{
+	uint32_t offset = 0;
 
-	font.loadedCodePoints.insert(start, end);
+	header.version            = parse_u32_be(data, offset);
+	header.fontRevision       = parse_u32_be(data, offset);
+	header.checkSumAdjustment = parse_u32_be(data, offset);
+	header.magicNumber        = parse_u32_be(data, offset);
+	header.flags              = parse_u16_be(data, offset);
+	header.unitsPerEm         = parse_u16_be(data, offset);
+	header.created            = parse_u64_be(data, offset);
+	header.modified           = parse_u64_be(data, offset);
+	header.xMin               = parse_i16_be(data, offset);
+	header.yMin               = parse_i16_be(data, offset);
+	header.xMax               = parse_i16_be(data, offset);
+	header.yMax               = parse_i16_be(data, offset);
+	header.macStyle           = parse_u16_be(data, offset);
+	header.lowestRecPPEM      = parse_u16_be(data, offset);
+	header.fontDirectionHint  = parse_i16_be(data, offset);
+	header.indexToLocFormat   = parse_enum_be<OTFIndexFormat>(data, offset);
+	header.glyphDataFormat    = parse_i16_be(data, offset);
+
+	if (header.magicNumber != 0x5f0f3cf5)
+		return { OTFResultType::InvalidMagic, "invalid 'head' table magic number" };
 
 	return OTFResultType::Success;
 }
 
-OTFResult otf_load_code_range(OTFFont& font, char32_t start, char32_t end)
+OTFResult OpenTypeImpl::parseMaxpTable(const uint8_t* data, const size_t size)
 {
-	auto it = font.tableMap.find(OTFTableTag::GLYF);
+	uint32_t offset = 0;
 
-	if (it == font.tableMap.cend())
-		return { OTFResultType::MissingTable, "missing 'glyf' table" };
+	maxProfile.version               = parse_u32_be(data, offset);
+	maxProfile.numGlyphs             = parse_u16_be(data, offset);
 
-	if (start == 0 && end == 0x10FFFF) {
-		for (GlyphID glyph_id = 0; glyph_id < font.maxProfile.numGlyphs; ++glyph_id)
-			OTF_CHECK(priv::otf_load_glyph_impl(font, glyph_id, it->second));
-
-		// TODO: set loaded code points
-
+	if (maxProfile.version == make_version(0, 5))
 		return OTFResultType::Success;
-	}
 
-	for (char32_t codepoint = start; codepoint <= end; ++codepoint) {
-		auto glyph_it = font.characterMap.charToGlyphMap.find(codepoint);
-
-		if (glyph_it == font.characterMap.charToGlyphMap.cend())
-			return { OTFResultType::MissingCodepoint, "codepoint not found in character map" };
-
-		OTF_CHECK(priv::otf_load_glyph_impl(font, glyph_it->second, it->second));
-	}
-
-	font.loadedCodePoints.insert(start, end);
+	maxProfile.maxPoints             = parse_u16_be(data, offset);
+	maxProfile.maxContours           = parse_u16_be(data, offset);
+	maxProfile.maxCompositePoints    = parse_u16_be(data, offset);
+	maxProfile.maxCompositeContours  = parse_u16_be(data, offset);
+	maxProfile.maxZones              = parse_u16_be(data, offset);
+	maxProfile.maxTwilightPoints     = parse_u16_be(data, offset);
+	maxProfile.maxStorage            = parse_u16_be(data, offset);
+	maxProfile.maxFunctionDefs       = parse_u16_be(data, offset);
+	maxProfile.maxInstructionDefs    = parse_u16_be(data, offset);
+	maxProfile.maxStackElements      = parse_u16_be(data, offset);
+	maxProfile.maxSizeOfInstructions = parse_u16_be(data, offset);
+	maxProfile.maxComponentElements  = parse_u16_be(data, offset);
+	maxProfile.maxComponentDepth     = parse_u16_be(data, offset);
 
 	return OTFResultType::Success;
 }
 
-OTFResult otf_try_load_code_range(OTFFont& font, char32_t start, char32_t end)
+OTFResult OpenTypeImpl::parseCmapTable(const uint8_t* data, const size_t size)
 {
-	auto it = font.tableMap.find(OTFTableTag::GLYF);
+	OTFCMAPTableHeader header;
+	OTFEncodingRecord  encoding_record;
+	
+	uint32_t encoding_offset = parse_cmap_table_header(header, data, 0);
 
-	if (it == font.tableMap.cend())
-		return { OTFResultType::MissingTable, "missing 'glyf' table" };
+	for (uint16_t i = 0; i < header.numSubtables; ++i) {
+		encoding_offset = parse_encoding_record(encoding_record, data, encoding_offset);
 
-	for (char32_t codepoint = start; codepoint <= end; ++codepoint) {
-		auto glyph_it = font.characterMap.charToGlyphMap.find(codepoint);
+		uint32_t       subtable_offset = encoding_record.subtableOffset;
+		OTFCMAPFormat  format          = parse_enum_be<OTFCMAPFormat>(data, subtable_offset);
+		const uint8_t* subtable_data   = data + subtable_offset;
+		size_t         subtable_size   = size - subtable_offset;
 
-		if (glyph_it != font.characterMap.charToGlyphMap.cend())
-			OTF_CHECK(priv::otf_load_glyph_impl(font, glyph_it->second, it->second));
+		// TODO: check size of subtable
+
+		switch (format) {
+		case OTFCMAPFormat::ByteEncodingTable:
+			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
+		case OTFCMAPFormat::HighByteMappingThroughTable:
+			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
+		case OTFCMAPFormat::SegmentMappingToDeltaValues:
+			CHECK(parseCmapFormat4(subtable_data, subtable_size, encoding_record));
+			break;
+		case OTFCMAPFormat::TrimmedTableMapping:
+			CHECK(parseCmapFormat6(subtable_data, subtable_size, encoding_record));
+			break;
+		case OTFCMAPFormat::Mixed16And32BitMapping:
+			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
+		case OTFCMAPFormat::TrimmedArray:
+			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
+		case OTFCMAPFormat::SegmentedCoverage:
+			CHECK(parseCmapFormat12(subtable_data, subtable_size, encoding_record));
+			break;
+		case OTFCMAPFormat::ManyToOneRangeMappings:
+			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
+		case OTFCMAPFormat::UnicodeVariationSequences:
+			return { OTFResultType::Unsupported, "unsupported cmap subtable format" };
+		default:
+			return { OTFResultType::InvalidFormat, "invalid cmap subtable format" };
+		}
 	}
 
-	font.loadedCodePoints.insert(start, end);
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseHheaTable(const uint8_t* data, const size_t size)
+{
+	uint32_t offset = 0;
+
+	horizontalHeader.majorVersion        = parse_u16_be(data, offset);
+	horizontalHeader.minorVersion        = parse_u16_be(data, offset);
+	horizontalHeader.ascender            = parse_i16_be(data, offset);
+	horizontalHeader.descender           = parse_i16_be(data, offset);
+	horizontalHeader.lineGap             = parse_i16_be(data, offset);
+	horizontalHeader.advanceWidthMax     = parse_u16_be(data, offset);
+	horizontalHeader.minLeftSideBearing  = parse_i16_be(data, offset);
+	horizontalHeader.minRightSideBearing = parse_i16_be(data, offset);
+	horizontalHeader.xMaxExtent          = parse_i16_be(data, offset);
+	horizontalHeader.caretSlopeRise      = parse_i16_be(data, offset);
+	horizontalHeader.caretSlopeRun       = parse_i16_be(data, offset);
+	horizontalHeader.caretOffset         = parse_i16_be(data, offset);
+	horizontalHeader.reserved0           = parse_i16_be(data, offset);
+	horizontalHeader.reserved1           = parse_i16_be(data, offset);
+	horizontalHeader.reserved2           = parse_i16_be(data, offset);
+	horizontalHeader.reserved3           = parse_i16_be(data, offset);
+	horizontalHeader.metricDataFormat    = parse_i16_be(data, offset);
+	horizontalHeader.numberOfHMetrics    = parse_u16_be(data, offset);
 
 	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseHmtxTable(const uint8_t* data, const size_t size)
+{
+	OTFLongHorMetric metric;
+	OTFFWORD         bearing;
+	uint32_t         offset      = 0;
+	uint16_t         num_metrics = horizontalHeader.numberOfHMetrics;
+	uint16_t         num_glyphs  = maxProfile.numGlyphs;
+	
+	for (uint16_t i = 0; i < num_metrics; ++i) {
+		offset = parse_long_hor_metric(metric, data, offset);
+		horizontalMetrics.longHorMetrics.push_back(metric);
+	}
+
+	for (uint16_t i = num_metrics; i < num_glyphs; ++i) {
+		bearing = parse_i16_be(data, offset);
+		horizontalMetrics.leftSideBearings.push_back(bearing);
+	}
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseNameTable(const uint8_t* data, const size_t size)
+{
+	OTFNAMETableHeader header;
+	OTFNameRecord      name_record;
+	std::string        str_buf;
+	uint32_t           offset = 0;
+
+	offset = parse_name_table_header(header, data, offset);
+
+	for (uint16_t i = 0; i < header.count; ++i) {
+		offset = parse_name_record(name_record, data, offset);
+
+		if (name_record.nameID >= OTFNameID::__Count__)
+			return { OTFResultType::InvalidID, "invalid name id" };
+
+		uint32_t str_offset = header.storageOffset + name_record.stringOffset;
+
+		str_buf.resize(name_record.length);
+		memcpy(str_buf.data(), data + str_offset, str_buf.size());
+
+		if (str_buf[0] == '\0')
+			decode_utf16be_to_utf8(str_buf);
+
+		OTFNameEntry* name_entry = findNameEntry(
+			name_record.platformID,
+			name_record.encodingID,
+			name_record.languageID);
+
+		if (name_entry == nullptr) {
+			OTFNameEntry& new_entry = nameEntries.emplace_back();
+			new_entry.platformID = name_record.platformID;
+			new_entry.encodingID = name_record.encodingID;
+			new_entry.languageID = name_record.languageID;
+			new_entry.names.resize(static_cast<size_t>(OTFNameID::__Count__));
+			new_entry.names[static_cast<size_t>(name_record.nameID)] = str_buf;
+		} else {
+			name_entry->names[static_cast<size_t>(name_record.nameID)] = str_buf;
+		}
+	}
+
+	if (header.version == 1) {
+		OTFLangTagRecord lang_tag;
+		OTFUint16 lang_tag_count = parse_u16_be(data, offset);
+
+		for (uint16_t i = 0; i < lang_tag_count; ++i) {
+			lang_tag.length        = parse_u16_be(data, offset);
+			lang_tag.langTagOffset = parse_u16_be(data, offset);
+
+			uint32_t str_offset = header.storageOffset + lang_tag.langTagOffset;
+
+			str_buf.resize(lang_tag.length);
+			memcpy(str_buf.data(), data + str_offset, str_buf.size());
+
+			decode_utf16be_to_utf8(str_buf);
+
+			languageTags.push_back(str_buf);
+		}
+	}
+
+	std::sort(VERA_SPAN(nameEntries), compare_name_entry);
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseOs2Table(const uint8_t* data, const size_t size)
+{
+	uint32_t offset = 0;
+
+	os2Metrics.version             = parse_u16_be(data, offset);
+	os2Metrics.xAvgCharWidth       = parse_i16_be(data, offset);
+	os2Metrics.usWeightClass       = parse_u16_be(data, offset);
+	os2Metrics.usWidthClass        = parse_u16_be(data, offset);
+	os2Metrics.fsType              = parse_u16_be(data, offset);
+	os2Metrics.ySubscriptXSize     = parse_i16_be(data, offset);
+	os2Metrics.ySubscriptYSize     = parse_i16_be(data, offset);
+	os2Metrics.ySubscriptXOffset   = parse_i16_be(data, offset);
+	os2Metrics.ySubscriptYOffset   = parse_i16_be(data, offset);
+	os2Metrics.ySuperscriptXSize   = parse_i16_be(data, offset);
+	os2Metrics.ySuperscriptYSize   = parse_i16_be(data, offset);
+	os2Metrics.ySuperscriptXOffset = parse_i16_be(data, offset);
+	os2Metrics.ySuperscriptYOffset = parse_i16_be(data, offset);
+	os2Metrics.yStrikeoutSize      = parse_i16_be(data, offset);
+	os2Metrics.yStrikeoutPosition  = parse_i16_be(data, offset);
+	os2Metrics.sFamilyClass        = parse_i16_be(data, offset);
+	parse_array_be(os2Metrics.panose, 10, data, offset);
+	os2Metrics.ulUnicodeRange1     = parse_u32_be(data, offset);
+	os2Metrics.ulUnicodeRange2     = parse_u32_be(data, offset);
+	os2Metrics.ulUnicodeRange3     = parse_u32_be(data, offset);
+	os2Metrics.ulUnicodeRange4     = parse_u32_be(data, offset);
+	parse_array_be(os2Metrics.achVendID, 4, data, offset);
+	os2Metrics.fsSelection         = parse_u16_be(data, offset);
+	os2Metrics.usFirstCharIndex    = parse_u16_be(data, offset);
+	os2Metrics.usLastCharIndex     = parse_u16_be(data, offset);
+	os2Metrics.sTypoAscender       = parse_i16_be(data, offset);
+	os2Metrics.sTypoDescender      = parse_i16_be(data, offset);
+	os2Metrics.sTypoLineGap        = parse_i16_be(data, offset);
+	os2Metrics.usWinAscent         = parse_u16_be(data, offset);
+	os2Metrics.usWinDescent        = parse_u16_be(data, offset);
+	
+	if (os2Metrics.version >= 1) {
+		os2Metrics.ulCodePageRange1 = parse_u32_be(data, offset);
+		os2Metrics.ulCodePageRange2 = parse_u32_be(data, offset);
+	}
+	
+	if (os2Metrics.version >= 2) {
+		os2Metrics.sxHeight      = parse_i16_be(data, offset);
+		os2Metrics.sCapHeight    = parse_i16_be(data, offset);
+		os2Metrics.usDefaultChar = parse_u16_be(data, offset);
+		os2Metrics.usBreakChar   = parse_u16_be(data, offset);
+		os2Metrics.usMaxContext  = parse_u16_be(data, offset);
+	}
+	
+	if (os2Metrics.version >= 5) {
+		os2Metrics.usLowerOpticalPointSize = parse_u16_be(data, offset);
+		os2Metrics.usUpperOpticalPointSize = parse_u16_be(data, offset);
+	}
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parsePostTable(const uint8_t* data, const size_t size)
+{
+	uint32_t offset = 0;
+	auto&    header = reinterpret_cast<OTFPOSTTableHeader&>(postScript);
+
+	offset = parse_post_table_header(header, data, offset);
+
+	if (get_version_major(header.version) < 2)
+		return OTFResultType::Success;
+
+	std::vector<std::string> glyph_names;
+	OTFUint16                num_glyphs    = parse_u16_be(data, offset);
+	uint16_t                 string_count  = getGlyphNameCount(num_glyphs, data, offset);
+	uint32_t                 string_offset = offset + num_glyphs * sizeof(OTFUint16);
+
+	glyph_names.resize(string_count);
+	
+	for (uint16_t i = 0; i < string_count; ++i) {
+		uint8_t        string_length = parse_u8_be(data, string_offset);
+		const uint8_t* data_ptr      = &data[string_offset];
+
+		glyph_names[i].assign(reinterpret_cast<const char*>(data_ptr), string_length);
+		string_offset += string_length;
+	}
+
+	for (uint16_t i = 0; i < num_glyphs; ++i) {
+		OTFUint16 glyph_name_idx = parse_u16_be(data, offset);
+		
+		if (glyph_name_idx < 258) {
+			const char* glyph_name = get_macintosh_glyph_names(glyph_name_idx);
+			postScript.glyphNames.push_back(glyph_name);
+		} else {
+			std::string& glyph_name = glyph_names[glyph_name_idx - 258];
+			postScript.glyphNames.push_back(glyph_name);
+		}
+	}
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseCvtTable(const uint8_t* data, const size_t size)
+{
+	controlValues.resize(size / sizeof(OTFUint16));
+
+	for (uint32_t offset = 0; auto& value : controlValues)
+		value = parse_u16_be(data, offset);
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseFpgmTable(const uint8_t* data, const size_t size)
+{
+	programData.resize(size);
+	memcpy(programData.data(), data, size);
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseLocaTable(const uint8_t* data, const size_t size)
+{
+	uint32_t offset = 0;
+	uint32_t count  = maxProfile.numGlyphs + 1;
+
+	glyphOffsets.resize(count);
+
+	if (header.indexToLocFormat == OTFIndexFormat::ShortOffsets) {
+		if (size < count * sizeof(OTFUint16))
+			return { OTFResultType::InvalidSize, "data size too small for 'loca' table" };
+
+		for (uint32_t i = 0; i < count; ++i)
+			glyphOffsets[i] = parse_u16_be(data, offset) * 2;
+	} else if (header.indexToLocFormat == OTFIndexFormat::LongOffsets) {
+		if (size < count * sizeof(OTFUint32))
+			return { OTFResultType::InvalidSize, "data size too small for 'loca' table" };
+
+		for (uint32_t i = 0; i < count; ++i)
+			glyphOffsets[i] = parse_u32_be(data, offset);
+	} else {
+		return { OTFResultType::InvalidFormat, "invalid 'loca' table index format" };
+	}
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseCmapFormat4(const uint8_t* data, const size_t size, const OTFEncodingRecord& encoding_record)
+{
+	uint32_t      offset         = 0;
+	OTFUint16     length         = parse_u16_be(data, offset);
+	OTFLanguageID language       = parse_language_id(data, offset, encoding_record.platformID);
+	OTFUint16     seg_count      = parse_u16_be(data, offset) / 2;
+/*  OTFUint16     search_range   = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
+/*  OTFUint16     entry_selector = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
+/*  OTFUint16     range_shift    = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
+	
+	uint32_t seg_count_size      = seg_count * sizeof(OTFUint16);
+	uint32_t start_code_offset   = offset + seg_count_size + sizeof(uint16_t);
+	uint32_t end_code_offset     = offset;
+	uint32_t id_delta_offset     = start_code_offset + seg_count_size;
+	uint32_t id_range_off_offset = id_delta_offset + seg_count_size;
+
+	if (!supported_cmap_encoding_format4(encoding_record.encodingID))
+		return { OTFResultType::Unsupported, "unsupported cmap format4 encoding" };
+
+	for (uint16_t i = 0; i < seg_count; ++i) {
+		char32_t start_code      = static_cast<char32_t>(parse_u16_be(data, start_code_offset));
+		char32_t end_code        = static_cast<char32_t>(parse_u16_be(data, end_code_offset));
+		uint32_t array_offset    = id_range_off_offset;
+		uint32_t id_range_offset = static_cast<uint32_t>(parse_u16_be(data, id_range_off_offset));
+		int16_t  id_delta        = parse_i16_be(data, id_delta_offset);
+
+		if (id_range_offset == 0) {
+			for (char32_t i = start_code; i <= end_code; ++i) {
+				auto glyph_idx = static_cast<OTFUint16>(i + id_delta);
+				charToGlyphMap[i] = glyph_idx;
+			}
+		} else {
+			for (char32_t i = start_code; i <= end_code; ++i) {
+				uint32_t  idx_offset = id_range_offset + 2 * (i - start_code) + array_offset;
+				OTFUint16 glyph_idx  = parse_u16_be(data, idx_offset);
+
+				if (glyph_idx != 0)
+					glyph_idx += id_delta;
+
+				charToGlyphMap[i] = glyph_idx;
+			}
+		}
+	}
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseCmapFormat6(const uint8_t* data, const size_t size, const OTFEncodingRecord& encoding_record)
+{
+	uint32_t      offset      = 0;
+	OTFLanguageID language    = parse_language_id(data, offset, encoding_record.platformID);
+	OTFUint16     first_code  = parse_u16_be(data, offset);
+	OTFUint16     entry_count = parse_u16_be(data, offset);
+
+	for (uint16_t i = 0; i < entry_count; ++i) {
+		char32_t  code     = static_cast<char32_t>(first_code + i);
+		OTFUint16 glyph_id = parse_u16_be(data, offset);
+
+		charToGlyphMap[code] = glyph_id;
+	}
+
+	return OTFResultType::Success;
+}
+
+OTFResult OpenTypeImpl::parseCmapFormat12(const uint8_t* data, const size_t size, const OTFEncodingRecord& encoding_record)
+{
+	OTFSequentialMapGroup map_group;
+
+	uint32_t offset      = 0;
+/*  OTFUint16 reserved   = parse_u16_be(data, offset); */ offset += sizeof(OTFUint16);
+	OTFUint32 length     = parse_u32_be(data, offset);
+	OTFUint32 language   = parse_u32_be(data, offset);
+	OTFUint32 num_groups = parse_u32_be(data, offset);
+
+	for (uint32_t i = 0; i < num_groups; ++i) {
+		offset = parse_sequential_map_group(map_group, data, offset);
+		
+		uint32_t code_count      = map_group.endCharCode - map_group.startCharCode + 1;
+		uint32_t first_glyph_idx = map_group.startGlyphID;
+		uint32_t last_glyph_idx  = first_glyph_idx + code_count;
+		char32_t code            = static_cast<char32_t>(map_group.startCharCode);
+
+		for (uint32_t i = first_glyph_idx; i < last_glyph_idx; ++i, ++ code)
+			charToGlyphMap[code] = i;
+	}
+
+	return OTFResultType::Success;
+}
+
+OTFNameEntry* OpenTypeImpl::findNameEntry(OTFPlatformID platform_id, OTFEncodingID encoding_id, OTFLanguageID language_id)
+{
+	auto cmp_entry = OTFNameEntry{ platform_id, encoding_id, language_id, {} };
+	auto it        = std::lower_bound(VERA_SPAN(nameEntries), cmp_entry, compare_name_entry);
+
+	return
+		it != nameEntries.end()&&
+		it->platformID == platform_id &&
+		it->encodingID == encoding_id &&
+		it->languageID == language_id ?
+		&(*it) : nullptr;
+}
+
+uint16_t OpenTypeImpl::getGlyphNameCount(OTFUint16 num_glyphs, const uint8_t* data, uint32_t offset)
+{
+	OTFUint16 max_count = 0;
+
+	for (uint16_t i = 0; i < num_glyphs; ++i) {
+		OTFUint16 glyph_name_idx = parse_u16_be(data, offset);
+		max_count = std::max<OTFUint16>(max_count, glyph_name_idx + 1);
+	}
+
+	return max_count;
 }
 
 VERA_NAMESPACE_END

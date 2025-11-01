@@ -1,36 +1,27 @@
 #pragma once
 
 #include "../core/intrusive_ptr.h"
-#include "../util/result_message.h"
 #include "../util/array_view.h"
-#include "../util/range.h"
 #include "code_range.h"
 #include "glyph.h"
 #include <string_view>
+#include <memory>
 
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
 
-struct FontImpl;
+class FontImplBase;
 
 VERA_PRIV_NAMESPACE_END
 
-enum class FontResultType VERA_ENUM
+enum class FontFormat VERA_ENUM
 {
-	Success,
-	AlreadyLoaded,
-	FailedToOpenFile,
-	TooManyFontsInFile,
-	UnsupportedFormat,
-	UnsupportedFeature,
-	AllocationFailed,
-	InvalidFormat,
-	MissingCodepoint,
-	MissingGlyph,
-	OutOfBounds
+	Unknown,
+	TrueType,
+	TrueTypeCollection,
+	OpenType,
+	SVG
 };
-
-typedef ResultMessage<FontResultType> FontResult;
 
 class Font : public ManagedObject
 {
@@ -44,20 +35,26 @@ public:
 	VERA_NODISCARD obj<Font> create(std::string_view path);
 	~Font() VERA_NOEXCEPT;
 
-	FontResult load(std::string_view path) VERA_NOEXCEPT;
+	void load(std::string_view path);
 	
+	VERA_NODISCARD FontFormat getFormat() const VERA_NOEXCEPT;
 	VERA_NODISCARD std::string_view getName() const VERA_NOEXCEPT;
 
-	FontResult loadGlyphRange(const basic_range<uint32_t>& range) VERA_NOEXCEPT;
-	FontResult loadCodeRange(const CodeRange& range) VERA_NOEXCEPT;
+	void loadAllGlyphs();
+	void loadGlyphRange(const basic_range<uint32_t>& range);
+	void loadCodeRange(const CodeRange& range);
 
 	VERA_NODISCARD uint32_t getGlyphCount() const VERA_NOEXCEPT;
-	VERA_NODISCARD const Glyph* getGlyph(GlyphID glyph_id) const VERA_NOEXCEPT;
-	VERA_NODISCARD const Glyph* findGlyph(char32_t codepoint) const VERA_NOEXCEPT;
+	VERA_NODISCARD GlyphID getGlyphID(char32_t codepoint) const;
+	VERA_NODISCARD const Glyph& findGlyph(GlyphID glyph_id) const;
+	VERA_NODISCARD const Glyph& getGlyph(GlyphID glyph_id);
+	VERA_NODISCARD const Glyph& findGlyphByCodepoint(char32_t codepoint) const;
+	VERA_NODISCARD const Glyph& getGlyphByCodepoint(char32_t codepoint);
 
 	VERA_NODISCARD bool empty() const VERA_NOEXCEPT;
+
 private:
-	priv::FontImpl* m_impl;
+	std::unique_ptr<priv::FontImplBase> m_impl;
 };
 
 VERA_NAMESPACE_END

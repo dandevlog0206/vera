@@ -1,22 +1,12 @@
-#define OPEN_TYPE_IMPLEMENTAION
-
 #pragma once
 
 #include "../../include/vera/typography/glyph.h"
 #include "../../include/vera/util/result_message.h"
 #include "../../include/vera/util/ranged_set.h"
-#include "../parse.h"
+#include "font_impl_base.h"
 #include <unordered_map>
 #include <map>
-#include <algorithm>
 #include <string>
-
-#define OTF_CHECK(expression)                          \
-	do {                                               \
-		OTFResult result = expression;                 \
-		if (result.result() != OTFResultType::Success) \
-			return result;                             \
-	} while (0)
 
 VERA_NAMESPACE_BEGIN
 
@@ -36,8 +26,6 @@ typedef int16_t OTFOffset16;
 typedef int32_t OTFOffset32;
 typedef uint32_t OTFVersion;
 typedef uint16_t OTFGlyphID;
-
-typedef float (*OTFVectorParser)(const uint8_t*, uint32_t&);
 
 enum class OTFResultType
 {
@@ -526,14 +514,6 @@ struct OTFSequentialMapGroup
 	OTFUint32 startGlyphID;
 };
 
-class OTFCMAPTable
-{
-public:
-	OTFUint16                                version        = {};
-	OTFUint16                                numSubtables   = {};
-	std::unordered_map<char32_t, OTFGlyphID> charToGlyphMap = {};
-};
-
 // HHEA: Horizontal Header Table
 
 struct OTFHHEATable
@@ -605,16 +585,6 @@ public:
 	OTFEncodingID            encodingID = {};
 	OTFLanguageID            languageID = {};
 	std::vector<std::string> names      = {};
-};
-
-class OTFNAMETable
-{
-public:
-	OTFUint16                 version       = {};
-	OTFUint16                 count         = {};
-	OTFUint16                 storageOffset = {};
-	std::vector<OTFNameEntry> names         = {};
-	std::vector<std::string>  languageTags  = {};
 };
 
 // OS2: OS/2 and Windows Metrics Table
@@ -703,40 +673,72 @@ struct OTFGlyphHeader
 	OTFInt16 yMax;
 };
 
-class OTFFont
+class OpenTypeImpl : public priv::FontImplBase
 {
 public:
 	using TableMap = std::unordered_map<OTFTableTag, OTFTableRecord>;
+	using CharMap  = std::unordered_map<char32_t, OTFGlyphID>;
 	using GlyphMap = std::map<OTFGlyphID, Glyph>;
 
-	TableMap              tableMap          = {};
-	OTFHEADTable          head              = {};
-	OTFMAXPTable          maxProfile        = {};
-	OTFCMAPTable          characterMap      = {};
-	OTFHHEATable          horizontalHeader  = {};
-	OTFHMTXTable          horizontalMetrics = {};
-	OTFNAMETable          nameTable         = {};
-	OTFOS2Table           os2Metrics        = {};
-	OTFPOSTTable          postScript        = {};
-	std::vector<uint8_t>  binaryData        = {};
-	std::vector<uint32_t> glyphOffsets      = {};
-	std::vector<OTFInt16> controlValues     = {}; // cvt table
-	std::vector<OTFUint8> programData       = {}; // fpgm table
-	GlyphMap              glyphs            = {};
-	ranged_set<char32_t>  loadedCodePoints  = {};
-};
+	static std::vector<uint32_t> getTTCFontOffsets(const uint8_t* data, const size_t size);
 
-class OTFFontCollection
-{
-public:
-	std::vector<OTFFont> fonts = {};
-};
+	OpenTypeImpl(const uint8_t* data, size_t size, uint32_t offset);
+	~OpenTypeImpl() VERA_NOEXCEPT override;
 
-extern OTFResult otf_load_ttc(OTFFontCollection& font_collection, const uint8_t* data, const size_t size);
-extern OTFResult otf_get_ttc_font_count(const uint8_t* data, const size_t size, uint32_t* font_count);
-extern OTFResult otf_load_ttf(OTFFont& font, const uint8_t* data, const size_t size);
-extern OTFResult otf_load_glyph_range(OTFFont& font, GlyphID start, GlyphID end);
-extern OTFResult otf_load_code_range(OTFFont& font, char32_t start, char32_t end);
-extern OTFResult otf_try_load_code_range(OTFFont& font, char32_t start, char32_t end);
+	std::string_view getName() const VERA_NOEXCEPT override;
+
+	void loadAllGlyphs() override;
+	void loadGlyphRange(const basic_range<GlyphID>& range) override;
+	void loadCodeRange(const CodeRange& range) override;
+
+	uint32_t getGlyphCount() const VERA_NOEXCEPT override;
+	GlyphID getGlyphID(char32_t codepoint) const override;
+	const Glyph& findGlyph(GlyphID glyph_id) const override;
+	const Glyph& getGlyph(GlyphID glyph_id) override;
+	const Glyph& findGlyphByCodepoint(char32_t codepoint) const override;
+	const Glyph& getGlyphByCodepoint(char32_t codepoint) override;
+
+	OTFHEADTable              header            = {};
+	OTFMAXPTable              maxProfile        = {};
+	OTFHHEATable              horizontalHeader  = {};
+	OTFHMTXTable              horizontalMetrics = {};
+	OTFOS2Table               os2Metrics        = {};
+	OTFPOSTTable              postScript        = {};
+	TableMap                  tableMap          = {};
+	CharMap                   charToGlyphMap    = {};
+	GlyphMap                  glyphs            = {};
+	std::vector<OTFNameEntry> nameEntries       = {};
+	std::vector<std::string>  languageTags      = {};
+	std::vector<uint32_t>     glyphOffsets      = {};
+	std::vector<uint8_t>      glyphBinary       = {};
+	std::vector<OTFInt16>     controlValues     = {}; // cvt table
+	std::vector<OTFUint8>     programData       = {}; // fpgm table
+
+private:
+	OTFResult loadGlyph(uint32_t glyph_id);
+	OTFResult parseSimpleGlyph(Glyph& glyph, const OTFGlyphHeader& glyph_header, uint32_t offset);
+	OTFResult parseCompositeGlyph(Glyph& glyph, const OTFGlyphHeader& glyph_header, uint32_t offset);
+
+	OTFResult parseTable(const uint8_t* data, const size_t size);
+	OTFResult parseHeadTable(const uint8_t* data, const size_t size);
+	OTFResult parseMaxpTable(const uint8_t* data, const size_t size);
+	OTFResult parseCmapTable(const uint8_t* data, const size_t size);
+	OTFResult parseHheaTable(const uint8_t* data, const size_t size);
+	OTFResult parseHmtxTable(const uint8_t* data, const size_t size);
+	OTFResult parseNameTable(const uint8_t* data, const size_t size);
+	OTFResult parseOs2Table(const uint8_t* data, const size_t size);
+	OTFResult parsePostTable(const uint8_t* data, const size_t size);
+	OTFResult parseCvtTable(const uint8_t* data, const size_t size);
+	OTFResult parseFpgmTable(const uint8_t* data, const size_t size);
+	OTFResult parseLocaTable(const uint8_t* data, const size_t size);
+
+	OTFResult parseCmapFormat4(const uint8_t* data, const size_t size, const OTFEncodingRecord& encoding_record);
+	OTFResult parseCmapFormat6(const uint8_t* data, const size_t size, const OTFEncodingRecord& encoding_record);
+	OTFResult parseCmapFormat12(const uint8_t* data, const size_t size, const OTFEncodingRecord& encoding_record);
+
+	OTFNameEntry* findNameEntry(OTFPlatformID platform_id, OTFEncodingID encoding_id, OTFLanguageID language_id);
+
+	static uint16_t getGlyphNameCount(OTFUint16 num_glyphs, const uint8_t* data, uint32_t offset);
+};
 
 VERA_NAMESPACE_END

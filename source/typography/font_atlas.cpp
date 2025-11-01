@@ -11,7 +11,7 @@
 #include "../../include/vera/core/buffer.h"
 #include "../../include/vera/util/rect_packer.h"
 #include "../../include/vera/util/renderdoc.h"
-#include "font_impl.h"
+#include "font_impl_base.h"
 
 #define FLOAT_INF        0x7f800000
 #define FLAG_NONE        0x0u
@@ -19,6 +19,8 @@
 #define FLAG_END_CONTOUR 0x2u
 #define FLAG_END_GLYPH   0x4u
 #define MAX_CONTOUR_SIZE 128
+#define END_CONTOUR      { FLOAT_INF, 0.0 }
+#define END_GLYPH        { FLOAT_INF, FLOAT_INF }
 
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
@@ -62,6 +64,8 @@ VERA_PRIV_NAMESPACE_END
 
 static weak_obj<priv::FontAtlasGlobalResource> g_global_resource;
 
+typedef float2 SDFGlyphPoint;
+
 struct BitmapVertex
 {
 	float2 pos;
@@ -80,11 +84,6 @@ struct SDFVertex
 	float2   fontCoordMax;
 	uint32_t storageOffset;
 	uint32_t layerIndex;
-};
-
-struct SDFGlyphPoint
-{
-	float2 position;
 };
 
 static void min_distance(std::pair<float, float>& min_dist, const std::pair<float, float>& dist)
@@ -198,9 +197,9 @@ static uint32_t get_font_size(const FontAtlasCreateInfo& info, uint32_t px)
 	return 0;
 }
 
-static float get_font_scale(const priv::FontImpl& impl, uint32_t px)
+static float get_font_scale(const priv::FontImplBase& impl, uint32_t px)
 {
-	return static_cast<float>(px) / static_cast<float>(impl.font.head.unitsPerEm);
+	return static_cast<float>(px) / impl.unitsPerEM;
 }
 
 static std::unique_ptr<priv::FontAtlasResource> create_font_atlas_resource(
@@ -297,25 +296,18 @@ static void fill_vertices_by_glyph_id(
 	std::vector<SDFGlyphPoint>& glyph_points,
 	std::vector<PackedGlyph*>&  packed_glyphs,
 	priv::GlyphPage&            page,
-	GlyphID                     glyph_id,
-	const priv::FontImpl&       impl,
+	const Glyph&                glyph,
 	float                       scale,
 	float                       sdf_padding2
 ) {
-	static const SDFGlyphPoint end_contour{ .position = { FLOAT_INF, 0.0f } };
-
-	auto glyph_it = impl.font.glyphs.find(glyph_id);
-
-	VERA_ASSERT(glyph_it != impl.font.glyphs.cend());
-
-	auto& packed_glyph = page.glyphMap.emplace(glyph_id, PackedGlyph{}).first->second;
-	packed_glyph.glyphID = glyph_id;
+	auto& packed_glyph = page.glyphMap.emplace(glyph.glyphID, PackedGlyph{}).first->second;
+	packed_glyph.glyphID = glyph.glyphID;
 	packed_glyph.px      = page.px;
 
 	packed_glyphs.push_back(&packed_glyph);
 
-	const auto& glyph = glyph_it->second;
-	const auto& size  = glyph.aabb.size();
+	const auto   size = glyph.aabb.size();
+	const float2 outside_point = glyph.aabb.min() - float2(sdf_padding2) / scale;
 
 	glyph_sizes.push_back(extent2d{
 		static_cast<uint32_t>(round(scale * size.x + sdf_padding2)),
@@ -328,7 +320,6 @@ static void fill_vertices_by_glyph_id(
 		.storageOffset = static_cast<uint32_t>(glyph_points.size()),
 	});
 
-	float2 outside_point = glyph.aabb.min() - float2(sdf_padding2) / scale;
 
 	if (glyph_sdf(glyph, outside_point) > 0.0) {
 		for (const auto& contour : glyph.contours) {
@@ -336,33 +327,23 @@ static void fill_vertices_by_glyph_id(
 			auto last  = contour.crend();
 			
 			if (!first->onCurve) {
-				glyph_points.push_back(SDFGlyphPoint{
-					.position = encode_glyph_point(contour[0]),
-				});
+				glyph_points.push_back(encode_glyph_point(contour[0]));
 				--last;
 			}
 
-			for (auto iter = first; iter != last; ++iter) {
-				glyph_points.push_back(SDFGlyphPoint{
-					.position = encode_glyph_point(*iter),
-				});
-			}
-
-			glyph_points.push_back(end_contour);
+			for (auto iter = first; iter != last; ++iter)
+				glyph_points.push_back(encode_glyph_point(*iter));
+			glyph_points.push_back(END_CONTOUR);
 		}
 	} else {
 		for (const auto& contour : glyph.contours) {
-			for (const auto& point : contour) {
-				glyph_points.push_back(SDFGlyphPoint{
-					.position = encode_glyph_point(point),
-				});
-			}
-
-			glyph_points.push_back(end_contour);
+			for (const auto& point : contour)
+				glyph_points.push_back(encode_glyph_point(point));
+			glyph_points.push_back(END_CONTOUR);
 		}
 	}
 
-	glyph_points.back().position.y = FLOAT_INF;
+	glyph_points.back() = END_GLYPH;
 }
 
 static void pack_font_glyph(
@@ -409,74 +390,6 @@ static void pack_font_glyph(
 
 		++layer_offset;
 	}
-}
-
-static bool fill_font_vertices(
-	std::vector<SDFVertex>&     vertices,
-	std::vector<SDFGlyphPoint>& glyph_points,
-	std::vector<uint32_t>&      packed_counts,
-	priv::GlyphPage&            page,
-	const priv::FontImpl&       impl,
-	const CodeRange&            range,
-	float                       sdf_padding
-) {
-	std::vector<PackedGlyph*> packed_glyphs;
-	std::vector<extent2d>     glyph_sizes;
-	
-	const auto& char_map     = impl.font.characterMap.charToGlyphMap;
-	float       scale        = get_font_scale(impl, page.px);
-	float       sdf_padding2 = 2.f * sdf_padding;
-
-	if (range.getUnicodeRange() == UnicodeRange::ALL) {
-		uint32_t glyph_count = impl.font.maxProfile.numGlyphs;
-
-		for (GlyphID glyph_id = 0; glyph_id < glyph_count; ++glyph_id) {
-			fill_vertices_by_glyph_id(
-				vertices,
-				glyph_sizes,
-				glyph_points,
-				packed_glyphs,
-				page,
-				glyph_id,
-				impl,
-				scale,
-				sdf_padding2
-			);
-		}
-	} else {
-		for (auto codepoint = range.start(); codepoint <= range.end(); ++codepoint) {
-			auto id_it = char_map.find(codepoint);
-			if (id_it == char_map.cend()) continue;
-
-			GlyphID glyph_id = id_it->second;
-			if (page.glyphMap.contains(glyph_id)) continue;
-
-			fill_vertices_by_glyph_id(
-				vertices,
-				glyph_sizes,
-				glyph_points,
-				packed_glyphs,
-				page,
-				glyph_id,
-				impl,
-				scale,
-				sdf_padding2
-			);
-		}
-	}
-
-	if (vertices.empty()) return false;
-
-	pack_font_glyph(
-		vertices,
-		packed_glyphs,
-		packed_counts,
-		*page.packer,
-		glyph_sizes,
-		static_cast<uint32_t>(page.textures.size())
-	);
-
-	return true;
 }
 
 static void update_storage_descriptor_set(
@@ -541,7 +454,7 @@ static void prepare_page_textures(
 		if (packed == 0 || page.textures.empty()) {
 			TextureCreateInfo texture_info = {
 				.format = Format::R32Float,
-				.usage  = TextureUsageFlagBits::Storage,
+				.usage  = TextureUsageFlagBits::Storage | TextureUsageFlagBits::Sampled,
 				.width  = info.atlasWidth,
 				.height = info.atlasHeight
 			};
@@ -566,12 +479,12 @@ static void prepare_page_textures(
 // renders SDF, PSDF, MSDF, MTSDF font glyphs into the atlas textures
 static CommandBufferSync render_sdf_font(
 	priv::FontAtlasResource&          resource,
-	const priv::FontImpl&             impl,
 	priv::GlyphPage&                  page,
 	const FontAtlasCreateInfo&        info,
 	const std::vector<SDFVertex>&     vertices,
 	const std::vector<SDFGlyphPoint>& glyph_points,
-	const std::vector<uint32_t>&      packed_counts
+	const std::vector<uint32_t>&      packed_counts,
+	float                             scale
 ) {
 	struct SDFPushConstantData {
 		uint32_t vertexOffset;
@@ -603,7 +516,7 @@ static CommandBufferSync render_sdf_font(
 	SDFPushConstantData pc_data = {
 		.vertexOffset = 0,
 		.vertexCount  = static_cast<uint32_t>(vertices.size()),
-		.scale        = get_font_scale(impl, page.px),
+		.scale        = scale,
 		.sdfPadding   = info.sdfPadding / pc_data.scale,
 		.resolution   = float2{ viewport.width, viewport.height }
 	};
@@ -613,6 +526,8 @@ static CommandBufferSync render_sdf_font(
 
 	if (!resource.commandBufferSync.empty())
 		resource.commandBufferSync.waitForComplete();
+
+	uint32_t texture_offset = page.textures.size();
 
 	upload_sdf_buffer(resource, vertices, glyph_points);
 	prepare_page_textures(resource, page, info, packed_counts);
@@ -627,6 +542,19 @@ static CommandBufferSync render_sdf_font(
 	cmd_buffer->beginRendering(rendering_info);
 	cmd_buffer->drawMeshTask((pc_data.vertexCount - 1) / 64 + 1, 1, 1);
 	cmd_buffer->endRendering();
+
+	for (uint32_t i = texture_offset; i < page.textures.size(); ++i) {
+		cmd_buffer->transitionImageLayout(
+			page.textures[i],
+			PipelineStageFlagBits::ComputeShader,
+			PipelineStageFlagBits::FragmentShader,
+			AccessFlagBits::ShaderWrite,
+			AccessFlagBits::ShaderRead,
+			TextureLayout::Undefined,
+			TextureLayout::ShaderReadOnlyOptimal
+		);
+	}
+
 	cmd_buffer->end();
 
 	return cmd_buffer->submit();
@@ -634,7 +562,7 @@ static CommandBufferSync render_sdf_font(
 
 static CommandBufferSync load_sdf_font(
 	priv::FontAtlasResource&    resource,
-	const priv::FontImpl&       impl,
+	const priv::FontImplBase&   impl,
 	const FontAtlasCreateInfo&  info,
 	priv::GlyphPage&            page,
 	const basic_range<GlyphID>& range
@@ -654,15 +582,13 @@ static CommandBufferSync load_sdf_font(
 			glyph_points,
 			packed_glyphs,
 			page,
-			glyph_id,
-			impl,
+			impl.findGlyph(glyph_id),
 			scale,
 			sdf_padding2
 		);
 	}
 
-	if (vertices.empty())
-		throw Exception("no glyphs to load in the specified range");
+	if (vertices.empty()) return {};
 
 	std::vector<uint32_t> packed_counts;
 
@@ -677,19 +603,19 @@ static CommandBufferSync load_sdf_font(
 
 	return render_sdf_font(
 		resource,
-		impl,
 		page,
 		info,
 		vertices,
 		glyph_points,
-		packed_counts
+		packed_counts,
+		scale
 	);
 }
 
 static CommandBufferSync load_sdf_font(
 	priv::FontAtlasResource&   resource,
-	const priv::FontImpl&      impl,
 	const FontAtlasCreateInfo& info,
+	const priv::FontImplBase&  impl,
 	priv::GlyphPage&           page,
 	const CodeRange&           range
 ) {
@@ -697,13 +623,12 @@ static CommandBufferSync load_sdf_font(
 	std::vector<SDFGlyphPoint> glyph_points;
 	std::vector<extent2d>      glyph_sizes;
 	std::vector<PackedGlyph*>  packed_glyphs;
-	
-	const auto& char_map     = impl.font.characterMap.charToGlyphMap;
-	float       scale        = get_font_scale(impl, page.px);
-	float       sdf_padding2 = 2.f * info.sdfPadding;
+
+	float scale        = get_font_scale(impl, page.px);
+	float sdf_padding2 = 2.f * info.sdfPadding;
 
 	if (range.getUnicodeRange() == UnicodeRange::ALL) {
-		uint32_t glyph_count = impl.font.maxProfile.numGlyphs;
+		uint32_t glyph_count = info.font->getGlyphCount();
 
 		for (GlyphID glyph_id = 0; glyph_id < glyph_count; ++glyph_id) {
 			fill_vertices_by_glyph_id(
@@ -712,18 +637,14 @@ static CommandBufferSync load_sdf_font(
 				glyph_points,
 				packed_glyphs,
 				page,
-				glyph_id,
-				impl,
+				impl.findGlyph(glyph_id),
 				scale,
 				sdf_padding2
 			);
 		}
 	} else {
-		for (auto codepoint = range.start(); codepoint <= range.end(); ++codepoint) {
-			auto id_it = char_map.find(codepoint);
-			if (id_it == char_map.cend()) continue;
-
-			GlyphID glyph_id = id_it->second;
+		for (const char32_t codepoint : range) {
+			GlyphID glyph_id = info.font->getGlyphID(codepoint);
 			if (page.glyphMap.contains(glyph_id)) continue;
 
 			fill_vertices_by_glyph_id(
@@ -732,16 +653,14 @@ static CommandBufferSync load_sdf_font(
 				glyph_points,
 				packed_glyphs,
 				page,
-				glyph_id,
-				impl,
+				impl.findGlyph(glyph_id),
 				scale,
 				sdf_padding2
 			);
 		}
 	}
 
-	if (vertices.empty())
-		throw Exception("no glyphs to load in the specified range");
+	if (vertices.empty()) return {};
 
 	std::vector<uint32_t> packed_counts;
 
@@ -756,12 +675,12 @@ static CommandBufferSync load_sdf_font(
 
 	return render_sdf_font(
 		resource,
-		impl,
 		page,
 		info,
 		vertices,
 		glyph_points,
-		packed_counts
+		packed_counts,
+		scale
 	);
 }
 
@@ -782,22 +701,26 @@ FontAtlas::~FontAtlas() VERA_NOEXCEPT
 {
 }
 
-ref<Font> FontAtlas::getFont() const VERA_NOEXCEPT
+obj<Font> FontAtlas::getFont() const VERA_NOEXCEPT
 {
 	return m_info.font;
 }
 
-const_ref<Texture> FontAtlas::getTexture(uint32_t px, uint32_t layer) const VERA_NOEXCEPT
+obj<TextureView> FontAtlas::getTextureView(uint32_t px, uint32_t layer) VERA_NOEXCEPT
 {
+	px = get_font_size(m_info, px);
+
 	if (auto it = m_pages.find(px); it != m_pages.cend())
 		if (layer < it->second.textures.size())
-			return const_ref<Texture>(it->second.textures[layer].get());
+			return unsafe_obj_cast<TextureView>(it->second.textures[layer]->getTextureView());
 
 	return nullptr;
 }
 
 uint32_t FontAtlas::getTextureCount(uint32_t px) const VERA_NOEXCEPT
 {
+	px = get_font_size(m_info, px);
+
 	if (auto it = m_pages.find(px); it != m_pages.cend())
 		return static_cast<uint32_t>(it->second.textures.size());
 
@@ -811,12 +734,10 @@ extent2d FontAtlas::getTextureSize() const VERA_NOEXCEPT
 
 CommandBufferSync FontAtlas::loadGlyphRange(const basic_range<GlyphID>& range, uint32_t px)
 {
-	FontResult       result  = m_info.font->loadGlyphRange(range);
+	m_info.font->loadGlyphRange(range);
+
 	uint32_t         font_px = get_font_size(m_info, px);
 	priv::GlyphPage* page = nullptr;
-
-	if (result != FontResultType::Success)
-		throw Exception("failed to load glyph range from font");
 
 	if (auto page_it = m_pages.find(font_px); page_it == m_pages.end()) {
 		auto [iter, success] = m_pages.emplace(font_px, priv::GlyphPage{});
@@ -859,12 +780,10 @@ CommandBufferSync FontAtlas::loadGlyphRange(const basic_range<GlyphID>& range, u
 
 CommandBufferSync FontAtlas::loadCodeRange(const CodeRange& range, uint32_t px)
 {
-	FontResult       result  = m_info.font->loadCodeRange(range);
+	m_info.font->loadCodeRange(range);
+	
 	uint32_t         font_px = get_font_size(m_info, px);
 	priv::GlyphPage* page = nullptr;
-
-	if (result != FontResultType::Success)
-		throw Exception("failed to load glyph range from font");
 
 	if (auto page_it = m_pages.find(font_px); page_it == m_pages.end()) {
 		auto [iter, success] = m_pages.emplace(font_px, priv::GlyphPage{});
@@ -894,8 +813,8 @@ CommandBufferSync FontAtlas::loadCodeRange(const CodeRange& range, uint32_t px)
 
 		return load_sdf_font(
 			*m_resource,
-			*m_info.font->m_impl,
 			m_info,
+			*m_info.font->m_impl,
 			*page,
 			range
 		);
@@ -907,18 +826,15 @@ CommandBufferSync FontAtlas::loadCodeRange(const CodeRange& range, uint32_t px)
 
 const PackedGlyph& FontAtlas::getGlyph(char32_t codepoint, uint32_t px)
 {
-	uint32_t font_px = get_font_size(m_info, px);
-	auto     page_it = m_pages.find(font_px);
-
+	uint32_t font_px  = get_font_size(m_info, px);
+	auto     page_it  = m_pages.find(font_px);
+	
 	if (page_it == m_pages.end())
-		loadCodeRange(codepoint, font_px);
+		loadCodeRange(codepoint, font_px).waitForComplete();
 
-	const auto& char_map = m_info.font->m_impl->font.characterMap;
-	auto        glyph_it = char_map.charToGlyphMap.find(codepoint);
-	if (glyph_it == char_map.charToGlyphMap.end())
-		throw Exception("glyph not found in font");
+	GlyphID glyph_id = m_info.font->getGlyphID(codepoint);
 
-	auto it = page_it->second.glyphMap.find(glyph_it->second);
+	auto it = page_it->second.glyphMap.find(glyph_id);
 	if (it == page_it->second.glyphMap.end())
 		throw Exception("glyph not found in font atlas");
 

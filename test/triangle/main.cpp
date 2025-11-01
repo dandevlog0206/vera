@@ -32,7 +32,7 @@ public:
 		m_pass = std::make_unique<vr::GraphicsPass>(m_device, vr::GraphicsPassCreateInfo{
 			.vertexShader   = vr::Shader::create(m_device, "shader/triangle.vert.glsl.spv"),
 			.fragmentShader = vr::Shader::create(m_device, "shader/triangle.frag.glsl.spv"),
-			.vertexCount    = 3
+			.vertexCount    = 6
 		});
 
 		m_window.Focussed = true;

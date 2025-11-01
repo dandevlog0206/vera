@@ -424,7 +424,8 @@ static void next_frame(ShaderStorageImpl& impl)
 		reset_shader_storage_frame(impl, nullptr, curr_frame);
 	} else if (impl.frames.size() == 1) {
 		append_shader_storage_frame(impl, &curr_frame, 1);
-		impl.frameIndex = 1;
+		impl.prevFrameIndex = 0;
+		impl.frameIndex     = 1;
 	} else {
 		auto  next_idx   = (impl.frameIndex + 1) % static_cast<uint32_t>(impl.frames.size());
 		auto& next_frame = impl.frames[next_idx];

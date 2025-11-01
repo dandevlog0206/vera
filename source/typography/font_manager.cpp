@@ -1,18 +1,11 @@
 #include "../../include/vera/typography/font_manager.h"
 
-#include "font_impl.h"
+#include "../../include/vera/core/exception.h"
+#include "open_type.h"
 #include <filesystem>
 #include <fstream>
 
 VERA_NAMESPACE_BEGIN
-
-static OTFResult try_load_glyph_ranges(priv::FontImpl& impl)
-{
-	for (const auto& range : impl.manager->getCodeRanges())
-		OTF_CHECK(otf_try_load_code_range(impl.font, range.start(), range.end()));
-
-	return OTFResultType::Success;
-}
 
 obj<FontManager> FontManager::create()
 {
@@ -25,15 +18,15 @@ FontManager::FontManager() VERA_NOEXCEPT :
 
 FontManager::~FontManager()
 {
-
+	// nothing to do
 }
 
-FontResult FontManager::load(std::string_view path) VERA_NOEXCEPT
+void FontManager::loadFont(std::string_view path)
 {
 	std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
 	
 	if (!file.is_open())
-		return FontResultType::FailedToOpenFile;
+		throw Exception("failed to open font file");
 
 	std::vector<uint8_t> data(static_cast<size_t>(file.tellg()));
 
@@ -45,70 +38,42 @@ FontResult FontManager::load(std::string_view path) VERA_NOEXCEPT
 
 	if (ext == ".ttc") {
 		std::vector<obj<Font>> new_fonts;
-		uint32_t               font_count;
-		OTFResult              result;
-		OTFFontCollection      font_collection;
 
-		result = otf_get_ttc_font_count(data.data(), data.size(), &font_count);
-		if (result != OTFResultType::Success)
-			return get_font_result(result);
+		auto offsets = OpenTypeImpl::getTTCFontOffsets(data.data(), data.size());
 
-		result = otf_load_ttc(font_collection, data.data(), data.size());
-		if (result != OTFResultType::Success)
-			return get_font_result(result);
+		if (offsets.empty())
+			throw Exception("no fonts found in TTC file");
 
-		for (const auto& font : font_collection.fonts) {
-			auto new_obj = obj<Font>(new Font);
-			
-			if (!new_obj)
-				return FontResultType::AllocationFailed;
-		
-			new_obj->m_impl       = new priv::FontImpl();
-			new_obj->m_impl->font = font;
+		for (const uint32_t offset : offsets) {
+			auto& new_font = new_fonts.emplace_back(new Font);
 
-			init_font_impl(*new_obj->m_impl, this);
-
-			result = try_load_glyph_ranges(*new_obj->m_impl);
-			if (result != OTFResultType::Success)
-				return get_font_result(result);
-			if (m_fonts.contains(std::string(new_obj->getName())))
-				return FontResultType::AlreadyLoaded;
-
-			new_fonts.emplace_back(new_obj);
+			new_font->m_impl = std::make_unique<OpenTypeImpl>(data.data(), data.size(), offset);
+			new_font->m_impl->format  = FontFormat::TrueTypeCollection;
+			new_font->m_impl->manager = this;
 		}
 
 		for (auto& font : new_fonts)
 			m_fonts.emplace(font->getName(), font);
+	} else if (ext == ".ttf" || ext == ".otf") {
+		auto new_font = obj<Font>(new Font);
+		new_font->m_impl = std::make_unique<OpenTypeImpl>(data.data(), data.size(), 0);
+		new_font->m_impl->format  = FontFormat::OpenType;
+		new_font->m_impl->manager = this;
 
-		return FontResultType::Success;
-	} else if (ext == ".ttf") {
-		OTFResult result;
-		OTFFont   font;
-
-		result = otf_load_ttf(font, data.data(), data.size());
-
-		if (result != OTFResultType::Success)
-			return get_font_result(result);
-
-		auto new_obj = obj<Font>(new Font);
-		if (!new_obj)
-			return FontResultType::AllocationFailed;
-
-		new_obj->m_impl       = new priv::FontImpl();
-		new_obj->m_impl->font = std::move(font);
-
-		init_font_impl(*new_obj->m_impl, this);
-
-		result = try_load_glyph_ranges(*new_obj->m_impl);
-		if (result != OTFResultType::Success)
-			return get_font_result(result);
-
-		m_fonts.emplace(new_obj->getName(), new_obj);
-
-		return FontResultType::Success;
+		m_fonts.emplace(new_font->getName(), new_font);
 	} else {
-		return FontResultType::UnsupportedFormat;
+		throw Exception("unsupported font format: {}", ext);
 	}
+}
+
+void FontManager::addFont(obj<Font> font)
+{
+	if (!font)
+		throw Exception("cannot add null font to FontManager");
+	if (font->m_impl->manager)
+		throw Exception("font is already managed by another FontManager");
+
+	m_fonts.emplace(font->getName(), font);
 }
 
 obj<Font> FontManager::getFont(std::string_view name) VERA_NOEXCEPT
@@ -153,7 +118,7 @@ bool FontManager::addCodeRange(const CodeRange& range) VERA_NOEXCEPT
 
 	auto it = std::find_if(VERA_SPAN(m_code_ranges),
 		[&range](const CodeRange& existing_range) {
-			return existing_range.contains(range);
+			return existing_range.contain(range);
 		});
 
 	if (it == m_code_ranges.end()) {

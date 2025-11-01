@@ -1,9 +1,7 @@
 #include "../../include/vera/typography/font.h"
 
 #include "../../include/vera/core/exception.h"
-#include "../../include/vera/typography/font_manager.h"
-#include "../../include/vera/util/ranged_set.h"
-#include "font_impl.h"
+#include "open_type.h"
 #include <filesystem>
 #include <fstream>
 #include <vector>
@@ -31,28 +29,25 @@ obj<Font> Font::create(std::string_view path)
 {
 	obj<Font> font = obj<Font>(new Font());
 
-	FontResult result = font->load(path);
-
-	if (result.result() != FontResultType::Success)
-		throw Exception(result.what());
+	font->load(path);
 
 	return font;
 }
 
 Font::~Font() VERA_NOEXCEPT
 {
-	delete m_impl;
+	// nothing to do
 }
 
-FontResult Font::load(std::string_view path) VERA_NOEXCEPT
+void Font::load(std::string_view path)
 {
 	if (m_impl != nullptr)
-		return FontResultType::AlreadyLoaded;
+		throw Exception("font is already loaded");
 
 	std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
 	
 	if (!file.is_open())
-		return FontResultType::FailedToOpenFile;
+		throw Exception("failed to open font file");
 
 	std::vector<uint8_t> data(static_cast<size_t>(file.tellg()));
 
@@ -63,99 +58,107 @@ FontResult Font::load(std::string_view path) VERA_NOEXCEPT
 	std::string ext = std::filesystem::path(path).extension().string();
 
 	if (ext == ".ttc") {
-		uint32_t          font_count;
-		OTFResult         result;
-		OTFFontCollection font_collection;
+		auto offsets = OpenTypeImpl::getTTCFontOffsets(data.data(), data.size());
 
-		result = otf_get_ttc_font_count(data.data(), data.size(), &font_count);
+		if (offsets.empty())
+			throw Exception("no fonts found in TTC file");
+		if (offsets.size() > 1)
+			throw Exception("too many fonts in TTC file, consider using FontManager for collection of fonts");
 
-		if (result != OTFResultType::Success)
-			return get_font_result(result);
-		if (1 < font_count)
-			return { FontResultType::TooManyFontsInFile,
-				"too many fonts in TTC file, consider using FontManager for collection of fonts" };
-
-		result = otf_load_ttc(font_collection, data.data(), data.size());
-
-		if (result != OTFResultType::Success)
-			return get_font_result(result);
-
-		m_impl       = new priv::FontImpl();
-		m_impl->font = std::move(font_collection.fonts[0]);
-
-		init_font_impl(*m_impl, nullptr);
-
-		return FontResultType::Success;
-	} else if (ext == ".ttf") {
-		OTFResult result;
-		OTFFont   font;
-
-		result = otf_load_ttf(font, data.data(), data.size());
-
-		if (result != OTFResultType::Success)
-			return get_font_result(result);
-
-		m_impl       = new priv::FontImpl();
-		m_impl->font = std::move(font);
-
-		init_font_impl(*m_impl, nullptr);
-
-		return FontResultType::Success;
+		m_impl = std::make_unique<OpenTypeImpl>(data.data(), data.size(), offsets.front());
+		m_impl->format  = FontFormat::TrueTypeCollection;
+		m_impl->manager = {};
+	} else if (ext == ".ttf" || ext == ".otf") {
+		m_impl = std::make_unique<OpenTypeImpl>(data.data(), data.size(), 0);
+		m_impl->format  = FontFormat::TrueTypeCollection;
+		m_impl->manager = {};
 	} else {
-		return FontResultType::UnsupportedFormat;
+		throw Exception("unsupported font format: {}", ext);
 	}
+}
+
+FontFormat Font::getFormat() const VERA_NOEXCEPT
+{
+	return m_impl ? m_impl->format : FontFormat::Unknown;
 }
 
 std::string_view Font::getName() const VERA_NOEXCEPT
 {
-	VERA_ASSERT_MSG(m_impl != nullptr, "font is not loaded");
-	return m_impl->fontName;
+	return m_impl ? m_impl->getName() : std::string_view{};
 }
 
-FontResult Font::loadGlyphRange(const basic_range<uint32_t>& range) VERA_NOEXCEPT
+void Font::loadAllGlyphs()
 {
-	VERA_ASSERT_MSG(m_impl != nullptr, "font is not loaded");
-	return get_font_result(otf_load_glyph_range(m_impl->font, range.first(), range.last() - 1));
+	if (!m_impl)
+		throw Exception("font is not loaded");
+
+	m_impl->loadAllGlyphs();
 }
 
-FontResult Font::loadCodeRange(const CodeRange& range) VERA_NOEXCEPT
+void Font::loadGlyphRange(const basic_range<uint32_t>& range)
 {
-	VERA_ASSERT_MSG(m_impl != nullptr, "font is not loaded");
-	return get_font_result(otf_load_code_range(m_impl->font, range.start(), range.end()));
+	if (!m_impl)
+		throw Exception("font is not loaded");
+
+	m_impl->loadGlyphRange(range);
+}
+
+void Font::loadCodeRange(const CodeRange& range)
+{
+	if (!m_impl)
+		throw Exception("font is not loaded");
+
+	m_impl->loadCodeRange(range);
 }
 
 uint32_t Font::getGlyphCount() const VERA_NOEXCEPT
 {
-	VERA_ASSERT_MSG(m_impl != nullptr, "font is not loaded");
-	return static_cast<uint32_t>(m_impl->font.maxProfile.numGlyphs);
+	return m_impl ? m_impl->getGlyphCount() : 0;
 }
 
-const Glyph* Font::getGlyph(GlyphID glyph_id) const VERA_NOEXCEPT
+GlyphID Font::getGlyphID(char32_t codepoint) const
 {
-	VERA_ASSERT_MSG(m_impl != nullptr, "font is not loaded");
+	if (!m_impl)
+		throw Exception("font is not loaded");
 
-	const auto& glyph_map = m_impl->font.glyphs;
-
-	if (auto glyph_it = glyph_map.find(glyph_id); glyph_it != glyph_map.cend())
-		return &glyph_it->second;
-
-	return nullptr;
+	return m_impl->getGlyphID(codepoint);
 }
 
-const Glyph* Font::findGlyph(char32_t codepoint) const VERA_NOEXCEPT
+const Glyph& Font::findGlyph(GlyphID glyph_id) const
 {
-	VERA_ASSERT_MSG(m_impl != nullptr, "font is not loaded");
+	if (!m_impl)
+		throw Exception("font is not loaded");
 
-	const auto& char_map = m_impl->font.characterMap.charToGlyphMap;
+	return m_impl->findGlyph(glyph_id);
+}
 
-	if (auto it = char_map.find(codepoint); it != char_map.cend()) {
-		const auto& glyph_map = m_impl->font.glyphs;
-	
-		if (auto glyph_it = glyph_map.find(it->second); glyph_it != glyph_map.cend())
-			return &glyph_it->second;
-	}
+const Glyph& Font::getGlyph(GlyphID glyph_id)
+{
+	if (!m_impl)
+		throw Exception("font is not loaded");
 
-	return nullptr;
+	return m_impl->getGlyph(glyph_id);
+}
+
+const Glyph& Font::findGlyphByCodepoint(char32_t codepoint) const
+{
+	if (!m_impl)
+		throw Exception("font is not loaded");
+
+	return m_impl->findGlyphByCodepoint(codepoint);
+}
+
+const Glyph& Font::getGlyphByCodepoint(char32_t codepoint)
+{
+	if (!m_impl)
+		throw Exception("font is not loaded");
+
+	return m_impl->getGlyphByCodepoint(codepoint);
+}
+
+bool Font::empty() const VERA_NOEXCEPT
+{
+	return m_impl == nullptr;
 }
 
 VERA_NAMESPACE_END

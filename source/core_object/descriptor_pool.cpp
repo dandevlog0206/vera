@@ -223,6 +223,9 @@ obj<DescriptorSet> DescriptorPool::allocate(
 	const_ref<DescriptorSetLayout> layout,
 	uint32_t                       variable_descriptor_count
 ) {
+	if (variable_descriptor_count == 1)
+		return allocate(layout);
+
 	VERA_ASSERT(layout, "empty resource layout");
 
 	auto  obj          = createNewCoreObject<DescriptorSet>();

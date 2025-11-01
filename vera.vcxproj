@@ -241,7 +241,7 @@
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
     <ClInclude Include="source\util\renderdoc_app.h" />
-    <ClInclude Include="source\typography\font_impl.h" />
+    <ClInclude Include="source\typography\font_impl_base.h" />
     <ClInclude Include="source\typography\open_type.h" />
     <ClInclude Include="source\impl\detail\resource_binding_desc.h" />
     <ClInclude Include="source\impl\detail\shader_reflection.h" />

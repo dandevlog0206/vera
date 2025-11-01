@@ -14,9 +14,8 @@ public:
 	VERA_NODISCARD static obj<FontManager> create();
 	~FontManager();
 
-	FontResult load(std::string_view path) VERA_NOEXCEPT;
-
-	void addFont(obj<Font> font) VERA_NOEXCEPT;
+	void loadFont(std::string_view path);
+	void addFont(obj<Font> font);
 
 	VERA_NODISCARD obj<Font> getFont(std::string_view name) VERA_NOEXCEPT;
 	VERA_NODISCARD std::vector<obj<Font>> getFonts() VERA_NOEXCEPT;

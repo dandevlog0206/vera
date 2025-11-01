@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/texture.h"
+#include "../core/texture_view.h"
 #include "../core/command_buffer_sync.h"
 #include "../util/rect_packer.h"
 #include "font.h"
@@ -35,7 +35,7 @@ struct PackedGlyph
 
 struct FontAtlasCreateInfo
 {
-	ref<Font>     font                  = {};
+	obj<Font>     font                  = {};
 	AtlasType     type                  = AtlasType::SDF;
 	PackingMethod packingMethod         = PackingMethod::Shelf;
 	uint32_t      sdfFontSize           = 0;                    // zero will use the font's default size
@@ -53,8 +53,8 @@ public:
 	VERA_NODISCARD static obj<FontAtlas> create(obj<Device> device, const FontAtlasCreateInfo& info = {});
 	~FontAtlas() VERA_NOEXCEPT;
 
-	VERA_NODISCARD ref<Font> getFont() const VERA_NOEXCEPT;
-	VERA_NODISCARD const_ref<Texture> getTexture(uint32_t px, uint32_t layer) const VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Font> getFont() const VERA_NOEXCEPT;
+	VERA_NODISCARD obj<TextureView> getTextureView(uint32_t px, uint32_t layer) VERA_NOEXCEPT;
 	VERA_NODISCARD uint32_t getTextureCount(uint32_t px) const VERA_NOEXCEPT;
 	VERA_NODISCARD extent2d getTextureSize() const VERA_NOEXCEPT;
 
