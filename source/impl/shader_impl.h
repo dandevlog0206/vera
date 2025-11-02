@@ -28,21 +28,6 @@ struct ShaderImpl
 	size_t             hashValue;
 };
 
-static vk::ShaderStageFlagBits to_vk_shader_stage(ShaderStageFlagBits flags)
-{
-	switch (flags) {
-	case ShaderStageFlagBits::Vertex:                 return vk::ShaderStageFlagBits::eVertex;
-	case ShaderStageFlagBits::TessellationControl:    return vk::ShaderStageFlagBits::eTessellationControl;
-	case ShaderStageFlagBits::TessellationEvaluation: return vk::ShaderStageFlagBits::eTessellationEvaluation;
-	case ShaderStageFlagBits::Geometry:               return vk::ShaderStageFlagBits::eGeometry;
-	case ShaderStageFlagBits::Fragment:               return vk::ShaderStageFlagBits::eFragment;
-	case ShaderStageFlagBits::Compute:                return vk::ShaderStageFlagBits::eCompute;
-	}
-
-	VERA_ASSERT_MSG(false, "invalid shader stage");
-	return {};
-}
-
 static vk::ShaderStageFlags to_vk_shader_stage_flags(ShaderStageFlags flags)
 {
 	// vr::ShaderStageFlags is VERA_VK_ABI_COMPATIBLE with vk::ShaderStageFlags

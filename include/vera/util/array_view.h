@@ -3,6 +3,7 @@
 #include "../core/assertion.h"
 #include <initializer_list>
 #include <type_traits>
+#include <iterator>
 
 VERA_NAMESPACE_BEGIN
 
@@ -10,6 +11,12 @@ template <typename T>
 class array_view
 {
 public:
+	using value_type       = T;
+	using reference        = const T&;
+	using size_type        = size_t;
+	using iterator         = const T*;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+
 	VERA_CONSTEXPR array_view() VERA_NOEXCEPT :
 		m_ptr(nullptr),
 		m_size(0) {}
@@ -111,6 +118,16 @@ public:
 	VERA_NODISCARD VERA_CONSTEXPR const T* end() const VERA_NOEXCEPT
 	{
 		return m_ptr + m_size;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR reverse_iterator rbegin() const VERA_NOEXCEPT
+	{
+		return reverse_iterator(end());
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR reverse_iterator rend() const VERA_NOEXCEPT
+	{
+		return reverse_iterator(begin());
 	}
 
 private:

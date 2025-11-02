@@ -9,18 +9,18 @@ VERA_NAMESPACE_BEGIN
 
 struct PipelineLayoutImpl
 {
-	obj<Device>                           device;
+	obj<Device>                           device               = {};
 
-	vk::PipelineLayout                    pipelineLayout;
+	vk::PipelineLayout                    pipelineLayout       = {};
 
-	ShaderReflection                      reflection;
-	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts;
-	std::vector<PushConstantRange>        pushConstantRanges;
-	PipelineBindPoint                     pipelineBindPoint;
-	ShaderStageFlags                      stageFlags;
-	string_pool                           namePool;
-	hash_t                                hashValue;
-	hash_t                                shaderHashValue;
+	ShaderReflection                      reflection           = {};
+	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts = {};
+	std::vector<PushConstantRange>        pushConstantRanges   = {};
+	PipelineBindPoint                     pipelineBindPoint    = {};
+	ShaderStageFlags                      stageFlags           = {};
+	string_pool                           namePool             = {};
+	hash_t                                hashValue            = {};
+	hash_t                                shaderHashValue      = {};
 };
 
 static vk::PushConstantRange get_vk_push_constant_range(const PushConstantRange& range)

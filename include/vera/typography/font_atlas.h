@@ -38,11 +38,11 @@ struct FontAtlasCreateInfo
 	obj<Font>     font                  = {};
 	AtlasType     type                  = AtlasType::SDF;
 	PackingMethod packingMethod         = PackingMethod::Shelf;
-	uint32_t      sdfFontSize           = 0;                    // zero will use the font's default size
-	uint32_t      sdfPadding            = 5;
 	uint32_t      atlasWidth            = 2048;
 	uint32_t      atlasHeight           = 2048;
 	uint32_t      padding               = 2;
+	uint32_t      sdfFontSize           = 0;
+	uint32_t      sdfPadding            = 5;
 	bool          hasOverlappingContour = false;
 };
 

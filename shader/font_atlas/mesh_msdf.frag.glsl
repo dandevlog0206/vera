@@ -9,6 +9,14 @@
 #define FLT_MAX                    3.402823466e+38
 #define FLT_INF                    0x7f800000
 
+#define EDGE_COLOR_NONE  0x0
+#define EDGE_COLOR_RED   0x1
+#define EDGE_COLOR_GREEN 0x2
+#define EDGE_COLOR_BLUE  0x4
+
+#define RESET_EDGE_SEGMENT EdgeSegment(vec2(FLT_INF), vec2(FLT_INF), vec2(FLT_INF), EDGE_COLOR_NONE)
+#define RESET_MULTI_DISTANCE vec3(-FLT_MAX)
+
 precision highp float;
 
 layout(location=0) in vec2       inFontCoord;
@@ -21,7 +29,7 @@ layout(set=0, binding=1) readonly buffer StorageBufferBlock
 	vec2 position[];
 } storageBuffer;
 
-layout(set=0, binding=2, rgb32f) uniform image2D glyphTextures[];
+layout(set=0, binding=2, rgba32f) uniform image2D glyphTextures[];
 
 struct SignedDistance
 {
@@ -34,6 +42,7 @@ struct EdgeSegment
 	vec2 p0;
 	vec2 p1; // if Edge is line p1 is same as p0
 	vec2 p2;
+	uint color;
 };
 
 struct PerpendicularSelector
@@ -62,9 +71,9 @@ float shoelace(vec2 a, vec2 b)
 	return (b.x - a.x) * (a.y + b.y);
 }
 
-float median(float a, float b, float c)
+float median(vec3 v)
 {
-	return max(min(a, b), min(max(a, b), c));
+	return max(min(v.x, v.y), min(max(v.x, v.y), v.z));
 }
 
 vec2 normalizeAllowZero(in vec2 v)
@@ -73,11 +82,20 @@ vec2 normalizeAllowZero(in vec2 v)
 	return len > 0.0 ? v / len : vec2(0.0);
 }
 
-bool decodeGlyphPoint(inout vec2 point)
+bool decodeGlyphPoint(inout vec2 point, out uint color)
 {
-	uint float_bits = floatBitsToUint(point.x);
-	point.x = uintBitsToFloat(float_bits & 0xfffffffeu);
-	return bool(float_bits & 0x1u);
+	uint float_bits_x = floatBitsToUint(point.x);
+	uint float_bits_y = floatBitsToUint(point.y);
+
+	point.x = uintBitsToFloat(float_bits_x & 0xfffffffcu);
+	point.y = uintBitsToFloat(float_bits_y & 0xfffffffcu);
+
+	color =
+		(bool(float_bits_x & 0x2u) ? EDGE_COLOR_RED   : 0) |
+		(bool(float_bits_y & 0x1u) ? EDGE_COLOR_GREEN : 0) |
+		(bool(float_bits_y & 0x2u) ? EDGE_COLOR_BLUE  : 0);
+
+	return bool(float_bits_x & 0x1u);
 }
 
 bool compareSignedDistance(in SignedDistance dist_a, in SignedDistance dist_b)
@@ -291,10 +309,17 @@ bool getPerpendicularDistance(
 void resetPerpendicularSelector(out PerpendicularSelector selector)
 {
 	selector.minTrueDistance                  = SignedDistance(-FLT_MAX, 0.0);
-	selector.nearEdge                         = EdgeSegment(vec2(FLT_INF), vec2(FLT_INF), vec2(FLT_INF));
+	selector.nearEdge                         = RESET_EDGE_SEGMENT;
 	selector.nearEdgeParam                    = 0.0;
 	selector.minNegativePerpendicularDistance = -FLT_MAX;
 	selector.minPositivePerpendicularDistance = FLT_MAX;
+}
+
+void resetMultiSelector(out MultiSelector selector)
+{
+	resetPerpendicularSelector(selector.r);
+	resetPerpendicularSelector(selector.g);
+	resetPerpendicularSelector(selector.b);
 }
 
 void addEdgeTrueDistance(
@@ -321,16 +346,22 @@ void addEdgePerpendicularDistance(
 }
 
 void addEdge(
-	inout PerpendicularSelector selector,
-	in    EdgeSegment           prev_edge,
-	in    EdgeSegment           curr_edge,
-	in    EdgeSegment           next_edge,
-	in    vec2                  p
+	inout MultiSelector selector,
+	in    EdgeSegment   prev_edge,
+	in    EdgeSegment   curr_edge,
+	in    EdgeSegment   next_edge,
+	in    vec2          p
 ) {
 	float param;
 	SignedDistance dist = edgeSDF(curr_edge, p, param);
 
-	addEdgeTrueDistance(selector, curr_edge, dist, param);
+	bool has_r = bool(curr_edge.color & EDGE_COLOR_RED);
+	bool has_g = bool(curr_edge.color & EDGE_COLOR_GREEN);
+	bool has_b = bool(curr_edge.color & EDGE_COLOR_BLUE);
+
+	if (has_r) addEdgeTrueDistance(selector.r, curr_edge, dist, param);
+	if (has_g) addEdgeTrueDistance(selector.g, curr_edge, dist, param);
+	if (has_b) addEdgeTrueDistance(selector.b, curr_edge, dist, param);
 
 	vec2  ap       = p - curr_edge.p0;
 	vec2  bp       = p - curr_edge.p1;
@@ -341,18 +372,25 @@ void addEdge(
 	float add      = dot(ap, normalizeAllowZero(prev_dir + a_dir));
 	float bdd      = -dot(bp, normalizeAllowZero(b_dir + next_dir));
 
-	if (add > 0) {
+	if (add > 0.0) {
 		float perp_dist = dist.distance;
 
-		if (getPerpendicularDistance(ap, -a_dir, perp_dist))
-			addEdgePerpendicularDistance(selector, perp_dist = -perp_dist);
+		if (getPerpendicularDistance(ap, -a_dir, perp_dist)) {
+			perp_dist = -perp_dist;
+			if (has_r) addEdgePerpendicularDistance(selector.r, perp_dist);
+			if (has_g) addEdgePerpendicularDistance(selector.g, perp_dist);
+			if (has_b) addEdgePerpendicularDistance(selector.b, perp_dist);
+		}
 	}
 
-	if (bdd > 0) {
+	if (bdd > 0.0) {
 		float perp_dist = dist.distance;
 
-		if (getPerpendicularDistance(bp, b_dir, perp_dist))
-			addEdgePerpendicularDistance(selector, perp_dist);
+		if (getPerpendicularDistance(bp, b_dir, perp_dist)) {
+			if (has_r) addEdgePerpendicularDistance(selector.r, perp_dist);
+			if (has_g) addEdgePerpendicularDistance(selector.g, perp_dist);
+			if (has_b) addEdgePerpendicularDistance(selector.b, perp_dist);
+		}
 	}
 }
 
@@ -362,30 +400,30 @@ void distanceToPerpendicularDistance(
 	in float             param,
 	inout SignedDistance dist
 ) {
-	if (param < 0) {
+	if (param < 0.0) {
 		vec2  dir = edgeDirection0(edge);
 		vec2  aq  = p - edge.p0;
 		float ts  = dot(aq, dir);
 
-		if (ts < 0) {
+		if (ts < 0.0) {
 			float perp_dist = cross2D(aq, dir);
 
 			if (abs(perp_dist) <= abs(dist.distance)) {
 				dist.distance = perp_dist;
-				dist.dot      = 0;
+				dist.dot      = 0.0;
 			}
 		}
-	} else if (param > 1) {
+	} else if (param > 1.0) {
 		vec2  dir = edgeDirection1(edge);
 		vec2  bq  = p - edge.p1;
 		float ts  = dot(bq, dir);
 		
-		if (ts > 0) {
+		if (ts > 0.0) {
 			float perp_dist = cross2D(bq, dir);
 
 			if (abs(perp_dist) <= abs(dist.distance)) {
 				dist.distance = perp_dist;
-				dist.dot      = 0;
+				dist.dot      = 0.0;
 			}
 		}
 	}
@@ -410,6 +448,16 @@ float computeDistance(in PerpendicularSelector selector, in vec2 p)
 	return min_dist;
 }
 
+vec3 computeMultiDistance(in MultiSelector selector, in vec2 p)
+{
+	vec3 dist;
+	dist.x = computeDistance(selector.r, p);
+	dist.y = computeDistance(selector.g, p);
+	dist.z = computeDistance(selector.b, p);
+
+	return dist;
+}
+
 void mergePerpendicularSelector(inout PerpendicularSelector dst, in PerpendicularSelector src)
 {
 	if (compareSignedDistance(src.minTrueDistance, dst.minTrueDistance)) {
@@ -424,22 +472,27 @@ void mergePerpendicularSelector(inout PerpendicularSelector dst, in Perpendicula
 		dst.minPositivePerpendicularDistance = src.minPositivePerpendicularDistance;
 }
 
+void mergeMultiSelector(inout MultiSelector dst, in MultiSelector src)
+{
+	mergePerpendicularSelector(dst.r, src.r);
+	mergePerpendicularSelector(dst.g, src.g);
+	mergePerpendicularSelector(dst.b, src.b);
+}
+
 void writeColor(vec3 dist)
 {
 	ivec2 coord = ivec2(gl_FragCoord.xy);
-	vec4  color = vec4(dist, 0.0);
+	vec4  color = vec4(dist, 1.0);
 	imageStore(glyphTextures[nonuniformEXT(inLayerIndex)], coord, color);
 }
 
 void main()
 {
-	PerpendicularSelector selectors_r[MAX_CONTOUR_COUNT];
-	PerpendicularSelector selectors_g[MAX_CONTOUR_COUNT];
-	PerpendicularSelector selectors_b[MAX_CONTOUR_COUNT];
-	EdgeSegment           edges[MAX_EDGE_COUNT];
-	vec3                  distances[MAX_CONTOUR_COUNT];
-	int                   windings[MAX_CONTOUR_COUNT];
-	vec2                  gp;
+	MultiSelector selectors[MAX_CONTOUR_COUNT];
+	EdgeSegment   edges[MAX_EDGE_COUNT];
+	vec3          distances[MAX_CONTOUR_COUNT];
+	int           windings[MAX_CONTOUR_COUNT];
+	vec2          gp;
 
 	vec2 font_coord = inScale * inFontCoord;
 	uint point_idx  = inStorageOffset;
@@ -448,6 +501,7 @@ void main()
 
 	do {
 		bool  on_curve;
+		uint  color;
 		float winding_score = 0.0;
 		uint  state         = 0;
 		uint  edge_count    = 0;
@@ -455,33 +509,25 @@ void main()
 		while (true) {
 			gp = storageBuffer.position[point_idx++];
 
-			if (gp.x == FLT_INF) {
-				vec2 p0 = edges[edge_count].p0;
-				vec2 p2 = edges[0].p0;
+			if (gp.x == FLT_INF) break;
 
-				if (state == 1)
-					edges[edge_count].p1 = p0;
-
-				edges[edge_count++].p2 = p2;
-				winding_score         += shoelace(p0, p2);
-				break;
-			}
-
-			on_curve = decodeGlyphPoint(gp);
+			on_curve = decodeGlyphPoint(gp, color);
 			gp      *= inScale;
 
 			switch (state) {
 			case 0: // starting point
-				edges[0].p0 = gp;
-				state       = 1;
+				edges[0].p0    = gp;
+				edges[0].color = color;
+				state          = 1;
 				break;
 			case 1: // previous point is on-curve
 				if (on_curve) {
-					edges[edge_count].p1 = edges[edge_count].p0;
-					edges[edge_count].p2 = gp;
-					winding_score       += shoelace(edges[edge_count].p0, gp);
+					edges[edge_count].p1    = edges[edge_count].p0;
+					edges[edge_count].p2    = gp;
+					winding_score          += shoelace(edges[edge_count].p0, gp);
 					edge_count++;
-					edges[edge_count].p0 = gp;
+					edges[edge_count].p0    = gp;
+					edges[edge_count].color = color;
 				} else {
 					edges[edge_count].p1 = gp;
 					state                = 2;
@@ -489,19 +535,21 @@ void main()
 				break;
 			case 2: // previous point is off-curve
 				if (on_curve) {
-					edges[edge_count].p2 = gp;
-					winding_score       += shoelace(edges[edge_count].p0, gp);
+					edges[edge_count].p2    = gp;
+					winding_score          += shoelace(edges[edge_count].p0, gp);
 					edge_count++;
-					edges[edge_count].p0 = gp;
-					state                = 1;
+					edges[edge_count].p0    = gp;
+					edges[edge_count].color = color;
+					state                   = 1;
 				} else {
 					vec2 p2 = 0.5 * (edges[edge_count].p1 + gp);
 
-					edges[edge_count].p2 = p2;
-					winding_score       += shoelace(edges[edge_count].p0, p2);
+					edges[edge_count].p2    = p2;
+					winding_score          += shoelace(edges[edge_count].p0, p2);
 					edge_count++;
-					edges[edge_count].p0 = p2;
-					edges[edge_count].p1 = gp;
+					edges[edge_count].p0    = p2;
+					edges[edge_count].p1    = gp;
+					edges[edge_count].color = color;
 				}
 				break;
 			}
@@ -516,13 +564,11 @@ void main()
 		uint curr_idx = edge_count - 1;
 		uint next_idx = 0;
 
-		resetPerpendicularSelector(selectors_r[cont_count]);
-		resetPerpendicularSelector(selectors_g[cont_count]);
-		resetPerpendicularSelector(selectors_b[cont_count]);
+		resetMultiSelector(selectors[cont_count]);
 
 		for (; next_idx < edge_count; ++next_idx) {
 			addEdge(
-				selectors_r[cont_count],
+				selectors[cont_count],
 				edges[prev_idx],
 				edges[curr_idx],
 				edges[next_idx],
@@ -536,52 +582,52 @@ void main()
 		cont_count++;
 	} while (gp.y != FLT_INF);
 
-	PerpendicularSelector shape_selector;
-	PerpendicularSelector inner_selector;
-	PerpendicularSelector outer_selector;
+	MultiSelector shape_selector;
+	MultiSelector inner_selector;
+	MultiSelector outer_selector;
 
-	resetPerpendicularSelector(shape_selector);
-	resetPerpendicularSelector(inner_selector);
-	resetPerpendicularSelector(outer_selector);
+	resetMultiSelector(shape_selector);
+	resetMultiSelector(inner_selector);
+	resetMultiSelector(outer_selector);
 
 	for (int i = 0; i < cont_count; ++i) {
-		distances[i].x = computeDistance(selectors_r[i], font_coord);
-		distances[i].y = computeDistance(selectors_g[i], font_coord);
-		distances[i].z = computeDistance(selectors_b[i], font_coord);
+		distances[i] = computeMultiDistance(selectors[i], font_coord);
 
-		mergePerpendicularSelector(shape_selector, selectors[i]);
+		mergeMultiSelector(shape_selector, selectors[i]);
 
-		if (windings[i] > 0 && distances[i] >= 0)
-			mergePerpendicularSelector(inner_selector, selectors[i]);
-		if (windings[i] < 0 && distances[i] <= 0)
-			mergePerpendicularSelector(outer_selector, selectors[i]);
+		if (windings[i] > 0 && median(distances[i]) >= 0)
+			mergeMultiSelector(inner_selector, selectors[i]);
+		if (windings[i] < 0 && median(distances[i]) <= 0)
+			mergeMultiSelector(outer_selector, selectors[i]);
 	}
 
-	float result_dist = -FLT_MAX;
-	float shape_dist  = computeDistance(shape_selector, font_coord);
-	float inner_dist  = computeDistance(inner_selector, font_coord);
-	float outer_dist  = computeDistance(outer_selector, font_coord);
-	int   winding     = 0;
+	vec3  shape_dist        = computeMultiDistance(shape_selector, font_coord);
+	vec3  inner_dist        = computeMultiDistance(inner_selector, font_coord);
+	vec3  outer_dist        = computeMultiDistance(outer_selector, font_coord);
+	vec3  result_dist       = RESET_MULTI_DISTANCE;
+	float inner_scalar_dist = median(inner_dist);
+	float outer_scalar_dist = median(outer_dist);
+	int   winding           = 0;
 
-	if (inner_dist >= 0.0 && abs(inner_dist) <= abs(outer_dist)) {
+	if (inner_scalar_dist >= 0.0 && abs(inner_scalar_dist) <= abs(outer_scalar_dist)) {
 		result_dist = inner_dist;
 		winding     = 1;
 
 		for (int i = 0; i < cont_count; ++i) {
 			if (windings[i] > 0) {
-				float cont_dist = distances[i];
-				if (abs(cont_dist) < abs(outer_dist) && cont_dist > result_dist)
+				vec3 cont_dist = distances[i];
+				if (abs(median(cont_dist)) < abs(outer_scalar_dist) && median(cont_dist) > median(result_dist))
 					result_dist = cont_dist;
 			}
 		}
-	} else if (outer_dist <= 0.0 && abs(outer_dist) < abs(inner_dist)) {
+	} else if (outer_scalar_dist <= 0.0 && abs(outer_scalar_dist) < abs(inner_scalar_dist)) {
 		result_dist = outer_dist;
 		winding     = -1;
 
 		for (int i = 0; i < cont_count; ++i) {
 			if (windings[i] < 0) {
-				float cont_dist = distances[i];
-				if (abs(cont_dist) < abs(inner_dist) && cont_dist < result_dist)
+				vec3 cont_dist = distances[i];
+				if (abs(median(cont_dist)) < abs(inner_scalar_dist) && median(cont_dist) < median(result_dist))
 					result_dist = cont_dist;
 			}
 		}
@@ -592,11 +638,14 @@ void main()
 
 	for (int i = 0; i < cont_count; ++i) {
 		if (windings[i] != winding) {
-			float cont_dist = distances[i];
-			if (cont_dist * result_dist >= 0.0 && abs(cont_dist) < abs(result_dist))
+			vec3 cont_dist = distances[i];
+			if (median(cont_dist) * median(result_dist) >= 0.0 && abs(median(cont_dist)) < abs(median(result_dist)))
 				result_dist = cont_dist;
 		}
 	}
+
+	if (median(result_dist) == median(shape_dist))
+		result_dist = shape_dist;
 
 	writeColor(result_dist);
 }

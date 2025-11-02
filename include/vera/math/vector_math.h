@@ -137,6 +137,48 @@ VERA_NODISCARD VERA_CONSTEXPR float shoelace(const vector_base<2, T, Q>& lhs, co
 }
 
 template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<2, T, Q> quadratic(
+	const vector_base<2, T, Q>& p0,
+	const vector_base<2, T, Q>& p1,
+	const vector_base<2, T, Q>& p2,
+	T                           t
+) VERA_NOEXCEPT {
+	return lerp(lerp(p0, p1, t), lerp(p1, p2, t), t);
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T, Q> quadratic(
+	const vector_base<3, T, Q>& p0,
+	const vector_base<3, T, Q>& p1,
+	const vector_base<3, T, Q>& p2,
+	T                           t
+) VERA_NOEXCEPT {
+	return lerp(lerp(p0, p1, t), lerp(p1, p2, t), t);
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<2, T, Q> cubic(
+	const vector_base<2, T, Q>& p0,
+	const vector_base<2, T, Q>& p1,
+	const vector_base<2, T, Q>& p2,
+	const vector_base<2, T, Q>& p3,
+	T                           t
+) VERA_NOEXCEPT {
+	return lerp(quadratic(p0, p1, p2, t), quadratic(p0, p1, p2, t), t);
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T, Q> cubic(
+	const vector_base<3, T, Q>& p0,
+	const vector_base<3, T, Q>& p1,
+	const vector_base<3, T, Q>& p2,
+	const vector_base<3, T, Q>& p3,
+	T                           t
+) VERA_NOEXCEPT {
+	return lerp(quadratic(p0, p1, p2, t), quadratic(p0, p1, p2, t), t);
+}
+
+template <class T, MathQualifier Q>
 VERA_NODISCARD VERA_CONSTEXPR matrix_base<4, 4, T, Q> lookAt(const vector_base<3, T, Q>& eye, const vector_base<3, T, Q>& center, const vector_base<3, T, Q>& up)
 {
 	const vector_base<3, T, Q> f(normalize(center - eye));

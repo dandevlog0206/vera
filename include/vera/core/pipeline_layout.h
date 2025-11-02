@@ -19,16 +19,16 @@ enum class PipelineBindPoint VERA_ENUM
 
 struct PushConstantRange
 {
-	uint32_t         offset;
-	uint32_t         size;
-	ShaderStageFlags stageFlags;
+	uint32_t         offset     = {};
+	uint32_t         size       = {};
+	ShaderStageFlags stageFlags = {};
 };
 
 struct PipelineLayoutCreateInfo
 {
-	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts;
-	std::vector<PushConstantRange>        pushConstantRanges;
-	PipelineBindPoint                     pipelineBindPoint;
+	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts = {};
+	std::vector<PushConstantRange>        pushConstantRanges   = {};
+	PipelineBindPoint                     pipelineBindPoint    = {};
 };
 
 class PipelineLayout : protected CoreObject

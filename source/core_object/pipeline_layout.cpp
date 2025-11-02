@@ -118,9 +118,10 @@ static bool check_compatible_reflection(const ReflectionDesc* a, const Reflectio
 
 		return true;
 	}
-	default:
-		VERA_ASSERT_MSG(false, "invalid reflection type");
 	}
+	
+	VERA_ASSERT_MSG(false, "invalid reflection type");
+	return {};
 }
 
 void fill_struct_next_member(array_view<ReflectionBlockDescPtr> block_descs, BlockDescArray& next_members) {
@@ -185,9 +186,10 @@ static ReflectionBlockDesc* copy_block_reflection(const ReflectionBlockDesc* sou
 		
 		return new_desc;
 	}
-	default:
-		VERA_ASSERT_MSG(false, "invalid block reflection type");
 	}
+	
+	VERA_ASSERT_MSG(false, "invalid block reflection type");
+	return {};
 }
 
 static ReflectionRootMemberDesc* copy_root_reflection(const ReflectionRootMemberDesc* source)
@@ -264,9 +266,10 @@ static ReflectionRootMemberDesc* copy_root_reflection(const ReflectionRootMember
 		
 		return new_desc;
 	}
-	default:
-		VERA_ASSERT_MSG(false, "invalid root reflection type");
 	}
+
+	VERA_ASSERT_MSG(false, "invalid root reflection type");
+	return {};
 }
 
 static ReflectionNameMap* find_name_map(ReflectionNameMap* name_maps, uint32_t name_map_count, const char* name)
@@ -594,7 +597,7 @@ static void create_reflection_info(PipelineLayoutImpl& impl, array_view<const_re
 	std::vector<ReflectionNameMap>           name_maps;
 	std::vector<basic_range<uint32_t>>       set_ranges;
 
-	const uint32_t shader_count = shaders.size();
+	const uint32_t shader_count = static_cast<uint32_t>(shaders.size());
 	const uint32_t set_count    = get_set_count(shaders);
 	uint32_t       res_count    = 0;
 	uint32_t       pc_count     = 0;

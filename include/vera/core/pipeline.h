@@ -152,6 +152,81 @@ VERA_VK_ABI_COMPATIBLE enum class PipelineStageFlagBits VERA_FLAG_BITS
 	AllGraphics                  = 1 << 15
 } VERA_ENUM_FLAGS(PipelineStageFlagBits, PipelineStageFlags)
 
+VERA_VK_ABI_COMPATIBLE enum class DynamicState VERA_ENUM
+{
+	LineWidth                           = 2,
+	DepthBias                           = 3,
+	BlendConstants                      = 4,
+	DepthBounds                         = 5,
+	StencilCompareMask                  = 6,
+	StencilWriteMask                    = 7,
+	StencilReference                    = 8,
+	CullMode                            = 1000267000,
+	FrontFace                           = 1000267001,
+	PrimitiveTopology                   = 1000267002,
+	ViewportWithCount                   = 1000267003,
+	ScissorWithCount                    = 1000267004,
+	VertexInputBindingStride            = 1000267005,
+	DepthTestEnable                     = 1000267006,
+	DepthWriteEnable                    = 1000267007,
+	DepthCompareOp                      = 1000267008,
+	DepthBoundsTestEnable               = 1000267009,
+	StencilTestEnable                   = 1000267010,
+	StencilOp                           = 1000267011,
+	RasterizerDiscardEnable             = 1000377001,
+	DepthBiasEnable                     = 1000377002,
+	PrimitiveRestartEnable              = 1000377004,
+	PatchControlPointsExt               = 1000377000,
+	LogicOpExt                          = 1000377003,
+	LineStipple                         = 1000259000,
+	ViewportWScalingNV                  = 1000087000,
+	ViewportWSCalingEnableNV            = 1000455023,
+	ViewportSwizzleNV                   = 1000455024,
+	DiscardRectangleExt                 = 1000099000,
+	DiscardRectangleEnableExt           = 1000099001,
+	DiscardRectangleModeExt             = 1000099002,
+	SampleLocationsExt                  = 1000143000,
+	SampleLocationsEnableExt            = 1000455017,
+	RayTracingPipelineStackSizeKHR      = 1000347000,
+	ViewportShadingRatePaletteNV        = 1000164004,
+	ViewportCoarseSampleOrderNV         = 1000164006,
+	FragmentShadingRateKHR              = 1000226000,
+	ExclusiveScissorEnableNV            = 1000205000,
+	ExclusiveScissorNV                  = 1000205001,
+	VertexInputExt                      = 1000352000,
+	ColorWriteEnableExt                 = 1000381000,
+	DepthClampEnableExt                 = 1000455003,
+	PolygonModeExt                      = 1000455004,
+	RasterizationSamplesExt             = 1000455005,
+	SampleMaskExt                       = 1000455006,
+	AlphaToCoverageEnableExt            = 1000455007,
+	AlphaToOneEnableExt                 = 1000455008,
+	LogicOpEnableExt                    = 1000455009,
+	ColorBlendEnableExt                 = 1000455010,
+	ColorBlendEquationExt               = 1000455011,
+	ColorWriteMaskExt                   = 1000455012,
+	TessellationDomainOriginExt         = 1000455002,
+	RasterizationStreamExt              = 1000455013,
+	ConservativeRasterizationModeExt    = 1000455014,
+	ExtraPrimitiveOverestimationSizeExt = 1000455015,
+	DepthClipEnableExt                  = 1000455016,
+	ColorBlendAdvancedExt               = 1000455018,
+	ProvokingVertexModeExt              = 1000455019,
+	LineRasterizationModeExt            = 1000455020,
+	LineStippleEnableExt                = 1000455021,
+	DepthClipNegativeOneToOneExt        = 1000455022,
+	CoverageToColorEnableNV             = 1000455025,
+	CoverageToColorLocationNV           = 1000455026,
+	CoverageModulationModeNV            = 1000455027,
+	CoverageModulationTableEnableNV     = 1000455028,
+	CoverageModulationTableNV           = 1000455029,
+	ShadingRateImageEnableNV            = 1000455030,
+	RepresentativeFragmentTestEnableNV  = 1000455031,
+	CoverageReductionModeNV             = 1000455032,
+	AttachmentFeedbackLoopEnableExt     = 1000524000,
+	DepthClampRangeExt                  = 1000582000,
+};
+
 VERA_VK_ABI_COMPATIBLE struct StencilOpState
 {
 	StencilOp failOp      = StencilOp::Keep;
@@ -242,6 +317,7 @@ struct GraphicsPipelineCreateInfo
 	std::optional<DepthStencilInfo>  depthStencilInfo;
 	std::optional<ColorBlendInfo>    colorBlendInfo;
 	std::vector<Format>              colorAttachmentFormats;
+	std::vector<DynamicState>        dynamicStates;
 };
 
 struct MeshPipelineCreateInfo
@@ -254,6 +330,7 @@ struct MeshPipelineCreateInfo
 	std::optional<DepthStencilInfo>  depthStencilInfo;
 	std::optional<ColorBlendInfo>    colorBlendInfo;
 	std::vector<Format>              colorAttachmentFormats;
+	std::vector<DynamicState>        dynamicStates;
 };
 
 struct ComputePipelineCreateInfo

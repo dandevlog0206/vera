@@ -22,24 +22,14 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 			.enableRestart = false,
 			.topology      = info.primitiveTopology
 		},
-		.rasterizationInfo              = RasterizationInfo{},
-		.tessellationPatchControlPoints = 0,
-		.depthStencilInfo               = DepthStencilInfo{},
 		.colorBlendInfo                 = ColorBlendInfo{
 			.attachments = {
 				ColorBlendAttachmentState{
-					.blendEnable         = true,
-					.srcColorBlendFactor = BlendFactor::SrcAlpha,
-					.dstColorBlendFactor = BlendFactor::OneMinusSrcAlpha,
-					.colorBlendOp        = BlendOp::Add,
-					.srcAlphaBlendFactor = BlendFactor::SrcAlpha,
-					.dstAlphaBlendFactor = BlendFactor::OneMinusSrcAlpha,
-					.alphaBlendOp        = BlendOp::Add,
-					.colorWriteMask      = ColorComponentFlagBits::RGBA
+					.blendEnable = true
 				}
 			}
 		},
-		.colorAttachmentFormats          = { Format::Unknown } // use default color
+		.colorAttachmentFormats         = { Format::Unknown } // use default color
 	};
 
 	if (!info.vertexInput.vertexInputDescriptor.empty()) {

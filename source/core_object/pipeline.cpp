@@ -276,15 +276,30 @@ static void fill_vertex_input_attributes(
 	}
 }
 
+static void fill_primitive_state_info(
+	vk::PipelineInputAssemblyStateCreateInfo& ps_info,
+	const PrimitiveInfo&                      info
+) {
+	ps_info.topology               = to_vk_primitive_topology(info.topology);
+	ps_info.primitiveRestartEnable = info.enableRestart;
+}
+
+static void fill_tessellation_state_info(
+	vk::PipelineTessellationStateCreateInfo& ts_info,
+	const uint32_t                           patch_control_points
+) {
+	ts_info.patchControlPoints = patch_control_points;
+}
+
 static void fill_rasterizer_state_info(
 	vk::PipelineRasterizationStateCreateInfo& rs_info,
 	const RasterizationInfo&                  info
 ) {
 	rs_info.depthClampEnable        = info.depthClampEnable;
 	rs_info.rasterizerDiscardEnable = info.rasterizerDiscardEnable;
-	rs_info.polygonMode             = static_cast<vk::PolygonMode>(info.polygonMode);
-	rs_info.cullMode                = static_cast<vk::CullModeFlags>(info.cullMode);
-	rs_info.frontFace               = static_cast<vk::FrontFace>(info.frontFace);
+	rs_info.polygonMode             = to_vk_polygon_mode(info.polygonMode);
+	rs_info.cullMode                = to_vk_cull_mode_flags(info.cullMode);
+	rs_info.frontFace               = to_vk_front_face(info.frontFace);
 	rs_info.depthBiasEnable         = info.depthBiasEnable;
 	rs_info.depthBiasConstantFactor = info.depthBiasConstantFactor;
 	rs_info.depthBiasClamp          = info.depthBiasClamp;
@@ -323,6 +338,7 @@ static void fill_color_blend_state_info(
 	vk::PipelineColorBlendStateCreateInfo& cb_info,
 	const ColorBlendInfo&                  info
 ) {
+	// VERA_VK_ABI_COMPATIBLE
 	const auto* p_attachments = reinterpret_cast<
 		const vk::PipelineColorBlendAttachmentState*>(info.attachments.data());
 
@@ -336,39 +352,6 @@ static void fill_color_blend_state_info(
 	cb_info.blendConstants[3] = info.blendConstants[3];
 }
 
-static void fill_default_color_blend_state_info(
-	vk::PipelineColorBlendStateCreateInfo& cb_info,
-	uint32_t                               attachment_count
-) {
-	static const vk::PipelineColorBlendAttachmentState attachment_state{
-		false,                           // blendEnable
-		vk::BlendFactor::eOne,           // srcColorBlendFactor
-		vk::BlendFactor::eZero,          // dstColorBlendFactor
-		vk::BlendOp::eAdd,               // colorBlendOp
-		vk::BlendFactor::eOne,           // srcAlphaBlendFactor
-		vk::BlendFactor::eZero,          // dstAlphaBlendFactor
-		vk::BlendOp::eAdd,               // alphaBlendOp
-		vk::ColorComponentFlagBits::eR | // colorWriteMask
-		vk::ColorComponentFlagBits::eG |
-		vk::ColorComponentFlagBits::eB |
-		vk::ColorComponentFlagBits::eA
-	};
-
-	static std::vector<vk::PipelineColorBlendAttachmentState> attachment_states;
-
-	if (attachment_states.size() < attachment_count)
-		attachment_states.resize(attachment_count, attachment_state);
-
-	cb_info.logicOpEnable     = false;
-	cb_info.logicOp           = vk::LogicOp::eCopy;
-	cb_info.attachmentCount   = attachment_count;
-	cb_info.pAttachments      = attachment_states.data();
-	cb_info.blendConstants[0] = 0.f;
-	cb_info.blendConstants[1] = 0.f;
-	cb_info.blendConstants[2] = 0.f;
-	cb_info.blendConstants[3] = 0.f;
-}
-
 static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, const GraphicsPipelineCreateInfo& info)
 {
 	states = {
@@ -377,42 +360,45 @@ static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, con
 		vk::DynamicState::eScissor
 	};
 
-	if (!info.primitiveInfo) {
-		states.push_back(vk::DynamicState::ePrimitiveRestartEnable);
-		states.push_back(vk::DynamicState::ePrimitiveTopology);
-	}
+	for (const auto ds : info.dynamicStates)
+		states.push_back(to_vk_dynamic_state(ds));
 
-	if (!info.rasterizationInfo) {
-		states.push_back(vk::DynamicState::eDepthClampEnableEXT);
-		states.push_back(vk::DynamicState::eRasterizerDiscardEnable);
-		states.push_back(vk::DynamicState::ePolygonModeEXT);
-		states.push_back(vk::DynamicState::eCullMode);
-		states.push_back(vk::DynamicState::eFrontFace);
-		states.push_back(vk::DynamicState::eDepthBiasEnable);
-		states.push_back(vk::DynamicState::eDepthBias);
-		states.push_back(vk::DynamicState::eLineWidth);
-	}
+	//if (!info.primitiveInfo) {
+	//	states.push_back(vk::DynamicState::ePrimitiveRestartEnable);
+	//	states.push_back(vk::DynamicState::ePrimitiveTopology);
+	//}
 
-	if (!info.tessellationPatchControlPoints)
-		states.push_back(vk::DynamicState::ePatchControlPointsEXT);
+	//if (!info.rasterizationInfo) {
+	//	states.push_back(vk::DynamicState::eDepthClampEnableEXT);
+	//	states.push_back(vk::DynamicState::eRasterizerDiscardEnable);
+	//	states.push_back(vk::DynamicState::ePolygonModeEXT);
+	//	states.push_back(vk::DynamicState::eCullMode);
+	//	states.push_back(vk::DynamicState::eFrontFace);
+	//	states.push_back(vk::DynamicState::eDepthBiasEnable);
+	//	states.push_back(vk::DynamicState::eDepthBias);
+	//	states.push_back(vk::DynamicState::eLineWidth);
+	//}
 
-	if (!info.depthStencilInfo) {
-		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
-		states.push_back(vk::DynamicState::eLogicOpEXT);
-		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
-		states.push_back(vk::DynamicState::eColorBlendEquationEXT);
-		states.push_back(vk::DynamicState::eColorWriteMaskEXT);
-		states.push_back(vk::DynamicState::eBlendConstants);
-	}
+	//if (!info.tessellationPatchControlPoints)
+	//	states.push_back(vk::DynamicState::ePatchControlPointsEXT);
 
-	if (!info.colorBlendInfo) {
-		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
-		states.push_back(vk::DynamicState::eLogicOpEXT);
-		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
-		states.push_back(vk::DynamicState::eColorBlendEquationEXT);
-		states.push_back(vk::DynamicState::eColorWriteMaskEXT);
-		states.push_back(vk::DynamicState::eBlendConstants);
-	}
+	//if (!info.depthStencilInfo) {
+	//	states.push_back(vk::DynamicState::eLogicOpEnableEXT);
+	//	states.push_back(vk::DynamicState::eLogicOpEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEnableEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEquationEXT);
+	//	states.push_back(vk::DynamicState::eColorWriteMaskEXT);
+	//	states.push_back(vk::DynamicState::eBlendConstants);
+	//}
+
+	//if (!info.colorBlendInfo) {
+	//	states.push_back(vk::DynamicState::eLogicOpEnableEXT);
+	//	states.push_back(vk::DynamicState::eLogicOpEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEnableEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEquationEXT);
+	//	states.push_back(vk::DynamicState::eColorWriteMaskEXT);
+	//	states.push_back(vk::DynamicState::eBlendConstants);
+	//}
 }
 
 static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, const MeshPipelineCreateInfo& info)
@@ -423,34 +409,37 @@ static void fill_dynamic_states(static_vector<vk::DynamicState, 64>& states, con
 		vk::DynamicState::eScissor
 	};
 
-	if (!info.rasterizationInfo) {
-		states.push_back(vk::DynamicState::eDepthClampEnableEXT);
-		states.push_back(vk::DynamicState::eRasterizerDiscardEnable);
-		states.push_back(vk::DynamicState::ePolygonModeEXT);
-		states.push_back(vk::DynamicState::eCullMode);
-		states.push_back(vk::DynamicState::eFrontFace);
-		states.push_back(vk::DynamicState::eDepthBiasEnable);
-		states.push_back(vk::DynamicState::eDepthBias);
-		states.push_back(vk::DynamicState::eLineWidth);
-	}
+	for (const auto ds : info.dynamicStates)
+		states.push_back(to_vk_dynamic_state(ds));
 
-	if (!info.depthStencilInfo) {
-		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
-		states.push_back(vk::DynamicState::eLogicOpEXT);
-		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
-		states.push_back(vk::DynamicState::eColorBlendEquationEXT);
-		states.push_back(vk::DynamicState::eColorWriteMaskEXT);
-		states.push_back(vk::DynamicState::eBlendConstants);
-	}
+	//if (!info.rasterizationInfo) {
+	//	states.push_back(vk::DynamicState::eDepthClampEnableEXT);
+	//	states.push_back(vk::DynamicState::eRasterizerDiscardEnable);
+	//	states.push_back(vk::DynamicState::ePolygonModeEXT);
+	//	states.push_back(vk::DynamicState::eCullMode);
+	//	states.push_back(vk::DynamicState::eFrontFace);
+	//	states.push_back(vk::DynamicState::eDepthBiasEnable);
+	//	states.push_back(vk::DynamicState::eDepthBias);
+	//	states.push_back(vk::DynamicState::eLineWidth);
+	//}
 
-	if (!info.colorBlendInfo) {
-		states.push_back(vk::DynamicState::eLogicOpEnableEXT);
-		states.push_back(vk::DynamicState::eLogicOpEXT);
-		states.push_back(vk::DynamicState::eColorBlendEnableEXT);
-		states.push_back(vk::DynamicState::eColorBlendEquationEXT);
-		states.push_back(vk::DynamicState::eColorWriteMaskEXT);
-		states.push_back(vk::DynamicState::eBlendConstants);
-	}
+	//if (!info.depthStencilInfo) {
+	//	states.push_back(vk::DynamicState::eLogicOpEnableEXT);
+	//	states.push_back(vk::DynamicState::eLogicOpEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEnableEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEquationEXT);
+	//	states.push_back(vk::DynamicState::eColorWriteMaskEXT);
+	//	states.push_back(vk::DynamicState::eBlendConstants);
+	//}
+
+	//if (!info.colorBlendInfo) {
+	//	states.push_back(vk::DynamicState::eLogicOpEnableEXT);
+	//	states.push_back(vk::DynamicState::eLogicOpEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEnableEXT);
+	//	states.push_back(vk::DynamicState::eColorBlendEquationEXT);
+	//	states.push_back(vk::DynamicState::eColorWriteMaskEXT);
+	//	states.push_back(vk::DynamicState::eBlendConstants);
+	//}
 }
 
 static hash_t hash_pipeline_info(const GraphicsPipelineCreateInfo& info)
@@ -570,17 +559,24 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 	vk::PipelineInputAssemblyStateCreateInfo ia_info;
 	if (info.primitiveInfo) {
-		ia_info.primitiveRestartEnable = info.primitiveInfo->enableRestart;
-		ia_info.topology               = to_vk_primitive_topology(info.primitiveInfo->topology);
+		fill_primitive_state_info(ia_info, *info.primitiveInfo);
+	} else {
+		fill_primitive_state_info(ia_info, PrimitiveInfo{});
 	}
 
 	vk::PipelineTessellationStateCreateInfo ts_info;
-	if (info.tessellationPatchControlPoints)
-		ts_info.patchControlPoints = *info.tessellationPatchControlPoints;
+	if (info.tessellationPatchControlPoints) {
+		fill_tessellation_state_info(ts_info, *info.tessellationPatchControlPoints);
+	} else {
+		fill_tessellation_state_info(ts_info, 0);
+	}
 
 	vk::PipelineRasterizationStateCreateInfo rs_info;
-	if (info.rasterizationInfo)
+	if (info.rasterizationInfo) {
 		fill_rasterizer_state_info(rs_info, *info.rasterizationInfo);
+	} else {
+		fill_rasterizer_state_info(rs_info, RasterizationInfo{});
+	}
 
 	vk::PipelineMultisampleStateCreateInfo ms_info;
 	ms_info.rasterizationSamples  = vk::SampleCountFlagBits::e1;
@@ -591,14 +587,18 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	ms_info.alphaToOneEnable      = false;
 
 	vk::PipelineDepthStencilStateCreateInfo ds_info;
-	if (info.depthStencilInfo)
+	if (info.depthStencilInfo) {
 		fill_depth_stencil_state_info(ds_info, *info.depthStencilInfo);
+	} else {
+		fill_depth_stencil_state_info(ds_info, DepthStencilInfo{});
+	}
 
 	vk::PipelineColorBlendStateCreateInfo cb_info;
-	if (info.colorBlendInfo)
+	if (info.colorBlendInfo) {
 		fill_color_blend_state_info(cb_info, *info.colorBlendInfo);
-	else
-		fill_default_color_blend_state_info(cb_info, 0);
+	} else {
+		fill_color_blend_state_info(cb_info, ColorBlendInfo{});
+	}
 
 	static_vector<vk::DynamicState, 64> dynamic_states;
 	fill_dynamic_states(dynamic_states, info);
@@ -606,14 +606,6 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	vk::PipelineDynamicStateCreateInfo dynamic_info;
 	dynamic_info.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
 	dynamic_info.pDynamicStates    = dynamic_states.data();
-
-	Format depth_format   = Format::Unknown;
-	Format stencil_format = Format::Unknown;
-
-	if (info.depthStencilInfo) {
-		depth_format   = static_cast<Format>(info.depthStencilInfo->depthFormat);
-		stencil_format = static_cast<Format>(info.depthStencilInfo->stencilFormat);
-	}
 
 	static_vector<vk::Format, 32> vk_color_formats;
 	for (const auto& format : info.colorAttachmentFormats) {
@@ -625,19 +617,27 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	vk::PipelineRenderingCreateInfoKHR rendering_info;
 	rendering_info.colorAttachmentCount    = static_cast<uint32_t>(vk_color_formats.size());
 	rendering_info.pColorAttachmentFormats = vk_color_formats.data();
-	rendering_info.depthAttachmentFormat   = to_vk_format(depth_format);
-	rendering_info.stencilAttachmentFormat = to_vk_format(stencil_format);
+
+	if (info.depthStencilInfo) {
+		rendering_info.depthAttachmentFormat   =
+			to_vk_format(static_cast<Format>(info.depthStencilInfo->depthFormat));
+		rendering_info.stencilAttachmentFormat =
+			to_vk_format(static_cast<Format>(info.depthStencilInfo->stencilFormat));
+	} else {
+		rendering_info.depthAttachmentFormat   = vk::Format::eUndefined; 
+		rendering_info.stencilAttachmentFormat = vk::Format::eUndefined;
+	}
 
 	vk::GraphicsPipelineCreateInfo pipeline_info;
 	pipeline_info.stageCount          = static_cast<uint32_t>(shader_infos.size());
 	pipeline_info.pStages             = shader_infos.data();
 	pipeline_info.pVertexInputState   = &vi_info;
-	pipeline_info.pInputAssemblyState = info.primitiveInfo ? &ia_info : nullptr;
-	pipeline_info.pTessellationState  = info.tessellationPatchControlPoints ? &ts_info : nullptr;
+	pipeline_info.pInputAssemblyState = &ia_info;
+	pipeline_info.pTessellationState  = &ts_info;
 	pipeline_info.pViewportState      = get_default_viewport_state_info();
-	pipeline_info.pRasterizationState = info.rasterizationInfo ? &rs_info : nullptr;
+	pipeline_info.pRasterizationState = &rs_info;
 	pipeline_info.pMultisampleState   = &ms_info;
-	pipeline_info.pDepthStencilState  = info.depthStencilInfo ? &ds_info : nullptr;
+	pipeline_info.pDepthStencilState  = &ds_info;
 	pipeline_info.pColorBlendState    = &cb_info;
 	pipeline_info.pDynamicState       = &dynamic_info;
 	pipeline_info.layout              = get_vk_pipeline_layout(impl.pipelineLayout);
@@ -686,8 +686,11 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	fill_shader_info(impl, shader_infos, info);
 
 	vk::PipelineRasterizationStateCreateInfo rs_info;
-	if (info.rasterizationInfo)
+	if (info.rasterizationInfo) {
 		fill_rasterizer_state_info(rs_info, *info.rasterizationInfo);
+	} else {
+		fill_rasterizer_state_info(rs_info, RasterizationInfo{});
+	}
 
 	vk::PipelineMultisampleStateCreateInfo ms_info;
 	ms_info.rasterizationSamples  = vk::SampleCountFlagBits::e1;
@@ -698,14 +701,18 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	ms_info.alphaToOneEnable      = false;
 
 	vk::PipelineDepthStencilStateCreateInfo ds_info;
-	if (info.depthStencilInfo)
+	if (info.depthStencilInfo) {
 		fill_depth_stencil_state_info(ds_info, *info.depthStencilInfo);
+	} else {
+		fill_depth_stencil_state_info(ds_info, DepthStencilInfo{});
+	}
 
 	vk::PipelineColorBlendStateCreateInfo cb_info;
-	if (info.colorBlendInfo)
+	if (info.colorBlendInfo) {
 		fill_color_blend_state_info(cb_info, *info.colorBlendInfo);
-	else
-		fill_default_color_blend_state_info(cb_info, 0);
+	} else {
+		fill_color_blend_state_info(cb_info, ColorBlendInfo{});
+	}
 
 	static_vector<vk::DynamicState, 64> dynamic_states;
 	fill_dynamic_states(dynamic_states, info);
@@ -713,14 +720,6 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	vk::PipelineDynamicStateCreateInfo dynamic_info;
 	dynamic_info.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
 	dynamic_info.pDynamicStates    = dynamic_states.data();
-
-	Format depth_format    = Format::Unknown;
-	Format stencil_format  = Format::Unknown;
-
-	if (info.depthStencilInfo) {
-		depth_format   = static_cast<Format>(info.depthStencilInfo->depthFormat);
-		stencil_format = static_cast<Format>(info.depthStencilInfo->stencilFormat);
-	}
 
 	static_vector<vk::Format, 32> vk_color_formats;
 	for (const auto& format : info.colorAttachmentFormats) {
@@ -732,16 +731,24 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	vk::PipelineRenderingCreateInfoKHR rendering_info;
 	rendering_info.colorAttachmentCount    = static_cast<uint32_t>(vk_color_formats.size());
 	rendering_info.pColorAttachmentFormats = vk_color_formats.data();
-	rendering_info.depthAttachmentFormat   = to_vk_format(depth_format);
-	rendering_info.stencilAttachmentFormat = to_vk_format(stencil_format);
+
+	if (info.depthStencilInfo) {
+		rendering_info.depthAttachmentFormat   =
+			to_vk_format(static_cast<Format>(info.depthStencilInfo->depthFormat));
+		rendering_info.stencilAttachmentFormat =
+			to_vk_format(static_cast<Format>(info.depthStencilInfo->stencilFormat));
+	} else {
+		rendering_info.depthAttachmentFormat   = vk::Format::eUndefined; 
+		rendering_info.stencilAttachmentFormat = vk::Format::eUndefined;
+	}
 
 	vk::GraphicsPipelineCreateInfo pipeline_info;
 	pipeline_info.stageCount          = static_cast<uint32_t>(shader_infos.size());
 	pipeline_info.pStages             = shader_infos.data();
 	pipeline_info.pViewportState      = get_default_viewport_state_info();
-	pipeline_info.pRasterizationState = info.rasterizationInfo ? &rs_info : nullptr;
+	pipeline_info.pRasterizationState = &rs_info;
 	pipeline_info.pMultisampleState   = &ms_info;
-	pipeline_info.pDepthStencilState  = info.depthStencilInfo ? &ds_info : nullptr;
+	pipeline_info.pDepthStencilState  = &ds_info;
 	pipeline_info.pColorBlendState    = &cb_info;
 	pipeline_info.pDynamicState       = &dynamic_info;
 	pipeline_info.layout              = get_vk_pipeline_layout(impl.pipelineLayout);

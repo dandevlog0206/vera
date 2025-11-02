@@ -41,23 +41,24 @@ public:
 
 		vr::FontAtlasCreateInfo atlas_info = {
 			.font        = font_manager->getFonts()[1],
-			.type        = vr::AtlasType::SDF,
-			.sdfFontSize = 48,
+			.type        = vr::AtlasType::MTSDF,
 			.atlasWidth  = 4096,
 			.atlasHeight = 4096,
-			.padding     = 5
+			.padding     = 5,
+			.sdfFontSize = 48
 		};
 
 		m_font_atlas = vr::FontAtlas::create(m_device, atlas_info);
 
-		// vr::basic_range<vr::GlyphID> glyph_range = get_cmdline_glyph_range();
+		vr::basic_range<vr::GlyphID> glyph_range = get_cmdline_glyph_range();
 		// vr::basic_range<vr::GlyphID> glyph_range = {0, font->getGlyphCount()};
-		vr::basic_range<vr::GlyphID> glyph_range = { 0, 39680 };
+		// vr::basic_range<vr::GlyphID> glyph_range = { 0, 39680 };
 		// vr::basic_range<vr::GlyphID> glyph_range = { 0, 100 };
 		
 		vr::RenderDoc::startFrameCapture();
 
-		m_font_atlas->loadGlyphRange(glyph_range, 32);
+		m_font_atlas->loadGlyphRange({ 0, 100 }, 32);
+		m_font_atlas->loadGlyphRange({ 100, 200 }, 32);
 		m_device->waitIdle();
 
 		vr::RenderDoc::endFrameCapture();

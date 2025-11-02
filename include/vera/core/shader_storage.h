@@ -16,7 +16,7 @@ class Texture;
 class TextureView;
 class Buffer;
 class BufferView;
-class ShaderStorageResource;
+struct ShaderStorageResource;
 struct ReflectionDesc;
 
 class ShaderVariable

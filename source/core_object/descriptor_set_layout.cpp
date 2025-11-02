@@ -34,9 +34,10 @@ static uint32_t get_max_resource_count(const DeviceImpl& impl, DescriptorType re
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageBuffers;
 	case DescriptorType::InputAttachment:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindInputAttachments;
-	default:
-		VERA_ASSERT_MSG(false, "invalid resource type");
 	}
+
+	VERA_ASSERT_MSG(false, "invalid resource type");
+	return {};
 }
 
 static bool check_contiguous(array_view<DescriptorSetLayoutBinding> ordered_bindings)
