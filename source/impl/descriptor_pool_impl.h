@@ -5,15 +5,20 @@
 
 VERA_NAMESPACE_BEGIN
 
-struct DescriptorPoolImpl
+class DescriptorPoolImpl
 {
-	using DescriptorSetMap = std::unordered_map<uint64_t, ref<DescriptorSet>>;
+public:
+	using AllocatedMap         = std::unordered_map<hash_t, ref<DescriptorSet>>;
+	using DescriptorSetPool    = std::vector<obj<DescriptorSet>>;
+	using DescriptorSetPoolMap = std::unordered_map<hash_t, DescriptorSetPool>;
 
-	obj<Device>        device;
+	obj<Device>               device         = {};
 
-	vk::DescriptorPool descriptorPool;
+	vk::DescriptorPool        descriptorPool = {};
 
-	DescriptorSetMap   descriptorSetMap;
+	AllocatedMap              allocatedSets  = {};
+	DescriptorSetPoolMap      poolMap        = {};
+	DescriptorPoolCreateFlags flags          = {};
 };
 
 VERA_NAMESPACE_END

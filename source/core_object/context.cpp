@@ -51,12 +51,12 @@ static VKAPI_ATTR VkBool32 vk_debug_callback(
 	return VK_FALSE;
 }
 
-const vk::Instance& get_vk_instance(const_ref<Context> context)
+const vk::Instance& get_vk_instance(const_ref<Context> context) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(context).instance;
 }
 
-vk::Instance& get_vk_instance(ref<Context> context)
+vk::Instance& get_vk_instance(ref<Context> context) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(context).instance;
 }

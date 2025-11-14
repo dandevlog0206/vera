@@ -1,6 +1,5 @@
 #pragma once
 
-#include "format.h"
 #include "../math/matrix_types.h"
 #include "../math/vector_types.h"
 #include <span>

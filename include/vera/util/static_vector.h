@@ -402,12 +402,12 @@ public:
 
 	T* data() noexcept
 	{
-		return m_storage.elem;
+		return m_size > 0 ? m_storage.elem : nullptr;
 	}
 
 	const T* data() const noexcept
 	{
-		return m_storage.elem;
+		return m_size > 0 ? m_storage.elem : nullptr;
 	}
 
 	iterator begin() noexcept

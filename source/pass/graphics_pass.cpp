@@ -1,7 +1,6 @@
 #include "../../include/vera/pass/graphics_pass.h"
 
-#include "../../include/vera/core/device.h"
-#include "../../include/vera/core/pipeline_layout.h"
+#include "../../include/vera/core/buffer.h"
 #include "../../include/vera/core/texture_view.h"
 
 #include <random>
@@ -55,7 +54,10 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 	}
 
 	m_pipeline = Pipeline::create(device, pipeline_info);
-	m_parameter.init(m_pipeline->getPipelineLayout());
+
+	m_param    = ShaderParameter::create(m_pipeline->getPipelineLayout());
+	// m_param    = ShaderParameter::create(nullptr);
+	m_param = nullptr;
 	m_states.setPipeline(m_pipeline);
 }
 
@@ -84,9 +86,9 @@ obj<Buffer> GraphicsPass::getIndexBuffer()
 	return m_index_buffer;
 }
 
-ShaderParameter& GraphicsPass::getShaderParameter()
+ShaderVariable GraphicsPass::getRootVariable()
 {
-	return m_parameter;
+	return m_param->getRootVariable();
 }
 
 void GraphicsPass::execute(obj<RenderContext> ctx, ref<FrameBuffer> framebuffer)
@@ -130,7 +132,7 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<FrameBuffer> framebuffer)
 	};
 
 	rendering_info.colorAttachments.push_back(
-		ColorAtttachmentInfo{
+		ColorAttachmentInfo{
 			.texture    = framebuffer->getTexture(),
 			.loadOp     = LoadOp::Clear,
 			.storeOp    = StoreOp::Store,
@@ -139,7 +141,7 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<FrameBuffer> framebuffer)
 
 	if (m_depth) {
 		rendering_info.depthAttachment =
-			DepthAtttachmentInfo{
+			DepthAttachmentInfo{
 				.texture    = m_depth,
 				.loadOp     = LoadOp::Clear,
 				.storeOp    = StoreOp::DontCare,
@@ -150,9 +152,9 @@ void GraphicsPass::execute(obj<RenderContext> ctx, ref<FrameBuffer> framebuffer)
 	m_states.setRenderingInfo(rendering_info);
 
 	if (m_index_buffer)
-		ctx->drawIndexed(m_states, m_parameter, m_index_count, 0, 0);
+		ctx->drawIndexed(m_states, m_param, m_index_count, 0, 0);
 	else
-		ctx->draw(m_states, m_parameter, m_vertex_count, 0);
+		ctx->draw(m_states, m_param, m_vertex_count, 0);
 }
 
 VERA_NAMESPACE_END

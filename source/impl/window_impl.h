@@ -10,8 +10,9 @@
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
 
-struct WindowImpl
+class WindowImpl
 {
+public:
 	os::Window*                 self;
 
 	GLFWwindow*                 window;

@@ -19,13 +19,10 @@
 # --- Script Configuration ---
 
 # The script automatically determines its own location to find the shaders.
-# $scriptPath = $PSScriptRoot
-$inputPath = Join-Path $PSScriptRoot "..\shader"
+$inputPath = Join-Path $PSScriptRoot "..\shader\glsl"
 
-$scriptPath = Resolve-Path -Path $inputPath
 # Set the relative path to the output directory for compiled SPIR-V files.
-# $outputDir = Join-Path $scriptPath "..\spv"
-$outputDir = $scriptPath
+$outputDir = Join-Path $PSScriptRoot "..\spirv"
 
 # --- End Configuration ---
 
@@ -48,6 +45,7 @@ Write-Host "[INFO] Starting recursive shader compilation check..." -ForegroundCo
 Write-Host "[INFO] Source: '$scriptPath' -> Destination: '$outputDir'"
 Write-Host ""
 
+$scriptPath = (Resolve-Path -Path $inputPath).Path
 $filesCompiled = 0
 $filesSkipped = 0
 
@@ -58,7 +56,7 @@ $shaderFiles = Get-ChildItem -Path $scriptPath -File -Recurse -Include *glsl, *.
 foreach ($sourceFile in $shaderFiles) {
     # Determine the relative path of the source file to replicate the folder structure.
     $relativePath = $sourceFile.FullName.Substring($scriptPath.Length + 1)
-    $destFile = "$relativePath.spv"
+    $destFile = Join-Path $outputDir "$relativePath.spv"
     $destSubDir = Split-Path -Path $destFile -Parent
 
     $doCompile = $false

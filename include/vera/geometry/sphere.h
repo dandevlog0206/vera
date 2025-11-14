@@ -11,12 +11,12 @@ public:
 		m_pos(0.f, 0.f, 0.f),
 		m_radius(1.f) {}
 
-	VERA_CONSTEXPR Sphere(float pos_x, float pos_y, float pos_z, float radius) VERA_NOEXCEPT :
-		m_pos(pos_x, pos_y, pos_z),
-		m_radius(radius) {}
-
 	VERA_CONSTEXPR Sphere(const float3& pos, float radius) VERA_NOEXCEPT :
 		m_pos(pos),
+		m_radius(radius) {}
+
+	VERA_CONSTEXPR Sphere(float pos_x, float pos_y, float pos_z, float radius) VERA_NOEXCEPT :
+		m_pos(pos_x, pos_y, pos_z),
 		m_radius(radius) {}
 
 	VERA_NODISCARD VERA_CONSTEXPR const float3& pos() const VERA_NOEXCEPT
@@ -24,7 +24,17 @@ public:
 		return m_pos;
 	}
 
-	VERA_NODISCARD VERA_CONSTEXPR float radius() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_CONSTEXPR float3& pos() VERA_NOEXCEPT
+	{
+		return m_pos;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const float& radius() const VERA_NOEXCEPT
+	{
+		return m_radius;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR float& radius() VERA_NOEXCEPT
 	{
 		return m_radius;
 	}

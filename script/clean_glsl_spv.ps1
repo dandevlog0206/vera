@@ -16,7 +16,7 @@
 
 # The script automatically determines its own location to find the shaders directory.
 # $scriptPath = $PSScriptRoot
-$inputPath = Join-Path $PSScriptRoot "..\shader"
+$inputPath = Join-Path $PSScriptRoot "..\spirv"
 
 $scriptPath = Resolve-Path -Path $inputPath
 # Set the relative path to the output directory where compiled .spv files are stored.
@@ -36,7 +36,7 @@ if (-not (Test-Path $outputDir)) {
 }
 
 # 2. Find all .spv files recursively within the output directory.
-$spvFiles = Get-ChildItem -Path $outputDir -File -Recurse -Filter *.spv
+$spvFiles = Get-ChildItem -Path $outputDir -File -Recurse -Filter *glsl.spv
 
 if ($spvFiles.Count -eq 0) {
     Write-Host "[SKIP] No .spv files found to delete." -ForegroundColor Yellow

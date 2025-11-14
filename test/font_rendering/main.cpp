@@ -58,7 +58,6 @@ public:
 		vr::RenderDoc::startFrameCapture();
 
 		m_font_atlas->loadGlyphRange({ 0, 100 }, 32);
-		m_font_atlas->loadGlyphRange({ 100, 200 }, 32);
 		m_device->waitIdle();
 
 		vr::RenderDoc::endFrameCapture();

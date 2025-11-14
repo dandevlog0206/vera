@@ -1,37 +1,23 @@
 #pragma once
 
 #include "object_impl.h"
-#include "detail/shader_reflection.h"
-#include "../../include/vera/core/shader.h"
-#include "../../../include/vera/util/string_pool.h"
 
 VERA_NAMESPACE_BEGIN
 
-enum class PipelineBindPoint VERA_ENUM;
-
 struct PushConstantRange;
 
-struct ShaderImpl
+class ShaderImpl
 {
-	using PushConstantRanges = std::vector<PushConstantRange>;
+public:
+	obj<Device>           device           = {};
+	obj<ShaderReflection> shaderReflection = {};
 
-	obj<Device>        device;
+	vk::ShaderModule      shader           = {};
 
-	vk::ShaderModule   shader;
+	std::vector<uint32_t> spirvCode        = {};
+	size_t                hashValue        = {};
 
-	ShaderReflection   reflection;
-	PushConstantRanges pushConstantRanges;
-	PipelineBindPoint  pipelineBindPoint;
-	ShaderStageFlags   stageFlags;
-	std::string_view   entryPointName;
-	string_pool        namePool;
-	size_t             hashValue;
+	obj<ShaderReflection> getOrCreateShaderReflection() VERA_NOEXCEPT;
 };
-
-static vk::ShaderStageFlags to_vk_shader_stage_flags(ShaderStageFlags flags)
-{
-	// vr::ShaderStageFlags is VERA_VK_ABI_COMPATIBLE with vk::ShaderStageFlags
-	return std::bit_cast<vk::ShaderStageFlags>(flags);
-}
 
 VERA_NAMESPACE_END

@@ -11,8 +11,8 @@
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/semaphore.h"
 #include "../../include/vera/core/texture.h"
+#include "../../include/vera/core/shader_parameter.h"
 #include "../../include/vera/graphics/graphics_state.h"
-#include "../../include/vera/graphics/shader_parameter.h"
 #include "../../include/vera/util/static_vector.h"
 
 VERA_NAMESPACE_BEGIN
@@ -171,10 +171,10 @@ void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32
 }
 
 void RenderContext::draw(
-	const GraphicsState&   states,
-	const ShaderParameter& params,
-	uint32_t               vtx_count,
-	uint32_t               vtx_off
+	const GraphicsState& states,
+	obj<ShaderParameter> param,
+	uint32_t             vtx_count,
+	uint32_t             vtx_off
 ) {
 	auto& impl = getImpl(this);
 	auto& cmd  = get_current_frame(impl).commandBuffer;
@@ -210,17 +210,17 @@ void RenderContext::draw(
 	}
 
 	cmd->bindGraphicsState(states);
-	cmd->bindShaderParameter(params);
+	// cmd->bindShaderParameter(param);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }
 
 void RenderContext::drawIndexed(
-	const GraphicsState&   states,
-	const ShaderParameter& params,
-	uint32_t               idx_count,
-	uint32_t               idx_off,
-	uint32_t               vtx_off
+	const GraphicsState& states,
+	obj<ShaderParameter> param,
+	uint32_t             idx_count,
+	uint32_t             idx_off,
+	uint32_t             vtx_off
 ) {
 	auto& impl = getImpl(this);
 	auto& cmd  = get_current_frame(impl).commandBuffer;
@@ -256,7 +256,7 @@ void RenderContext::drawIndexed(
 	}
 
 	cmd->bindGraphicsState(states);
-	cmd->bindShaderParameter(params);
+	cmd->bindShaderParameter(param);
 
 	cmd->drawIndexed(idx_count, 1, idx_off, vtx_off, 0);
 }
@@ -278,11 +278,16 @@ void RenderContext::submit()
 
 	cmd_impl.state = CommandBufferState::Submitted;
 
+	vk::TimelineSemaphoreSubmitInfo timeline_info;
+	timeline_info.signalSemaphoreValueCount = 1;
+	timeline_info.pSignalSemaphoreValues    = &cmd_impl.submitID;
+
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount   = 1;
 	submit_info.pCommandBuffers      = &cmd_impl.commandBuffer;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &get_vk_semaphore(cmd_impl.semaphore);
+	submit_info.pNext                = &timeline_info;
 
 	static_vector<vk::Semaphore, 32>          semaphores;
 	static_vector<vk::PipelineStageFlags, 32> stage_masks;

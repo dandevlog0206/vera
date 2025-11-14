@@ -1,44 +1,23 @@
 #pragma once
 
 #include "object_impl.h"
-#include "../../include/vera/core/descriptor_set.h"
-#include "../../include/vera/util/index_map.h"
-#include "../../include/vera/util/hash.h"
+#include <unordered_map>
 
 VERA_NAMESPACE_BEGIN
 
-enum class DescriptorType VERA_ENUM;
-
-struct DescriptorBindingDesc
+class DescriptorSetImpl
 {
-	DescriptorBindingInfo bindingInfo;
-	hash_t                hashValue;
-};
+public:
+	using BindingStateMap = std::unordered_map<uint64_t, obj<CoreObject>> ;
 
-struct DescriptorArrayBindingDesc
-{
-	using BindingDescs = std::vector<DescriptorBindingDesc>;
+	obj<Device>              device                  = {};
+	obj<DescriptorPool>      descriptorPool          = {};
+	obj<DescriptorSetLayout> descriptorSetLayout     = {};
 
-	BindingDescs   bindingDescs;
-	uint32_t       binding;
-	DescriptorType resourceType;
-};
+	vk::DescriptorSet        descriptorSet           = {};
 
-struct DescriptorSetImpl
-{
-	// BindingMap[binding][array_element] -> resource
-	using BindingStates = std::vector<DescriptorArrayBindingDesc>;
-
-	ref<Device>                    device;
-	ref<DescriptorPool>            descriptorPool;
-	const_ref<DescriptorSetLayout> descriptorSetLayout;
-
-	vk::DescriptorSet              descriptorSet;
-
-	hash_t                         hashValue;
-	BindingStates                  bindingStates;
-	uint32_t                       arrayElementCount; // for last binding
-	bool                           isCached;
+	BindingStateMap          bindingStates           = {};
+	uint32_t                 variableDescriptorCount = {};
 };
 
 VERA_NAMESPACE_END

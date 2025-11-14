@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/command_buffer.h"
+#include <map>
 
 VERA_NAMESPACE_BEGIN
 
@@ -9,48 +10,36 @@ class GraphicsState
 	friend class RenderContext;
 	friend class CommandBuffer;
 public:
-	GraphicsState();
+	GraphicsState() VERA_NOEXCEPT;
 	~GraphicsState();
 
-	void setViewport(const Viewport& viewport);
-	const Viewport& getViewport() const;
-	void pushViewport(const Viewport& viewport);
-	void popViewport();
+	void setViewport(const Viewport& viewport) VERA_NOEXCEPT;
+	VERA_NODISCARD std::optional<Viewport> getViewport() const VERA_NOEXCEPT;
 
-	void setScissor(const Scissor& viewport);
-	const Scissor& getScissor() const;
-	void pushScissor(const Scissor& viewport);
-	void popScissor();
+	void setScissor(const Scissor& viewport) VERA_NOEXCEPT;
+	VERA_NODISCARD std::optional<Scissor> getScissor() const VERA_NOEXCEPT;
 
-	void setVertexBuffer(ref<Buffer> buffer);
-	ref<Buffer> getVertexBuffer() const;
-	void pushVertexBuffer(ref<Buffer> buffer);
-	void popVertexBuffer();
+	void setVertexBuffer(obj<Buffer> buffer) VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Buffer> getVertexBuffer() const VERA_NOEXCEPT;
 
-	void setIndexBuffer(ref<Buffer> buffer);
-	ref<Buffer> getIndexBuffer() const;
-	void pushIndexBuffer(ref<Buffer> buffer);
-	void popIndexBuffer();
+	void setIndexBuffer(obj<Buffer> buffer) VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Buffer> getIndexBuffer() const VERA_NOEXCEPT;
 
-	void setRenderingInfo(const RenderingInfo& info);
-	const RenderingInfo& getRenderingInfo() const;
-	void pushRenderingInfo(const RenderingInfo& info);
-	void popRenderingInfo();
+	void setRenderingInfo(const RenderingInfo& info) VERA_NOEXCEPT;
+	VERA_NODISCARD const RenderingInfo& getRenderingInfo() const VERA_NOEXCEPT;
 
-	void setPipeline(ref<Pipeline> pipeline);
-	ref<Pipeline> getPipeline() const;
-	void pushPipeline(ref<Pipeline> pipeline);
-	void popPipelineInfo();
+	void setPipeline(obj<Pipeline> pipeline) VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Pipeline> getPipeline() const VERA_NOEXCEPT;
 
 	void clear();
 
 private:
-	std::vector<Viewport>      m_viewports;
-	std::vector<Scissor>       m_scissors;
-	std::vector<ref<Buffer>>   m_vertex_buffers;
-	std::vector<ref<Buffer>>   m_index_buffers;
-	std::vector<RenderingInfo> m_renderingInfos;
-	std::vector<ref<Pipeline>> m_pipelines;
+	Viewport      m_viewport;
+	Scissor       m_scissor;
+	obj<Buffer>   m_vertex_buffer;
+	obj<Buffer>   m_index_buffer;
+	RenderingInfo m_rendering_info;
+	obj<Pipeline> m_pipeline;
 };
 
 VERA_NAMESPACE_END

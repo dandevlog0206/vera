@@ -1,42 +1,23 @@
 #pragma once
 
-#include "pipeline.h"
-#include "buffer.h"
-#include "texture.h"
+#include "device.h"
 #include "command_buffer_sync.h"
-#include "device_memory.h"
 #include "../graphics/color.h"
-#include "../util/rect.h"
 #include "../util/array_view.h"
+#include "../util/rect.h"
+#include <optional>
 #include <vector>
 
 VERA_NAMESPACE_BEGIN
 
+class Pipeline;
+class PipelineLayout;
+class ShaderParameter;
 class DescriptorSet;
+class Buffer;
+class Texture;
 class GraphicsState;
 class ShaderParameter;
-
-enum class ResolveMode VERA_ENUM
-{
-	None,
-	SampleZero,
-	Average,
-	Min,
-	Max
-};
-
-enum class LoadOp VERA_ENUM
-{
-	Load,
-	Clear,
-	DontCare
-};
-
-enum class StoreOp VERA_ENUM
-{
-	Store,
-	DontCare
-};
 
 struct Viewport
 {
@@ -59,25 +40,25 @@ struct Scissor
 template <class ClearType>
 struct AttachmentInfo
 {
-	ref<Texture> texture        = {};
-	ref<Texture> resolveTexture = {};
-	ResolveMode  resolveMode    = {};
-	LoadOp       loadOp         = LoadOp::Load;
-	StoreOp      storeOp        = StoreOp::Store;
-	ClearType    clearValue     = {};
+	ref<Texture>        texture        = {};
+	ref<Texture>        resolveTexture = {};
+	ResolveModeFlagBits resolveMode    = {};
+	LoadOp              loadOp         = LoadOp::Load;
+	StoreOp             storeOp        = StoreOp::Store;
+	ClearType           clearValue     = {};
 };
 
-typedef AttachmentInfo<Color> ColorAtttachmentInfo;
-typedef AttachmentInfo<float> DepthAtttachmentInfo;
-typedef AttachmentInfo<uint32_t> StencilAtttachmentInfo;
+typedef AttachmentInfo<Color> ColorAttachmentInfo;
+typedef AttachmentInfo<float> DepthAttachmentInfo;
+typedef AttachmentInfo<uint32_t> StencilAttachmentInfo;
 
 struct RenderingInfo
 {
-	irect2d                               renderArea        = {};
-	uint32_t                              layerCount        = 1;
-	std::vector<ColorAtttachmentInfo>     colorAttachments;
-	std::optional<DepthAtttachmentInfo>   depthAttachment;
-	std::optional<StencilAtttachmentInfo> stencilAttachment;
+	irect2d                              renderArea        = {};
+	uint32_t                             layerCount        = 1;
+	std::vector<ColorAttachmentInfo>     colorAttachments;
+	std::optional<DepthAttachmentInfo>   depthAttachment;
+	std::optional<StencilAttachmentInfo> stencilAttachment;
 };
 
 class CommandBuffer : protected CoreObject // TODO: consider rename to command buffer
@@ -115,9 +96,9 @@ public:
 
 	void setViewport(const Viewport& viewport);
 	void setScissor(const Scissor& scissor);
-	void bindVertexBuffer(ref<Buffer> buffer, size_t offset = 0);
-	void bindIndexBuffer(ref<Buffer> buffer, size_t offset = 0);
-	void bindPipeline(ref<Pipeline> pipeline);
+	void bindVertexBuffer(obj<Buffer> buffer, size_t offset = 0);
+	void bindIndexBuffer(obj<Buffer> buffer, size_t offset = 0);
+	void bindPipeline(obj<Pipeline> pipeline);
 	
 	void pushConstant(
 		const_ref<PipelineLayout> pipeline_layout,
@@ -125,8 +106,6 @@ public:
 		uint32_t                  offset,
 		const void*               data,
 		uint32_t                  size);
-
-	void bindGraphicsState(const GraphicsState& state);
 
 	void bindDescriptorSet(
 		const_ref<PipelineLayout> pipeline_layout,
@@ -138,8 +117,10 @@ public:
 		uint32_t                  set,
 		ref<DescriptorSet>        desc_set,
 		array_view<uint32_t>      dynamic_offsets);
+	
+	void bindGraphicsState(const GraphicsState& state);
 
-	void bindShaderParameter(const ShaderParameter& shader_param);
+	void bindShaderParameter(obj<ShaderParameter> params);
 
 	void beginRendering(const RenderingInfo& info);
 

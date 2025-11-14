@@ -10,13 +10,23 @@
 
 VERA_NAMESPACE_BEGIN
 
+const vk::DeviceMemory& get_vk_device_memory(const_ref<DeviceMemory> device_memory) VERA_NOEXCEPT
+{
+	return CoreObject::getImpl(device_memory).memory;
+}
+
+vk::DeviceMemory& get_vk_device_memory(ref<DeviceMemory> device_memory) VERA_NOEXCEPT
+{
+	return CoreObject::getImpl(device_memory).memory;
+}
+
 obj<DeviceMemory> DeviceMemory::create(obj<Device> device, const DeviceMemoryCreateInfo& info)
 {
 	auto  obj         = createNewCoreObject<DeviceMemory>();
 	auto& impl        = getImpl(obj);
 	auto& device_impl = getImpl(device);
 
-	auto type_idx = find_memory_type_idx(device_impl, info.propertyFlags, info.memoryTypeMask);
+	auto type_idx = device_impl.findMemoryTypeIndex(info.propertyFlags, info.memoryTypeMask);
 
 	vk::MemoryAllocateInfo alloc_info;
 	alloc_info.allocationSize  = info.size;

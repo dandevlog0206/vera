@@ -1,6 +1,6 @@
 #pragma once
 
-#include "format.h"
+#include "../core/enum_types.h"
 #include <string_view>
 
 VERA_NAMESPACE_BEGIN

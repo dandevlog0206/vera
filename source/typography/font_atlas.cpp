@@ -1,13 +1,10 @@
 #include "../../include/vera/typography/font_atlas.h"
 
 #include "../../include/vera/core/exception.h"
-#include "../../include/vera/core/device.h"
 #include "../../include/vera/core/pipeline.h"
-#include "../../include/vera/core/pipeline_layout.h"
+#include "../../include/vera/core/shader.h"
 #include "../../include/vera/core/command_buffer.h"
 #include "../../include/vera/core/descriptor_pool.h"
-#include "../../include/vera/core/descriptor_set_layout.h"
-#include "../../include/vera/core/descriptor_set.h"
 #include "../../include/vera/core/buffer.h"
 #include "../../include/vera/math/vector_math.h"
 #include "../../include/vera/util/rect_packer.h"
@@ -337,8 +334,8 @@ static std::unique_ptr<priv::FontAtlasResource> create_font_atlas_resource(
 	} break;
 	case AtlasType::SDF: {
 		if (!g_global_resource->sdfPipeline) {
-			auto mesh = Shader::create(device, "shader/font_atlas/mesh_sdf.mesh.glsl.spv");
-			auto frag = Shader::create(device, "shader/font_atlas/mesh_sdf.frag.glsl.spv");
+			auto mesh = Shader::create(device, "spirv/font_atlas/mesh_sdf.mesh.slang.spv");
+			auto frag = Shader::create(device, "spirv/font_atlas/mesh_sdf.frag.glsl.spv");
 			
 			MeshPipelineCreateInfo pipeline_info = {
 				.meshShader        = mesh,
@@ -353,8 +350,8 @@ static std::unique_ptr<priv::FontAtlasResource> create_font_atlas_resource(
 	} break;
 	case AtlasType::PSDF: {
 		if (!g_global_resource->psdfPipeline) {
-			auto mesh = Shader::create(device, "shader/font_atlas/mesh_sdf.mesh.glsl.spv");
-			auto frag = Shader::create(device, "shader/font_atlas/mesh_psdf.frag.glsl.spv");
+			auto mesh = Shader::create(device, "spirv/font_atlas/mesh_sdf.mesh.slang.spv");
+			auto frag = Shader::create(device, "spirv/font_atlas/mesh_psdf.frag.glsl.spv");
 			
 			MeshPipelineCreateInfo pipeline_info = {
 				.meshShader        = mesh,
@@ -369,8 +366,8 @@ static std::unique_ptr<priv::FontAtlasResource> create_font_atlas_resource(
 	} break;
 	case AtlasType::MSDF: {
 		if (!g_global_resource->msdfPipeline) {
-			auto mesh = Shader::create(device, "shader/font_atlas/mesh_sdf.mesh.glsl.spv");
-			auto frag = Shader::create(device, "shader/font_atlas/mesh_msdf.frag.glsl.spv");
+			auto mesh = Shader::create(device, "spirv/font_atlas/mesh_sdf.mesh.glsl.spv");
+			auto frag = Shader::create(device, "spirv/font_atlas/mesh_msdf.frag.glsl.spv");
 			
 			MeshPipelineCreateInfo pipeline_info = {
 				.meshShader        = mesh,
@@ -385,8 +382,8 @@ static std::unique_ptr<priv::FontAtlasResource> create_font_atlas_resource(
 	} break;
 	case AtlasType::MTSDF: {
 		if (!g_global_resource->mtsdfPipeline) {
-			auto mesh = Shader::create(device, "shader/font_atlas/mesh_sdf.mesh.glsl.spv");
-			auto frag = Shader::create(device, "shader/font_atlas/mesh_mtsdf.frag.glsl.spv");
+			auto mesh = Shader::create(device, "spirv/font_atlas/mesh_sdf.mesh.slang.spv");
+			auto frag = Shader::create(device, "spirv/font_atlas/mesh_mtsdf.frag.glsl.spv");
 			
 			MeshPipelineCreateInfo pipeline_info = {
 				.meshShader        = mesh,
@@ -403,8 +400,8 @@ static std::unique_ptr<priv::FontAtlasResource> create_font_atlas_resource(
 		VERA_ASSERT_MSG(false, "invalid atlas type");
 	}
 	
-	auto pipeline_layout = resource->pipeline->getPipelineLayout().cref();
-	auto desc_set_layout = pipeline_layout->getDescriptorSetLayout(0).cref();
+	auto pipeline_layout = resource->pipeline->getPipelineLayout();
+	auto desc_set_layout = pipeline_layout->getDescriptorSetLayout(0);
 
 	resource->device         = device;
 	resource->descriptorPool = DescriptorPool::create(device);
@@ -782,18 +779,15 @@ static void fill_sdf_vertices(
 
 static void update_storage_descriptor_set(
 	ref<DescriptorSet> storage_descriptor_set,
-	ref<Buffer>        storage_buffer,
+	obj<Buffer>        storage_buffer,
 	uint32_t           dst_binding
 ) {
-	DescriptorBindingInfo binding_info;
-	binding_info.descriptorType       = DescriptorType::StorageBuffer;
-	binding_info.dstBinding           = dst_binding;
-	binding_info.dstArrayElement      = 0;
-	binding_info.storageBuffer.buffer = storage_buffer;
-	binding_info.storageBuffer.offset = 0;
-	binding_info.storageBuffer.range  = storage_buffer->size();
-	
-	storage_descriptor_set->setDescriptorBindingInfo(binding_info);
+	DescriptorBufferInfo buffer_info;
+	buffer_info.buffer = storage_buffer;
+	buffer_info.offset = 0;
+	buffer_info.range  = storage_buffer->size();
+
+	storage_descriptor_set->write(dst_binding, buffer_info);
 }
 
 static void upload_sdf_buffer(
@@ -852,14 +846,11 @@ static void prepare_page_textures(
 			page.packer->clear();
 		}
 
-		DescriptorBindingInfo binding_info;
-		binding_info.descriptorType             = DescriptorType::StorageImage;
-		binding_info.dstBinding                 = 2;
-		binding_info.dstArrayElement            = dst_array_idx++;
-		binding_info.storageImage.textureView   = page.textures.back()->getTextureView();
-		binding_info.storageImage.textureLayout = TextureLayout::General;
-		
-		resource.descriptorSet->setDescriptorBindingInfo(binding_info);
+		DescriptorTextureInfo texture_info;
+		texture_info.textureView = TextureView::create(page.textures.back());
+		texture_info.layout      = TextureLayout::General;
+
+		resource.descriptorSet->write(2, texture_info, dst_array_idx++);
 
 		page.fullyPackedCount++;
 	}

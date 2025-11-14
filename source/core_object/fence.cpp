@@ -33,12 +33,12 @@ static bool wait_fences(vk::Device vk_device, std::span<obj<Fence>> fences, bool
 	throw Exception("failed to wait fences");
 }
 
-const vk::Fence& get_vk_fence(const_ref<Fence> fence)
+const vk::Fence& get_vk_fence(const_ref<Fence> fence) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(fence).fence;
 }
 
-vk::Fence& get_vk_fence(ref<Fence> fence)
+vk::Fence& get_vk_fence(ref<Fence> fence) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(fence).fence;
 }

@@ -16,13 +16,13 @@ static uint32_t get_max_resource_count(const DeviceImpl& impl, DescriptorType re
 	switch (resource_type) {
 	case DescriptorType::Sampler:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers;
-	case DescriptorType::CombinedImageSampler:
+	case DescriptorType::CombinedTextureSampler:
 		return std::min(
 			indexing_props.maxPerStageDescriptorUpdateAfterBindSamplers,
 			indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages);
-	case DescriptorType::SampledImage:
+	case DescriptorType::SampledTexture:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindSampledImages;
-	case DescriptorType::StorageImage:
+	case DescriptorType::StorageTexture:
 		return indexing_props.maxPerStageDescriptorUpdateAfterBindStorageImages;
 	case DescriptorType::UniformTexelBuffer:
 	case DescriptorType::UniformBuffer:
@@ -74,14 +74,14 @@ static hash_t hash_descriptor_set_layout(const DescriptorSetLayoutCreateInfo& in
 	return seed;
 }
 
-const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> descriptor_set_layout)
+const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(descriptor_set_layout).descriptorSetLayout;
+	return CoreObject::getImpl(set_layout).descriptorSetLayout;
 }
 
-vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<DescriptorSetLayout> descriptor_set_layout)
+vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(descriptor_set_layout).descriptorSetLayout;
+	return CoreObject::getImpl(set_layout).descriptorSetLayout;
 }
 
 obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const DescriptorSetLayoutCreateInfo& info)
@@ -112,7 +112,7 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 	static_vector<vk::DescriptorSetLayoutBinding, 32> bindings;
 	static_vector<vk::DescriptorBindingFlags, 32>     binding_flags;
 
-	for (const auto& binding : impl.bindings) {
+	for (auto& binding : impl.bindings) {
 		auto& vk_binding = bindings.emplace_back();
 		vk_binding.binding            = binding.binding;
 		vk_binding.descriptorType     = to_vk_descriptor_type(binding.descriptorType);
@@ -124,6 +124,8 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 			vk_binding.descriptorCount = get_max_resource_count(device_impl, binding.descriptorType);
 
 		binding_flags.push_back(to_vk_descriptor_binding_flags(binding.flags));
+
+		impl.bindingMap[binding.binding] = &binding;
 	}
 
 	vk::DescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info;
@@ -156,17 +158,27 @@ DescriptorSetLayout::~DescriptorSetLayout()
 	destroyObjectImpl(this);
 }
 
-obj<Device> DescriptorSetLayout::getDevice()
+obj<Device> DescriptorSetLayout::getDevice() VERA_NOEXCEPT
 {
 	return getImpl(this).device;
 }
 
-const std::vector<DescriptorSetLayoutBinding>& DescriptorSetLayout::getBindings() const
+uint32_t DescriptorSetLayout::getBindingCount() const VERA_NOEXCEPT
+{
+	return static_cast<uint32_t>(getImpl(this).bindings.size());
+}
+
+const DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(uint32_t binding) const VERA_NOEXCEPT
+{
+	return *getImpl(this).bindingMap.at(binding);
+}
+
+const std::vector<DescriptorSetLayoutBinding>& DescriptorSetLayout::getBindings() const VERA_NOEXCEPT
 {
 	return getImpl(this).bindings;
 }
 
-hash_t DescriptorSetLayout::hash() const
+hash_t DescriptorSetLayout::hash() const VERA_NOEXCEPT
 {
 	return getImpl(this).hashValue;
 }

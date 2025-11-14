@@ -300,7 +300,7 @@ struct FBXLoader
 	static Result load(AssetLoader& loader, std::string_view path)
 	{
 		NodeRecord     root_node = {};
-		StackAllocator allocator;
+		stack_allocator allocator;
 		Header         header;
 
 		std::ifstream input_file(path.data(), std::ios::binary);
@@ -425,7 +425,7 @@ private:
 	}
 
 	template <class NodeRecordType>
-	static Result parse_node(std::ifstream& input_file, StackAllocator& allocator, NodeRecord& parent_node)
+	static Result parse_node(std::ifstream& input_file, stack_allocator& allocator, NodeRecord& parent_node)
 	{
 		NodeRecordType raw_node;
 		size_t         prop_end_offset;
@@ -482,7 +482,7 @@ private:
 		return AssetResult::Success;
 	}
 
-	static Result parse_property(std::ifstream& input_file, StackAllocator& allocator, PropertyRecordPtr* prop_ptr)
+	static Result parse_property(std::ifstream& input_file, stack_allocator& allocator, PropertyRecordPtr* prop_ptr)
 	{
 		PropertyRecordArrayRaw raw_prop;
 		uint32_t               length;

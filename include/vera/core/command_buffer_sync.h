@@ -5,7 +5,7 @@
 VERA_NAMESPACE_BEGIN
 
 class Semaphore;
-struct CommandBufferImpl;
+class CommandBufferImpl;
 
 enum class CommandBufferState VERA_ENUM
 {

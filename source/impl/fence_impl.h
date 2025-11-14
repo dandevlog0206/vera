@@ -4,13 +4,12 @@
 
 VERA_NAMESPACE_BEGIN
 
-class Device;
-
-struct FenceImpl
+class FenceImpl
 {
-	obj<Device> device;
+public:
+	obj<Device> device = {};
 
-	vk::Fence   fence;
+	vk::Fence   fence  = {};
 };
 
 VERA_NAMESPACE_END

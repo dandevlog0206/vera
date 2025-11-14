@@ -12,31 +12,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-class Device;
 class Texture;
-
-enum class TextureViewType VERA_ENUM
-{
-	Unknown,
-	View1D,
-	View2D,
-	View3D,
-	ViewCube,
-	View1DArray,
-	View2DArray,
-	ViewCubeArray
-};
-
-enum class ComponentSwizzle VERA_ENUM
-{
-	Identity,
-	One,
-	Zero,
-	R,
-	G,
-	B,
-	A
-};
 
 struct ComponentMapping
 {
@@ -57,7 +33,7 @@ struct TextureSubresourceRange
 
 struct TextureViewCreateInfo
 {
-	TextureViewType    type           = TextureViewType::Unknown;
+	TextureViewType    type           = TextureViewType::View2D;
 	Format             format         = Format::Unknown;
 	ComponentMapping   mapping        = VERA_COMPONENT_MAPPING(R, G, B, A);
 	TextureAspectFlags aspectFlags    = TextureAspectFlagBits::Color;
@@ -71,7 +47,7 @@ class TextureView : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(TextureView)
 public:
-	static obj<TextureView> create(obj<Texture> texture, const TextureViewCreateInfo& info);
+	static obj<TextureView> create(obj<Texture> texture, const TextureViewCreateInfo& info = {});
 	~TextureView();
 
 	obj<Device> getDevice();

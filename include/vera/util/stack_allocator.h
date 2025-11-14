@@ -1,8 +1,8 @@
 #include "../core/coredefs.h"
 
 #include <type_traits>
-#include <vector>
 #include <cstdlib>
+#include <vector>
 
 #ifdef _MSC_VER
 #define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
@@ -13,19 +13,19 @@
 
 VERA_NAMESPACE_BEGIN
 
-class StackAllocator
+class stack_allocator
 {
 public:
 	using size_type          = size_t;
 	using difference_type    = std::ptrdiff_t;
 
-	VERA_INLINE StackAllocator() VERA_NOEXCEPT :
+	VERA_INLINE stack_allocator() VERA_NOEXCEPT :
 		m_pages(),
 		m_page_size(512),
 		m_current_page(-1),
 		m_offset() {}
 
-	VERA_INLINE StackAllocator(size_type page_size) VERA_NOEXCEPT :
+	VERA_INLINE stack_allocator(size_type page_size) VERA_NOEXCEPT :
 		m_pages(),
 		m_page_size(page_size),
 		m_current_page(-1),
@@ -34,7 +34,7 @@ public:
 			"page size must be power of 2 greater or equal than 8");
 	}
 
-	VERA_INLINE ~StackAllocator()
+	VERA_INLINE ~stack_allocator()
 	{
 		for (auto& page : m_pages)
 			aligned_free(page.data);
@@ -48,7 +48,7 @@ public:
 
 		VERA_ASSERT_MSG(elem_count != 0, "cannot allocate with zero element count");
 
-		return reinterpret_cast<T*>(allocateImpl(elem_count * sizeof(T), alignof(T)));
+		return reinterpret_cast<T*>(allocate_impl(elem_count * sizeof(T), alignof(T)));
 	}
 
 	VERA_INLINE void clear(size_t offset = 0) VERA_NOEXCEPT
@@ -90,7 +90,7 @@ public:
 		return m_offset;
 	}
 
-	VERA_NODISCARD VERA_INLINE size_t sizeInUse() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE size_t size_in_use() const VERA_NOEXCEPT
 	{
 		size_t used = 0;
 
@@ -100,7 +100,7 @@ public:
 		return used;
 	}
 
-	VERA_NODISCARD VERA_INLINE size_t totalSize() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE size_t total_size() const VERA_NOEXCEPT
 	{
 		size_t allocated = 0;
 
@@ -110,7 +110,7 @@ public:
 		return allocated;
 	}
 
-	VERA_NODISCARD VERA_INLINE float usageRatio() const VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE float usage_ratio() const VERA_NOEXCEPT
 	{
 		size_t used      = 0;
 		size_t allocated = 0;
@@ -124,7 +124,7 @@ public:
 	}
 
 private:
-	void* allocateImpl(size_t size, size_t alignment)
+	void* allocate_impl(size_t size, size_t alignment)
 	{
 		VERA_ASSERT_MSG(std::popcount(alignment), "alignment must be power of 2");
 

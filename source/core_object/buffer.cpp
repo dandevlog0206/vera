@@ -43,7 +43,7 @@ static void allocate_device_memory(
 
 	vk::MemoryAllocateInfo info;
 	info.allocationSize  = req.size;
-	info.memoryTypeIndex = find_memory_type_idx(device_impl, flags, req.memoryTypeBits);
+	info.memoryTypeIndex = device_impl.findMemoryTypeIndex(flags, req.memoryTypeBits);
 
 	impl.device        = std::move(device);
 	impl.memory        = device_impl.device.allocateMemory(info);
@@ -53,12 +53,12 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
-const vk::Buffer& get_vk_buffer(const_ref<Buffer> buffer)
+const vk::Buffer& get_vk_buffer(const_ref<Buffer> buffer) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(buffer).buffer;
 }
 
-vk::Buffer& get_vk_buffer(ref<Buffer> buffer)
+vk::Buffer& get_vk_buffer(ref<Buffer> buffer) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(buffer).buffer;
 }

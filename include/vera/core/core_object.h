@@ -7,12 +7,14 @@
 #include <memory>
 #include <atomic>
 
-#define VERA_CORE_OBJECT_INIT(obj_name)                                             \
-	using impl_type = struct obj_name ## Impl;                                 \
+#define VERA_CORE_OBJECT_INIT(obj_name)                                        \
+	using impl_type = class obj_name ## Impl;                                 \
 	using pair_type = ::vr::priv::compressed_pair<obj_name, obj_name ## Impl>; \
 	friend class CoreObject;                                                   \
 	friend class obj<obj_name>;                                                \
 	friend pair_type;                                                          \
+	template <class Target, class T>                                           \
+	friend VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT;   \
 	obj_name() = default;
 
 VERA_NAMESPACE_BEGIN

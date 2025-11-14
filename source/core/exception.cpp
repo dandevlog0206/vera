@@ -22,21 +22,7 @@ void __check_impl(
 	throw ::vr::Exception(ss.str());
 }
 
-void __error_impl(
-	const char* message,
-	const char* file,
-	uint32_t    line
-) {
-	std::stringstream ss;
-
-	ss << " an error has been occured. message: " << message;
-	ss << " in file: " << file;
-	ss << " line: " << line;
-
-	throw ::vr::Exception(message);
-}
-
-void __assert_impl(
+VERA_NORETURN void __assert_impl(
 	const char* expression,
 	const char* message,
 	const char* file,
@@ -54,6 +40,27 @@ void __assert_impl(
 #	ifdef _MSC_VER
 	__debugbreak();
 #	endif
+
+	exit(1);
+}
+
+VERA_NORETURN void __error_impl(
+	const char* message,
+	const char* file,
+	uint32_t    line
+) {
+	std::stringstream ss;
+	ss << "error message: " << message << ", ";
+	ss << "file: " << file << ", ";
+	ss << "line: " << line;
+
+	Logger::error(ss.str());
+
+#	ifdef _MSC_VER
+	__debugbreak();
+#	endif
+
+	exit(1);
 }
 
 VERA_PRIV_NAMESPACE_END

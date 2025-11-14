@@ -521,11 +521,13 @@ public:
 
 	VERA_NODISCARD VERA_CONSTEXPR T first() const VERA_NOEXCEPT
 	{
+		VERA_ASSERT_MSG(m_first != m_last, "empty range");
 		return m_first;
 	}
 
 	VERA_NODISCARD VERA_CONSTEXPR T last() const VERA_NOEXCEPT
 	{
+		VERA_ASSERT_MSG(m_first != m_last, "empty range");
 		return m_last;
 	}
 

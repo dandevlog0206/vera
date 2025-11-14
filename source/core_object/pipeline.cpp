@@ -1,4 +1,5 @@
 #include "../../include/vera/core/pipeline.h"
+#include "../spirv/reflection_desc.h"
 #include "../impl/device_impl.h"
 #include "../impl/pipeline_impl.h"
 #include "../impl/shader_impl.h"
@@ -8,12 +9,13 @@
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/util/static_vector.h"
 
-#define MAX_SHADER_COUNT 8
+#define MAX_SHADER_STAGE_COUNT 16
 
 VERA_NAMESPACE_BEGIN
 
 static const vk::PipelineViewportStateCreateInfo* get_default_viewport_state_info()
 {
+	// numbers here are arbitrary since we always use viewport and scissor dynamic states
 	static const vk::Viewport temp_viewport{
 		0.f,    // x
 		0.f,    // y
@@ -39,234 +41,203 @@ static const vk::PipelineViewportStateCreateInfo* get_default_viewport_state_inf
 	return &info;
 }
 
+static void check_shader_stage(const obj<Shader>& shader, ShaderStageFlagBits stage)
+{
+	// create shader reflection if not yet created
+	(void)const_cast<obj<Shader>&>(shader)->getShaderReflection();
+	
+	const auto& shader_impl = CoreObject::getImpl(shader);
+	const auto* root_node   = get_reflection_root_node(shader_impl.shaderReflection);
+
+	if (!root_node->getShaderStageFlags().has(stage))
+		throw Exception("shader has no desired stage");
+}
+
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
-	static_vector<const_ref<Shader>, MAX_SHADER_COUNT> shaders;
+	static_vector<obj<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
 	
+	check_shader_stage(info.vertexShader, ShaderStageFlagBits::Vertex);
+	check_shader_stage(info.fragmentShader, ShaderStageFlagBits::Fragment);
+
 	shaders.push_back(info.vertexShader);
 	shaders.push_back(info.fragmentShader);
 
-	if (info.tessellationControlShader)
+	if (info.tessellationControlShader) {
+		check_shader_stage(info.tessellationControlShader, ShaderStageFlagBits::TessellationControl);
 		shaders.push_back(info.tessellationControlShader);
-	if (info.tessellationEvaluationShader)
+	}
+	if (info.tessellationEvaluationShader) {
+		check_shader_stage(info.tessellationEvaluationShader, ShaderStageFlagBits::TessellationEvaluation);
 		shaders.push_back(info.tessellationEvaluationShader);
-	if (info.geometryShader)
+	}
+	if (info.geometryShader) {
+		check_shader_stage(info.geometryShader, ShaderStageFlagBits::Geometry);
 		shaders.push_back(info.geometryShader);
+	}
 
 	return PipelineLayout::create(device, shaders);
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const MeshPipelineCreateInfo& info)
 {
-	static_vector<const_ref<Shader>, MAX_SHADER_COUNT> shaders;
+	static_vector<obj<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
+
+	check_shader_stage(info.meshShader, ShaderStageFlagBits::Mesh);
+	check_shader_stage(info.fragmentShader, ShaderStageFlagBits::Fragment);
 
 	shaders.push_back(info.meshShader);
 	shaders.push_back(info.fragmentShader);
 
-	if (info.taskShader)
+	if (info.taskShader) {
+		check_shader_stage(info.taskShader, ShaderStageFlagBits::Task);
 		shaders.push_back(info.taskShader);
+	}
 
 	return PipelineLayout::create(device, shaders);
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const ComputePipelineCreateInfo& info)
 {
-	auto shader = const_ref<Shader>(info.computeShader);
-	return PipelineLayout::create(device, shader);
+	check_shader_stage(info.computeShader, ShaderStageFlagBits::Compute);
+
+	return PipelineLayout::create(device, info.computeShader);
+}
+
+static void add_shader_stage(
+	PipelineImpl&                                                             impl,
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_STAGE_COUNT>& shader_infos,
+	const obj<Shader>&                                                        shader,
+	ShaderStageFlagBits                                                       stage
+) {
+	VERA_ASSERT_MSG(shader, "shader is null");
+
+	vk::PipelineShaderStageCreateInfo shader_info;
+
+	auto& shader_impl = CoreObject::getImpl(shader);
+	auto* root_node   = get_reflection_root_node(shader_impl.shaderReflection);
+
+	shader_info.stage               = to_vk_shader_stage_flag_bits(stage);
+	shader_info.module              = shader_impl.shader;
+	shader_info.pName               = root_node->getEntryPointName(stage);
+	shader_info.pSpecializationInfo = nullptr;
+
+	shader_infos.push_back(shader_info);
+	impl.shaders.push_back(std::make_pair(stage, shader));
 }
 
 static void fill_shader_info(
-	PipelineImpl&                                                       impl,
-	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT>& shader_infos,
-	const GraphicsPipelineCreateInfo&                                   info
+	PipelineImpl&                                                             impl,
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_STAGE_COUNT>& shader_infos,
+	const GraphicsPipelineCreateInfo&                                         info
 ) {
-	vk::PipelineShaderStageCreateInfo shader_info;
+	add_shader_stage(impl, shader_infos, info.vertexShader, ShaderStageFlagBits::Vertex);
+	add_shader_stage(impl, shader_infos, info.fragmentShader, ShaderStageFlagBits::Fragment);
 
-	if (info.vertexShader) {
-		auto& shader_impl = CoreObject::getImpl(info.vertexShader);
+	if (info.tessellationControlShader)
+		add_shader_stage(impl, shader_infos, info.tessellationControlShader,
+			ShaderStageFlagBits::TessellationControl);
 
-		shader_info.stage               = vk::ShaderStageFlagBits::eVertex;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
+	if (info.tessellationEvaluationShader)
+		add_shader_stage(impl, shader_infos, info.tessellationEvaluationShader,
+			ShaderStageFlagBits::TessellationEvaluation);
 
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Vertex, info.vertexShader));
-	}
-
-	if (info.tessellationControlShader) {
-		auto& shader_impl = CoreObject::getImpl(info.tessellationControlShader);
-
-		shader_info.stage               = vk::ShaderStageFlagBits::eTessellationControl;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
-
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(
-			ShaderStageFlagBits::TessellationControl, info.tessellationControlShader));
-	}
-
-	if (info.tessellationEvaluationShader) {
-		auto& shader_impl = CoreObject::getImpl(info.tessellationEvaluationShader);
-
-		shader_info.stage               = vk::ShaderStageFlagBits::eTessellationEvaluation;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
-
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(
-			ShaderStageFlagBits::TessellationEvaluation, info.tessellationEvaluationShader));
-	}
-
-	if (info.geometryShader) {
-		auto& shader_impl = CoreObject::getImpl(info.geometryShader);
-
-		shader_info.stage               = vk::ShaderStageFlagBits::eGeometry;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
-
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Geometry, info.geometryShader));
-	}
-
-	if (info.fragmentShader) {
-		auto& shader_impl = CoreObject::getImpl(info.fragmentShader);
-
-		shader_info.stage               = vk::ShaderStageFlagBits::eFragment;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
-
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Fragment, info.fragmentShader));
-	}
+	if (info.geometryShader)
+		add_shader_stage(impl, shader_infos, info.geometryShader, ShaderStageFlagBits::Geometry);
 }
 
 static void fill_shader_info(
-	PipelineImpl&                                                       impl,
-	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT>& shader_infos,
-	const MeshPipelineCreateInfo&                                       info
+	PipelineImpl&                                                             impl,
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_STAGE_COUNT>& shader_infos,
+	const MeshPipelineCreateInfo&                                             info
 ) {
-	vk::PipelineShaderStageCreateInfo shader_info;
-	if (info.taskShader) {
-		auto& shader_impl = CoreObject::getImpl(info.taskShader);
+	if (info.taskShader)
+		add_shader_stage(impl, shader_infos, info.taskShader, ShaderStageFlagBits::Task);
 
-		shader_info.stage               = vk::ShaderStageFlagBits::eTaskEXT;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
-
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Task, info.taskShader));
-	}
-	if (info.meshShader) {
-		auto& shader_impl = CoreObject::getImpl(info.meshShader);
-
-		shader_info.stage               = vk::ShaderStageFlagBits::eMeshEXT;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
-
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Mesh, info.meshShader));
-	}
-	if (info.fragmentShader) {
-		auto& shader_impl = CoreObject::getImpl(info.fragmentShader);
-
-		shader_info.stage               = vk::ShaderStageFlagBits::eFragment;
-		shader_info.module              = shader_impl.shader;
-		shader_info.pName               = shader_impl.entryPointName.data();
-		shader_info.pSpecializationInfo = nullptr;
-
-		shader_infos.push_back(shader_info);
-		impl.shaders.push_back(std::make_pair(ShaderStageFlagBits::Fragment, info.fragmentShader));
-	}
+	add_shader_stage(impl, shader_infos, info.meshShader, ShaderStageFlagBits::Mesh);
+	add_shader_stage(impl, shader_infos, info.fragmentShader, ShaderStageFlagBits::Fragment);
 }
 
-static vk::Format get_vertex_format(VertexFormat format, uint32_t& attribute_count)
+static vk::Format get_vertex_format(VertexFormat format, uint32_t& attr_count)
 {
 	switch (format) {
-	case VertexFormat::Char:      attribute_count = 1; return vk::Format::eR8Sint;
-	case VertexFormat::Char2:     attribute_count = 1; return vk::Format::eR8G8Sint;
-	case VertexFormat::Char3:     attribute_count = 1; return vk::Format::eR8G8B8Sint;
-	case VertexFormat::Char4:     attribute_count = 1; return vk::Format::eR8G8B8A8Sint;
-	case VertexFormat::UChar:     attribute_count = 1; return vk::Format::eR8Uint;
-	case VertexFormat::UChar2:    attribute_count = 1; return vk::Format::eR8G8Uint;
-	case VertexFormat::UChar3:    attribute_count = 1; return vk::Format::eR8G8B8Uint;
-	case VertexFormat::UChar4:    attribute_count = 1; return vk::Format::eR8G8B8A8Uint;
-	case VertexFormat::Short:     attribute_count = 1; return vk::Format::eR16Sint;
-	case VertexFormat::Short2:    attribute_count = 1; return vk::Format::eR16G16Sint;
-	case VertexFormat::Short3:    attribute_count = 1; return vk::Format::eR16G16B16Sint;
-	case VertexFormat::Short4:    attribute_count = 1; return vk::Format::eR16G16B16A16Sint;
-	case VertexFormat::UShort:    attribute_count = 1; return vk::Format::eR16Uint;
-	case VertexFormat::UShort2:   attribute_count = 1; return vk::Format::eR16G16Uint;
-	case VertexFormat::UShort3:   attribute_count = 1; return vk::Format::eR16G16B16Uint;
-	case VertexFormat::UShort4:   attribute_count = 1; return vk::Format::eR16G16B16A16Uint;
-	case VertexFormat::Int:       attribute_count = 1; return vk::Format::eR32Sint;
-	case VertexFormat::Int2:      attribute_count = 1; return vk::Format::eR32G32Sint;
-	case VertexFormat::Int3:      attribute_count = 1; return vk::Format::eR32G32B32Sint;
-	case VertexFormat::Int4:      attribute_count = 1; return vk::Format::eR32G32B32A32Sint;
-	case VertexFormat::UInt:      attribute_count = 1; return vk::Format::eR32Uint;
-	case VertexFormat::UInt2:     attribute_count = 1; return vk::Format::eR32G32Uint;
-	case VertexFormat::UInt3:     attribute_count = 1; return vk::Format::eR32G32B32Uint;
-	case VertexFormat::UInt4:     attribute_count = 1; return vk::Format::eR32G32B32A32Uint;
-	case VertexFormat::Long:      attribute_count = 1; return vk::Format::eR64Sint;
-	case VertexFormat::Long2:     attribute_count = 1; return vk::Format::eR64G64Sint;
-	case VertexFormat::Long3:     attribute_count = 1; return vk::Format::eR64G64B64Sint;
-	case VertexFormat::Long4:     attribute_count = 1; return vk::Format::eR64G64B64A64Sint;
-	case VertexFormat::ULong:     attribute_count = 1; return vk::Format::eR64Uint;
-	case VertexFormat::ULong2:    attribute_count = 1; return vk::Format::eR64G64Uint;
-	case VertexFormat::ULong3:    attribute_count = 1; return vk::Format::eR64G64B64Uint;
-	case VertexFormat::ULong4:    attribute_count = 1; return vk::Format::eR64G64B64A64Uint;
-	case VertexFormat::Float:     attribute_count = 1; return vk::Format::eR32Sfloat;
-	case VertexFormat::Float2:    attribute_count = 1; return vk::Format::eR32G32Sfloat;
-	case VertexFormat::Float3:    attribute_count = 1; return vk::Format::eR32G32B32Sfloat;
-	case VertexFormat::Float4:    attribute_count = 1; return vk::Format::eR32G32B32A32Sfloat;
-	case VertexFormat::Float2x2:  attribute_count = 2; return vk::Format::eR32G32Sfloat;
-	case VertexFormat::Float2x3:  attribute_count = 2; return vk::Format::eR32G32B32Sfloat;
-	case VertexFormat::Float2x4:  attribute_count = 2; return vk::Format::eR32G32B32A32Sfloat;
-	case VertexFormat::Float3x2:  attribute_count = 3; return vk::Format::eR32G32Sfloat;
-	case VertexFormat::Float3x3:  attribute_count = 3; return vk::Format::eR32G32B32Sfloat;
-	case VertexFormat::Float3x4:  attribute_count = 3; return vk::Format::eR32G32B32A32Sfloat;
-	case VertexFormat::Float4x2:  attribute_count = 4; return vk::Format::eR32G32Sfloat;
-	case VertexFormat::Float4x3:  attribute_count = 4; return vk::Format::eR32G32B32Sfloat;
-	case VertexFormat::Float4x4:  attribute_count = 4; return vk::Format::eR32G32B32A32Sfloat;
-	case VertexFormat::Double:    attribute_count = 1; return vk::Format::eR64Sfloat;
-	case VertexFormat::Double2:   attribute_count = 1; return vk::Format::eR64G64Sfloat;
-	case VertexFormat::Double3:   attribute_count = 1; return vk::Format::eR64G64B64Sfloat;
-	case VertexFormat::Double4:   attribute_count = 1; return vk::Format::eR64G64B64A64Sfloat;
-	case VertexFormat::Double2x2: attribute_count = 2; return vk::Format::eR64G64Sfloat;
-	case VertexFormat::Double2x3: attribute_count = 2; return vk::Format::eR64G64B64Sfloat;
-	case VertexFormat::Double2x4: attribute_count = 2; return vk::Format::eR64G64B64A64Sfloat;
-	case VertexFormat::Double3x2: attribute_count = 3; return vk::Format::eR64G64Sfloat;
-	case VertexFormat::Double3x3: attribute_count = 3; return vk::Format::eR64G64B64Sfloat;
-	case VertexFormat::Double3x4: attribute_count = 3; return vk::Format::eR64G64B64A64Sfloat;
-	case VertexFormat::Double4x2: attribute_count = 4; return vk::Format::eR64G64Sfloat;
-	case VertexFormat::Double4x3: attribute_count = 4; return vk::Format::eR64G64B64Sfloat;
-	case VertexFormat::Double4x4: attribute_count = 4; return vk::Format::eR64G64B64A64Sfloat;
+	case VertexFormat::Char:      attr_count = 1; return vk::Format::eR8Sint;
+	case VertexFormat::Char2:     attr_count = 1; return vk::Format::eR8G8Sint;
+	case VertexFormat::Char3:     attr_count = 1; return vk::Format::eR8G8B8Sint;
+	case VertexFormat::Char4:     attr_count = 1; return vk::Format::eR8G8B8A8Sint;
+	case VertexFormat::UChar:     attr_count = 1; return vk::Format::eR8Uint;
+	case VertexFormat::UChar2:    attr_count = 1; return vk::Format::eR8G8Uint;
+	case VertexFormat::UChar3:    attr_count = 1; return vk::Format::eR8G8B8Uint;
+	case VertexFormat::UChar4:    attr_count = 1; return vk::Format::eR8G8B8A8Uint;
+	case VertexFormat::Short:     attr_count = 1; return vk::Format::eR16Sint;
+	case VertexFormat::Short2:    attr_count = 1; return vk::Format::eR16G16Sint;
+	case VertexFormat::Short3:    attr_count = 1; return vk::Format::eR16G16B16Sint;
+	case VertexFormat::Short4:    attr_count = 1; return vk::Format::eR16G16B16A16Sint;
+	case VertexFormat::UShort:    attr_count = 1; return vk::Format::eR16Uint;
+	case VertexFormat::UShort2:   attr_count = 1; return vk::Format::eR16G16Uint;
+	case VertexFormat::UShort3:   attr_count = 1; return vk::Format::eR16G16B16Uint;
+	case VertexFormat::UShort4:   attr_count = 1; return vk::Format::eR16G16B16A16Uint;
+	case VertexFormat::Int:       attr_count = 1; return vk::Format::eR32Sint;
+	case VertexFormat::Int2:      attr_count = 1; return vk::Format::eR32G32Sint;
+	case VertexFormat::Int3:      attr_count = 1; return vk::Format::eR32G32B32Sint;
+	case VertexFormat::Int4:      attr_count = 1; return vk::Format::eR32G32B32A32Sint;
+	case VertexFormat::UInt:      attr_count = 1; return vk::Format::eR32Uint;
+	case VertexFormat::UInt2:     attr_count = 1; return vk::Format::eR32G32Uint;
+	case VertexFormat::UInt3:     attr_count = 1; return vk::Format::eR32G32B32Uint;
+	case VertexFormat::UInt4:     attr_count = 1; return vk::Format::eR32G32B32A32Uint;
+	case VertexFormat::Long:      attr_count = 1; return vk::Format::eR64Sint;
+	case VertexFormat::Long2:     attr_count = 1; return vk::Format::eR64G64Sint;
+	case VertexFormat::Long3:     attr_count = 1; return vk::Format::eR64G64B64Sint;
+	case VertexFormat::Long4:     attr_count = 1; return vk::Format::eR64G64B64A64Sint;
+	case VertexFormat::ULong:     attr_count = 1; return vk::Format::eR64Uint;
+	case VertexFormat::ULong2:    attr_count = 1; return vk::Format::eR64G64Uint;
+	case VertexFormat::ULong3:    attr_count = 1; return vk::Format::eR64G64B64Uint;
+	case VertexFormat::ULong4:    attr_count = 1; return vk::Format::eR64G64B64A64Uint;
+	case VertexFormat::Float:     attr_count = 1; return vk::Format::eR32Sfloat;
+	case VertexFormat::Float2:    attr_count = 1; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float3:    attr_count = 1; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float4:    attr_count = 1; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Float2x2:  attr_count = 2; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float2x3:  attr_count = 2; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float2x4:  attr_count = 2; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Float3x2:  attr_count = 3; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float3x3:  attr_count = 3; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float3x4:  attr_count = 3; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Float4x2:  attr_count = 4; return vk::Format::eR32G32Sfloat;
+	case VertexFormat::Float4x3:  attr_count = 4; return vk::Format::eR32G32B32Sfloat;
+	case VertexFormat::Float4x4:  attr_count = 4; return vk::Format::eR32G32B32A32Sfloat;
+	case VertexFormat::Double:    attr_count = 1; return vk::Format::eR64Sfloat;
+	case VertexFormat::Double2:   attr_count = 1; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double3:   attr_count = 1; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double4:   attr_count = 1; return vk::Format::eR64G64B64A64Sfloat;
+	case VertexFormat::Double2x2: attr_count = 2; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double2x3: attr_count = 2; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double2x4: attr_count = 2; return vk::Format::eR64G64B64A64Sfloat;
+	case VertexFormat::Double3x2: attr_count = 3; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double3x3: attr_count = 3; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double3x4: attr_count = 3; return vk::Format::eR64G64B64A64Sfloat;
+	case VertexFormat::Double4x2: attr_count = 4; return vk::Format::eR64G64Sfloat;
+	case VertexFormat::Double4x3: attr_count = 4; return vk::Format::eR64G64B64Sfloat;
+	case VertexFormat::Double4x4: attr_count = 4; return vk::Format::eR64G64B64A64Sfloat;
 	}
 
-	VERA_ASSERT_MSG(false, "invalid vertex format");
-	return {};
+	VERA_ERROR_MSG("invalid vertex format");
 }
 
 static void fill_vertex_input_attributes(
 	std::vector<vk::VertexInputAttributeDescription>& attributes,
 	uint32_t                                          binding,
-	uint32_t                                          input_attribute_count,
-	const VertexInputAttribute*                       input_attributes,
+	uint32_t                                          input_attr_count,
+	const VertexInputAttribute*                       input_attrs,
 	uint32_t&                                         location
 ) {
-	uint32_t attribute_count;
+	uint32_t attr_count;
 
-	for (uint32_t i = 0; i < input_attribute_count; ++i) {
-		auto& input_attribute = input_attributes[i];
-		auto  vk_format       = get_vertex_format(input_attribute.format, attribute_count);
+	for (uint32_t i = 0; i < input_attr_count; ++i) {
+		auto& input_attribute = input_attrs[i];
+		auto  vk_format       = get_vertex_format(input_attribute.format, attr_count);
 
-		for (uint32_t i = 0; i < attribute_count; ++i) {
+		for (uint32_t i = 0; i < attr_count; ++i) {
 			auto& attribute = attributes.emplace_back();
 			attribute.location = location++;
 			attribute.binding  = binding;
@@ -475,12 +446,12 @@ static hash_t hash_pipeline_info(const ComputePipelineCreateInfo& info)
 	return seed;
 }
 
-const vk::Pipeline& get_vk_pipeline(const_ref<Pipeline> pipeline)
+const vk::Pipeline& get_vk_pipeline(const_ref<Pipeline> pipeline) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(pipeline).pipeline;
 }
 
-vk::Pipeline& get_vk_pipeline(ref<Pipeline> pipeline)
+vk::Pipeline& get_vk_pipeline(ref<Pipeline> pipeline) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(pipeline).pipeline;
 }
@@ -500,12 +471,13 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 		return obj<Pipeline>(it->second.get());
 	}
 
+	// create pipline layout first to check shader stages
+	auto pipeline_layout = register_pipeline_layout(device, info);
+
 	auto  obj  = createNewCoreObject<Pipeline>();
 	auto& impl = getImpl(obj);
 
-	impl.pipelineLayout = register_pipeline_layout(device, info);
-
-	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT> shader_infos;
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_STAGE_COUNT> shader_infos;
 	fill_shader_info(impl, shader_infos, info);
 
 	std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
@@ -640,7 +612,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	pipeline_info.pDepthStencilState  = &ds_info;
 	pipeline_info.pColorBlendState    = &cb_info;
 	pipeline_info.pDynamicState       = &dynamic_info;
-	pipeline_info.layout              = get_vk_pipeline_layout(impl.pipelineLayout);
+	pipeline_info.layout              = get_vk_pipeline_layout(pipeline_layout);
 	pipeline_info.renderPass          = nullptr;
 	pipeline_info.subpass             = 0;
 	pipeline_info.basePipelineHandle  = nullptr;
@@ -653,11 +625,12 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 		throw Exception("failed to create graphics pipeline");
 
 	impl.device            = std::move(device);
+	impl.pipelineLayout    = std::move(pipeline_layout);
 	impl.pipeline          = result.value;
 	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
 	impl.hashValue         = hash_value;
 
-	device_impl.pipelineCacheMap.insert({ hash_value, obj });
+	device_impl.registerPipeline(impl.hashValue, obj);
 
 	return obj;
 }
@@ -677,12 +650,13 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 		return obj<Pipeline>(it->second.get());
 	}
 
+	// create pipline layout first to check shader stages
+	auto pipeline_layout = register_pipeline_layout(device, info);
+
 	auto  obj  = createNewCoreObject<Pipeline>();
 	auto& impl = getImpl(obj);
 
-	impl.pipelineLayout = register_pipeline_layout(device, info);
-
-	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_COUNT> shader_infos;
+	static_vector<vk::PipelineShaderStageCreateInfo, MAX_SHADER_STAGE_COUNT> shader_infos;
 	fill_shader_info(impl, shader_infos, info);
 
 	vk::PipelineRasterizationStateCreateInfo rs_info;
@@ -751,7 +725,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	pipeline_info.pDepthStencilState  = &ds_info;
 	pipeline_info.pColorBlendState    = &cb_info;
 	pipeline_info.pDynamicState       = &dynamic_info;
-	pipeline_info.layout              = get_vk_pipeline_layout(impl.pipelineLayout);
+	pipeline_info.layout              = get_vk_pipeline_layout(pipeline_layout);
 	pipeline_info.renderPass          = nullptr;
 	pipeline_info.subpass             = 0;
 	pipeline_info.basePipelineHandle  = nullptr;
@@ -764,11 +738,12 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 		throw Exception("failed to create graphics pipeline");
 
 	impl.device            = std::move(device);
+	impl.pipelineLayout    = std::move(pipeline_layout);
 	impl.pipeline          = result.value;
 	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
 	impl.hashValue         = hash_value;
 
-	device_impl.pipelineCacheMap.insert({ hash_value, obj });
+	device_impl.registerPipeline(impl.hashValue, obj);
 
 	return obj;
 }
@@ -786,19 +761,18 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 		return obj<Pipeline>(it->second.get());
 	}
 
+	// create pipline layout first to check shader stages
+	auto pipeline_layout = register_pipeline_layout(device, info);
+	
 	auto  obj         = createNewCoreObject<Pipeline>();
 	auto& impl        = getImpl(obj);
 	auto& shader_impl = getImpl(info.computeShader);
-
-	if (!shader_impl.stageFlags.has(ShaderStageFlagBits::Compute))
-		throw Exception("compute pipeline requires a compute shader");
-
-	auto pipeline_layout = register_pipeline_layout(device, info);
+	auto* root_node   = get_reflection_root_node(shader_impl.shaderReflection);
 
 	vk::ComputePipelineCreateInfo pipeline_info;
 	pipeline_info.stage.stage  = vk::ShaderStageFlagBits::eCompute;
 	pipeline_info.stage.module = shader_impl.shader;
-	pipeline_info.stage.pName  = shader_impl.entryPointName.data();
+	pipeline_info.stage.pName  = root_node->getEntryPointName(ShaderStageFlagBits::Compute);
 	pipeline_info.layout       = get_vk_pipeline_layout(pipeline_layout);
 
 	auto result = device_impl.device.createComputePipeline(device_impl.pipelineCache, pipeline_info);
@@ -813,7 +787,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 	impl.pipelineBindPoint = PipelineBindPoint::Compute;
 	impl.hashValue         = hash_value;
 
-	device_impl.pipelineCacheMap.insert({ hash_value, obj });
+	device_impl.registerPipeline(impl.hashValue, obj);
 
 	return obj;
 }
@@ -823,7 +797,7 @@ Pipeline::~Pipeline()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
-	device_impl.pipelineCacheMap.erase(impl.hashValue);
+	device_impl.unregisterPipeline(impl.hashValue);
 	device_impl.device.destroy(impl.pipeline);
 
 	destroyObjectImpl(this);

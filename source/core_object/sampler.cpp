@@ -44,12 +44,12 @@ static size_t hash_sampler(const SamplerCreateInfo& info)
 	return seed;
 }
 
-const vk::Sampler& get_vk_sampler(const_ref<Sampler> sampler)
+const vk::Sampler& get_vk_sampler(const_ref<Sampler> sampler) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(sampler).sampler;
 }
 
-vk::Sampler& get_vk_sampler(ref<Sampler> sampler)
+vk::Sampler& get_vk_sampler(ref<Sampler> sampler) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(sampler).sampler;
 }
@@ -103,7 +103,7 @@ obj<Sampler> Sampler::create(obj<Device> device, const SamplerCreateInfo& info)
 	impl.hashValue = hash_value;
 	impl.info      = info;
 
-	device_impl.samplerCacheMap.insert({ hash_value, obj });
+	device_impl.registerSampler(impl.hashValue, obj);
 	
 	return obj;
 }
@@ -113,6 +113,7 @@ Sampler::~Sampler()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 	
+	device_impl.unregisterSampler(impl.hashValue);
 	device_impl.device.destroy(impl.sampler);
 	
 	destroyObjectImpl(this);

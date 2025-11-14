@@ -79,7 +79,7 @@ static void allocate_device_memory(
 
 	vk::MemoryAllocateInfo info;
 	info.allocationSize  = req.size;
-	info.memoryTypeIndex = find_memory_type_idx(device_impl, flags, req.memoryTypeBits);
+	info.memoryTypeIndex = device_impl.findMemoryTypeIndex(flags, req.memoryTypeBits);
 
 	impl.device        = std::move(device);
 	impl.memory        = device_impl.device.allocateMemory(info);
@@ -89,12 +89,12 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
-const vk::Image& get_vk_image(const_ref<Texture> texture)
+const vk::Image& get_vk_image(const_ref<Texture> texture) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(texture).image;
 }
 
-vk::Image& get_vk_image(ref<Texture> texture)
+vk::Image& get_vk_image(ref<Texture> texture) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(texture).image;
 }

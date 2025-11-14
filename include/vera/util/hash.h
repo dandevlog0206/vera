@@ -5,7 +5,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-typedef size_t hash_t;
+typedef uint64_t hash_t;
 
 // A hash combine function based on boost::hash_combine
 template <class T>

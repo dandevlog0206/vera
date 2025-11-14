@@ -81,9 +81,6 @@
     <ClInclude Include="include\vera\core\texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\graphics\format.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\vera\util\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -100,9 +97,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\impl\window_impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\internal\format.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\semaphore.h">
@@ -157,9 +151,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\device_memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\vera\graphics\shader_parameter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\buffer.h">
@@ -243,10 +234,10 @@
     <ClInclude Include="include\vera\graphics\format_traits.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\shader_storage.h">
+    <ClInclude Include="include\vera\core\shader_parameter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\impl\shader_storage_impl.h">
+    <ClInclude Include="source\impl\shader_parameter_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\graphics\image_edit.h">
@@ -384,9 +375,6 @@
     <ClInclude Include="source\impl\descriptor_set_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\impl\detail\resource_binding_desc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\vera\core\command_buffer_sync.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -403,9 +391,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\ring_vector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\impl\detail\shader_reflection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\string_pool.h">
@@ -486,10 +471,43 @@
     <ClInclude Include="include\vera\util\rect_packer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\util\renderdoc_app.h">
+    <ClInclude Include="source\debug\renderdoc_app.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\util\renderdoc.h">
+    <ClInclude Include="include\vera\debug\renderdoc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\geometry\circle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\pass\pass_object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\pass\pass_variable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\enum_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\shader_variable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\flat_hash_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\shader_reflection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\impl\shader_reflection_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\flat_hash_map_view.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\spirv\reflection_desc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\spirv\spirv_parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -551,9 +569,6 @@
     <ClCompile Include="source\core_object\buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\graphics\shader_parameter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\colormap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -566,7 +581,7 @@
     <ClCompile Include="source\graphics\format_traits.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core_object\shader_storage.cpp">
+    <ClCompile Include="source\core_object\shader_parameter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\graphics\image_edit.cpp">
@@ -623,9 +638,6 @@
     <ClCompile Include="source\core_object\decriptor_set.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\impl\detail\shader_reflection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\typography\font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -644,7 +656,19 @@
     <ClCompile Include="source\util\rect_packer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\util\renderdoc.cpp">
+    <ClCompile Include="source\debug\renderdoc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core\shader_variable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core_object\shader_reflection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\spirv\spirv_parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\spirv\reflection_desc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -660,5 +684,6 @@
     <None Include="glsl shader\shader_toy\shader_toy4.frag.glsl" />
     <None Include="glsl shader\font_atlas\mesh_sdf.mesh.glsl" />
     <None Include="glsl shader\font_atlas\mesh_sdf.frag.glsl" />
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

@@ -1,11 +1,9 @@
 #pragma once
 
-#include "core_object.h"
+#include "device.h"
 #include <span>
 
 VERA_NAMESPACE_BEGIN
-
-class Device;
 
 class Fence : protected CoreObject
 {

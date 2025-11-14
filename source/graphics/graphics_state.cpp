@@ -1,172 +1,101 @@
 #include "../../include/vera/graphics/graphics_state.h"
-#include "../impl/command_buffer_impl.h"
+
+#include "../../include/vera/core/exception.h"
+#include "../../include/vera/core/pipeline.h"
+#include "../../include/vera/core/buffer.h"
+
+#define EMPTY_VIEWPORT Viewport{ .posX = INFINITY, .posY = INFINITY }
+#define EMPTY_SCISSOR  Scissor{ .minX = UINT32_MAX, .minY = UINT32_MAX }
 
 VERA_NAMESPACE_BEGIN
 
-GraphicsState::GraphicsState()
-{
-}
+GraphicsState::GraphicsState() VERA_NOEXCEPT :
+	m_viewport(EMPTY_VIEWPORT),
+	m_scissor(EMPTY_SCISSOR),
+	m_vertex_buffer(),
+	m_index_buffer(),
+	m_rendering_info(),
+	m_pipeline() {}
 
 GraphicsState::~GraphicsState()
 {
+	// nothing to do
 }
 
-void GraphicsState::setViewport(const Viewport& viewport)
+void GraphicsState::setViewport(const Viewport& viewport) VERA_NOEXCEPT
 {
-	if (m_viewports.empty())
-		m_viewports.push_back(viewport);
-	else
-		m_viewports.back() = viewport;
+	m_viewport = viewport;
 }
 
-const Viewport& GraphicsState::getViewport() const
+std::optional<Viewport> GraphicsState::getViewport() const VERA_NOEXCEPT
 {
-	return m_viewports.back();
+	return m_viewport;
 }
 
-void GraphicsState::pushViewport(const Viewport& viewport)
+void GraphicsState::setScissor(const Scissor& scissor) VERA_NOEXCEPT
 {
-	m_viewports.push_back(viewport);
+	m_scissor = scissor;
 }
 
-void GraphicsState::popViewport()
+std::optional<Scissor> GraphicsState::getScissor() const VERA_NOEXCEPT
 {
-	m_viewports.pop_back();
+	return m_scissor;
 }
 
-void GraphicsState::setScissor(const Scissor& scissor)
-{
-	if (m_scissors.empty())
-		m_scissors.push_back(scissor);
-	else
-		m_scissors.back() = scissor;
-}
-
-const Scissor& GraphicsState::getScissor() const
-{
-	return m_scissors.back();
-}
-
-void GraphicsState::pushScissor(const Scissor& scissor)
-{
-	m_scissors.push_back(scissor);
-}
-
-void GraphicsState::popScissor()
-{
-	m_scissors.pop_back();
-}
-
-void GraphicsState::setVertexBuffer(ref<Buffer> buffer)
+void GraphicsState::setVertexBuffer(obj<Buffer> buffer) VERA_NOEXCEPT
 {
 	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::VertexBuffer))
 		throw Exception("buffer is not for vertex");
 
-	if (m_vertex_buffers.empty())
-		m_vertex_buffers.push_back(buffer);
-	else
-		m_vertex_buffers.back() = buffer;
+	m_vertex_buffer = std::move(buffer);
 }
 
-ref<Buffer> GraphicsState::getVertexBuffer() const
+obj<Buffer> GraphicsState::getVertexBuffer() const VERA_NOEXCEPT
 {
-	return m_vertex_buffers.back();
+	return m_vertex_buffer;
 }
 
-void GraphicsState::pushVertexBuffer(ref<Buffer> buffer)
-{
-	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::VertexBuffer))
-		throw Exception("buffer is not for vertex");
-
-	m_vertex_buffers.push_back(buffer);
-}
-
-void GraphicsState::popVertexBuffer()
-{
-	m_vertex_buffers.pop_back();
-}
-
-void GraphicsState::setIndexBuffer(ref<Buffer> buffer)
+void GraphicsState::setIndexBuffer(obj<Buffer> buffer) VERA_NOEXCEPT
 {
 	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::IndexBuffer))
 		throw Exception("buffer is not for index");
 
-	if (m_index_buffers.empty())
-		m_index_buffers.push_back(buffer);
-	else
-		m_index_buffers.back() = buffer;
+	m_index_buffer = std::move(buffer);
 }
 
-ref<Buffer> GraphicsState::getIndexBuffer() const
+obj<Buffer> GraphicsState::getIndexBuffer() const VERA_NOEXCEPT
 {
-	return m_index_buffers.back();
+	return m_index_buffer;
 }
 
-void GraphicsState::pushIndexBuffer(ref<Buffer> buffer)
+void GraphicsState::setRenderingInfo(const RenderingInfo& info) VERA_NOEXCEPT
 {
-	if (!buffer->getUsageFlags().has(BufferUsageFlagBits::IndexBuffer))
-		throw Exception("buffer is not for index");
-
-	m_index_buffers.push_back(buffer);
+	m_rendering_info = info;
 }
 
-void GraphicsState::popIndexBuffer()
+const RenderingInfo& GraphicsState::getRenderingInfo() const VERA_NOEXCEPT
 {
-	m_index_buffers.pop_back();
+	return m_rendering_info;
 }
 
-void GraphicsState::setRenderingInfo(const RenderingInfo& info)
+void GraphicsState::setPipeline(obj<Pipeline> pipeline) VERA_NOEXCEPT
 {
-	if (m_renderingInfos.empty())
-		m_renderingInfos.push_back(info);
-	else
-		m_renderingInfos.back() = info;
+	m_pipeline = std::move(pipeline);
 }
 
-const RenderingInfo& GraphicsState::getRenderingInfo() const
+obj<Pipeline> GraphicsState::getPipeline() const VERA_NOEXCEPT
 {
-	return m_renderingInfos.back();
-}
-
-void GraphicsState::pushRenderingInfo(const RenderingInfo& info)
-{
-	m_renderingInfos.push_back(info);
-}
-
-void GraphicsState::popRenderingInfo()
-{
-	m_renderingInfos.pop_back();
-}
-
-void GraphicsState::setPipeline(ref<Pipeline> pipeline)
-{
-	if (m_pipelines.empty())
-		m_pipelines.push_back(pipeline);
-	else
-		m_pipelines.back() = std::move(pipeline);
-}
-
-ref<Pipeline> GraphicsState::getPipeline() const
-{
-	return m_pipelines.back();
-}
-
-void GraphicsState::pushPipeline(ref<Pipeline> pipeline)
-{
-	m_pipelines.push_back(std::move(pipeline));
-}
-
-void GraphicsState::popPipelineInfo()
-{
-	m_pipelines.pop_back();
+	return m_pipeline;
 }
 
 void GraphicsState::clear()
 {
-	m_viewports.clear();
-	m_scissors.clear();
-	m_renderingInfos.clear();
-	m_pipelines.clear();
+	m_viewport       = EMPTY_VIEWPORT;
+	m_scissor        = EMPTY_SCISSOR;
+	m_vertex_buffer  = {};
+	m_index_buffer   = {};
+	m_rendering_info = {};
+	m_pipeline       = {};
 }
 
 VERA_NAMESPACE_END

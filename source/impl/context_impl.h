@@ -4,12 +4,13 @@
 
 VERA_NAMESPACE_BEGIN
 
-struct ContextImpl
+class ContextImpl
 {
-	vk::Instance               instance;
+public:
+	vk::Instance               instance                 = {};
 
-	vk::DebugUtilsMessengerEXT debugUtilsMessenger;
-	uint32_t                   debugUtilsMessengerLevel;
+	vk::DebugUtilsMessengerEXT debugUtilsMessenger      = {};
+	uint32_t                   debugUtilsMessengerLevel = {};
 };
 
 VERA_NAMESPACE_END

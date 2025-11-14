@@ -1,14 +1,13 @@
 #pragma once
 
-#include "core_object.h"
+#include "device.h"
+#include "command_buffer.h"
 #include "render_frame.h"
 
 VERA_NAMESPACE_BEGIN
 
 enum class TextureLayout VERA_ENUM;
 
-class Device;
-class CommandBuffer;
 class GraphicsState;
 class ShaderParameter;
 class Texture;
@@ -46,17 +45,17 @@ public:
 		uint32_t             vtx_off);
 
 	void draw(
-		const GraphicsState&   states,
-		const ShaderParameter& params,
-		uint32_t               vtx_count,
-		uint32_t               vtx_off);
+		const GraphicsState& states,
+		obj<ShaderParameter> param,
+		uint32_t             vtx_count,
+		uint32_t             vtx_off);
 
 	void drawIndexed(
-		const GraphicsState&   states,
-		const ShaderParameter& params,
-		uint32_t               idx_count,
-		uint32_t               idx_off,
-		uint32_t               vtx_off);
+		const GraphicsState& states,
+		obj<ShaderParameter> param,
+		uint32_t             idx_count,
+		uint32_t             idx_off,
+		uint32_t             vtx_off);
 
 	void submit();
 };

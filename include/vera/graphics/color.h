@@ -1,6 +1,6 @@
 #pragma once
 
-#include "format.h"
+#include "../core/enum_types.h"
 #include "../math/vector_types.h"
 #include <bit>
 

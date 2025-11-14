@@ -5,13 +5,14 @@
 
 VERA_NAMESPACE_BEGIN
 
-struct FrameBufferImpl
+class FrameBufferImpl
 {
-	obj<Device>       device;
-	obj<Texture>      colorAttachment;
-	obj<Texture>      depthAttachment;
-	obj<Texture>      stencilAttachment;
-	obj<Semaphore>    waitSemaphore;
+public:
+	obj<Device>       device            = {};
+	obj<Texture>      colorAttachment   = {};
+	obj<Texture>      depthAttachment   = {};
+	obj<Texture>      stencilAttachment = {};
+	obj<Semaphore>    waitSemaphore     = {};
 
 	uint32_t          width             = {};
 	uint32_t          height            = {};

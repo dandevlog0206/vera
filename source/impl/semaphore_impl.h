@@ -4,13 +4,13 @@
 
 VERA_NAMESPACE_BEGIN
 
-struct SemaphoreImpl
+class SemaphoreImpl
 {
-	using object_type = class Semaphore;
+public:
+	obj<Device>       device        = {};
 
-	obj<Device>   device;
-
-	vk::Semaphore semaphore;
+	vk::Semaphore     semaphore     = {};
+	vk::SemaphoreType semaphoreType = {};
 };
 
 VERA_NAMESPACE_END

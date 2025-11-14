@@ -1,7 +1,6 @@
 #pragma once
 
-#include "core_object.h"
-#include "../graphics/format.h"
+#include "buffer.h"
 
 VERA_NAMESPACE_BEGIN
 

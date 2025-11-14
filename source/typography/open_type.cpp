@@ -200,52 +200,6 @@ static uint32_t parse_glyph_header(OTFGlyphHeader& header, const uint8_t* data, 
 	return offset;
 }
 
-static void make_vector_parser(
-	OTFGlyphFlagBits flags,
-	OTFVectorParser& x_vector_func,
-	OTFVectorParser& y_vector_func
-) {
-	static const auto short_positive_vector = [](const uint8_t* data, uint32_t& offset) {
-		return static_cast<float>(parse_u8_be(data, offset));
-	};
-
-	static const auto short_negative_vector = [](const uint8_t* data, uint32_t& offset) {
-		return -static_cast<float>(parse_u8_be(data, offset));
-	};
-
-	static const auto long_vector = [](const uint8_t* data, uint32_t& offset) {
-		return static_cast<float>(parse_i16_be(data, offset));
-	};
-
-	static const auto zero_vector = [](const uint8_t* data, uint32_t& offset) {
-		return 0.f;
-	};
-
-	if (has_flag(flags, OTFGlyphFlagBits::XShortVector)) {
-		if (has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
-			x_vector_func = short_positive_vector;
-		else
-			x_vector_func = short_negative_vector;
-	} else {
-		if (has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
-			x_vector_func = zero_vector;
-		else
-			x_vector_func = long_vector;
-	}
-
-	if (has_flag(flags, OTFGlyphFlagBits::YShortVector)) {
-		if (has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive))
-			y_vector_func = short_positive_vector;
-		else
-			y_vector_func = short_negative_vector;
-	} else {
-		if (has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive))
-			y_vector_func = zero_vector;
-		else
-			y_vector_func = long_vector;
-	}
-}
-
 static bool supported_cmap_encoding_format4(OTFEncodingID encoding_id) {
 	switch (encoding_id) {
 	case OTFEncodingID::Unicode_1_0_Semantics:
@@ -795,10 +749,11 @@ OTFResult OpenTypeImpl::parseSimpleGlyph(Glyph& glyph, const OTFGlyphHeader& gly
 	y_point_offset = x_point_offset + x_point_size;
 	point_count    = static_cast<uint32_t>(end_indicies.back() + 1);
 
-	float2 curr_point;
-	float2 prev_point;
-	float  delta_x;
-	float  delta_y;
+	OTFGlyphFlagBits flags;
+	float2           curr_point;
+	float2           prev_point;
+	float            delta_x;
+	float            delta_y;
 
 	auto     curr_path    = glyph.contours.begin();
 	auto     curr_end     = end_indicies.begin();
@@ -808,12 +763,9 @@ OTFResult OpenTypeImpl::parseSimpleGlyph(Glyph& glyph, const OTFGlyphHeader& gly
 	float    curr_y       = 0.f;
 	bool     on_curve     = false;
 
-	OTFVectorParser x_vector_func = nullptr;
-	OTFVectorParser y_vector_func = nullptr;
-
 	for (uint32_t i = 0; i < point_count; ++i) {
 		if (repeat_count == 0) {
-			auto flags = parse_enum_be<OTFGlyphFlagBits>(data, offset);
+			flags = parse_enum_be<OTFGlyphFlagBits>(data, offset);
 
 			if (has_flag(flags, OTFGlyphFlagBits::RepeatFlag))
 				repeat_count = parse_u8_be(data, offset) + 1;
@@ -821,18 +773,33 @@ OTFResult OpenTypeImpl::parseSimpleGlyph(Glyph& glyph, const OTFGlyphHeader& gly
 				repeat_count = 1;
 
 			on_curve = has_flag(flags, OTFGlyphFlagBits::OnCurvePoint);
-
-			make_vector_parser(flags, x_vector_func, y_vector_func);
 		}
 
-		delta_x = x_vector_func(data, x_point_offset);
-		delta_y = y_vector_func(data, y_point_offset);
-		
-		curr_x += delta_x;
-		curr_y += delta_y;
+		if (has_flag(flags, OTFGlyphFlagBits::XShortVector)) {
+			delta_x = static_cast<float>(static_cast<int32_t>(parse_u16_be(data, x_point_offset)));
+			delta_x = has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive) ? delta_x : -delta_x;
+		} else {
+			if (has_flag(flags, OTFGlyphFlagBits::XIsSameOrPositive))
+				delta_x = 0.f;
+			else
+				delta_x = static_cast<float>(static_cast<int32_t>(parse_u32_be(data, x_point_offset)));
+		}
 
-		if (delta_x != 0 || delta_y != 0)
-		curr_path->emplace_back(float2(curr_x, curr_y), on_curve);
+		if (has_flag(flags, OTFGlyphFlagBits::YShortVector)) {
+			float delta_y = static_cast<float>(static_cast<int32_t>(parse_u16_be(data, y_point_offset)));
+			delta_y = has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive) ? delta_y : -delta_y;
+		} else {
+			if (has_flag(flags, OTFGlyphFlagBits::YIsSameOrPositive))
+				delta_y = 0.f;
+			else
+				delta_y = static_cast<float>(static_cast<int32_t>(parse_u32_be(data, y_point_offset)));
+		}
+
+		if (delta_x != 0.f || delta_y != 0.f) {
+			curr_x += delta_x;
+			curr_y += delta_y;
+			curr_path->emplace_back(float2(curr_x, curr_y), on_curve);
+		}
 
 		if (i == *curr_end) {
 			point_comp = 0;

@@ -92,7 +92,7 @@ public:
 
 		m_texture->upload(image);
 
-		m_pass->getShaderParameter()["sTexture"] = m_texture;
+		m_pass->getRootVariable()["sTexture"] = m_texture;
 
 		auto  vertex_memory = m_pass->getVertexBuffer()->getDeviceMemory();
 		auto* map           = reinterpret_cast<Vertex*>(vertex_memory->map());
@@ -173,13 +173,13 @@ public:
 		//auto mat = vr::Transform2D().translate(sinf(time), sinf(time)).getMatrix();
 		//auto mat = vr::Transform2D().getMatrix();
 
-		auto& params = m_pass->getShaderParameter();
-		params["pc"]["viewport"]  = vr::float2(image->width(), image->height());
-		params["pc"]["time"]      = time; // for block variable
-		params["pc"]["transform"] = mat;
-		params["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
-		params["pc"]["colors"][1] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.71666f, 1.9f) - 1.f)).unorm();
-		params["pc"]["colors"][2] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 1.38333f, 1.9f) - 1.f)).unorm();
+		auto root_var = m_pass->getRootVariable();
+		root_var["pc"]["viewport"]  = vr::float2(image->width(), image->height());
+		root_var["pc"]["time"]      = time; // for block variable
+		root_var["pc"]["transform"] = mat;
+		root_var["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
+		root_var["pc"]["colors"][1] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.71666f, 1.9f) - 1.f)).unorm();
+		root_var["pc"]["colors"][2] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 1.38333f, 1.9f) - 1.f)).unorm();
 
 		m_pass->execute(m_render_ctx, image);
 

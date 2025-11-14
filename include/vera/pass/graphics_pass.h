@@ -4,9 +4,10 @@
 #include "../core/pipeline.h"
 #include "../core/render_context.h"
 #include "../core/texture.h"
+#include "../core/shader_parameter.h"
+#include "../core/descriptor_pool.h"
 #include "../graphics/graphics_state.h"
 #include "../graphics/vertex_input.h"
-#include "../graphics/shader_parameter.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -35,22 +36,22 @@ public:
 	obj<Buffer> getVertexBuffer();
 	obj<Buffer> getIndexBuffer();
 
-	ShaderParameter& getShaderParameter();
+	ShaderVariable getRootVariable();
 
 	virtual void execute(obj<RenderContext> cmd, ref<FrameBuffer> framebuffer);
 
 private:
-	obj<Device>     m_device;
-	obj<Pipeline>   m_pipeline;
-	obj<Buffer>     m_vertex_buffer;
-	obj<Buffer>     m_index_buffer;
-	obj<Texture>    m_depth;
-	ShaderParameter m_parameter;
-	GraphicsState   m_states;
+	obj<Device>          m_device;
+	obj<Pipeline>        m_pipeline;
+	obj<Buffer>          m_vertex_buffer;
+	obj<Buffer>          m_index_buffer;
+	obj<Texture>         m_depth;
+	obj<ShaderParameter> m_param;
+	GraphicsState        m_states;
 
-	DepthFormat     m_depth_format;
-	uint32_t        m_vertex_count;
-	uint32_t        m_index_count;
+	DepthFormat          m_depth_format;
+	uint32_t             m_vertex_count;
+	uint32_t             m_index_count;
 };
 
 VERA_NAMESPACE_END

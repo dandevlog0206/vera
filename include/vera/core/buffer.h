@@ -1,33 +1,8 @@
 #pragma once
 
-#include "device.h"
-#include "../util/flag.h"
+#include "device_memory.h"
 
 VERA_NAMESPACE_BEGIN
-
-class Device;
-class DeviceMemory;
-
-enum class IndexType VERA_ENUM
-{
-	Unknown,
-	UInt8,
-	UInt16,
-	UInt32
-};
-
-enum class BufferUsageFlagBits VERA_FLAG_BITS
-{
-	TransferSrc        = 1 << 0,
-	TransferDst        = 1 << 1,
-	UniformTexelBuffer = 1 << 2,
-	StorageTexelBuffer = 1 << 3,
-	UniformBuffer      = 1 << 4,
-	StorageBuffer      = 1 << 5,
-	IndexBuffer        = 1 << 6,
-	VertexBuffer       = 1 << 7,
-	IndirectBuffer     = 1 << 8
-} VERA_ENUM_FLAGS(BufferUsageFlagBits, BufferUsageFlags)
 
 struct BufferCreateInfo
 {

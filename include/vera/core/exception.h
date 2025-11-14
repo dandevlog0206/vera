@@ -12,9 +12,6 @@
 	(static_cast<bool>(expression)) ? (void)(0) : \
 	vr::priv::__check_impl(#expression, msg, __FILE__, __LINE__)
 
-#define VERA_ERROR(msg) \
-	vr::priv::__error_impl(msg, __FILE__, __LINE__)
-
 VERA_NAMESPACE_BEGIN
 
 class Exception : public std::exception
@@ -42,11 +39,6 @@ VERA_PRIV_NAMESPACE_BEGIN
 
 extern void __check_impl(
 	const char* expression,
-	const char* message,
-	const char* file,
-	uint32_t    line);
-
-extern void __error_impl(
 	const char* message,
 	const char* file,
 	uint32_t    line);

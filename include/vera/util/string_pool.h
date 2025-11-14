@@ -7,11 +7,30 @@
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
 
+#if defined(_MSC_VER)
+#  pragma warning(push)
+#  pragma warning(disable:4200) // nonstandard extension used: zero-sized array in struct/union
+#elif defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wpedantic"
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 struct string_pool_node
 {
 	string_pool_node* m_next;
 	char              m_string[];
 };
+
+#if defined(_MSC_VER)
+#  pragma warning(pop)
+#elif defined(__clang__)
+#  pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic pop
+#endif
 
 class string_pool_iterator
 {

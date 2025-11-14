@@ -137,6 +137,45 @@ VERA_NODISCARD VERA_CONSTEXPR float shoelace(const vector_base<2, T, Q>& lhs, co
 }
 
 template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<2, T, Q> lerp(
+	const vector_base<2, T, Q>& p0,
+	const vector_base<2, T, Q>& p1,
+	T                           t
+) VERA_NOEXCEPT {
+	return {
+		p0.x + (p1.x - p0.x) * t,
+		p0.y + (p1.y - p0.y) * t
+	};
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<3, T, Q> lerp(
+	const vector_base<3, T, Q>& p0,
+	const vector_base<3, T, Q>& p1,
+	T                           t
+) VERA_NOEXCEPT {
+	return {
+		p0.x + (p1.x - p0.x) * t,
+		p0.y + (p1.y - p0.y) * t,
+		p0.z + (p1.z - p0.z) * t
+	};
+}
+
+template <class T, MathQualifier Q>
+VERA_NODISCARD VERA_CONSTEXPR vector_base<4, T, Q> lerp(
+	const vector_base<4, T, Q>& p0,
+	const vector_base<4, T, Q>& p1,
+	T                           t
+) VERA_NOEXCEPT {
+	return {
+		p0.x + (p1.x - p0.x) * t,
+		p0.y + (p1.y - p0.y) * t,
+		p0.z + (p1.z - p0.z) * t,
+		p0.w + (p1.w - p0.w) * t
+	};
+}
+
+template <class T, MathQualifier Q>
 VERA_NODISCARD VERA_CONSTEXPR vector_base<2, T, Q> quadratic(
 	const vector_base<2, T, Q>& p0,
 	const vector_base<2, T, Q>& p1,

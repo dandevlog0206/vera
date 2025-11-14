@@ -157,19 +157,27 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\core\shader_variable.cpp" />
+    <ClCompile Include="source\core_object\shader_reflection.cpp" />
+    <ClCompile Include="source\spirv\reflection_desc.cpp" />
+    <ClCompile Include="source\spirv\spirv_parser.cpp" />
     <ClCompile Include="source\util\rect_packer.cpp" />
-    <ClCompile Include="source\util\renderdoc.cpp" />
+    <ClCompile Include="source\debug\renderdoc.cpp" />
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
+    <ClInclude Include="include\vera\core\enum_types.h" />
     <ClInclude Include="include\vera\core\framebuffer.h" />
     <ClInclude Include="include\vera\core\render_frame.h" />
     <ClInclude Include="include\vera\core\descriptor_set.h" />
     <ClInclude Include="include\vera\core\descriptor_pool.h" />
-    <ClInclude Include="include\vera\core\shader_storage.h" />
+    <ClInclude Include="include\vera\core\shader_parameter.h" />
     <ClInclude Include="include\vera\core\intrusive_ptr.h" />
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
+    <ClInclude Include="include\vera\core\shader_reflection.h" />
+    <ClInclude Include="include\vera\core\shader_variable.h" />
     <ClInclude Include="include\vera\geometry\aabb.h" />
     <ClInclude Include="include\vera\geometry\bezier.h" />
+    <ClInclude Include="include\vera\geometry\circle.h" />
     <ClInclude Include="include\vera\geometry\frustum.h" />
     <ClInclude Include="include\vera\geometry\geometry.h" />
     <ClInclude Include="include\vera\geometry\line.h" />
@@ -177,6 +185,8 @@
     <ClInclude Include="include\vera\geometry\path.h" />
     <ClInclude Include="include\vera\geometry\plane.h" />
     <ClInclude Include="include\vera\geometry\sphere.h" />
+    <ClInclude Include="include\vera\pass\pass_object.h" />
+    <ClInclude Include="include\vera\pass\pass_variable.h" />
     <ClInclude Include="include\vera\typography\font.h" />
     <ClInclude Include="include\vera\math\constant.h" />
     <ClInclude Include="include\vera\math\detail\config.h" />
@@ -225,14 +235,16 @@
     <ClInclude Include="include\vera\util\array_view.h" />
     <ClInclude Include="include\vera\util\camera.h" />
     <ClInclude Include="include\vera\util\direction.h" />
+    <ClInclude Include="include\vera\util\flat_hash_map.h" />
     <ClInclude Include="include\vera\util\flycam.h" />
     <ClInclude Include="include\vera\math\radian.h" />
+    <ClInclude Include="include\vera\util\flat_hash_map_view.h" />
     <ClInclude Include="include\vera\util\index_map.h" />
     <ClInclude Include="include\vera\util\lookup_table.h" />
     <ClInclude Include="include\vera\util\range.h" />
     <ClInclude Include="include\vera\util\ranged_set.h" />
     <ClInclude Include="include\vera\util\rect_packer.h" />
-    <ClInclude Include="include\vera\util\renderdoc.h" />
+    <ClInclude Include="include\vera\debug\renderdoc.h" />
     <ClInclude Include="include\vera\util\result_message.h" />
     <ClInclude Include="include\vera\util\ring_vector.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
@@ -240,11 +252,12 @@
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
-    <ClInclude Include="source\util\renderdoc_app.h" />
+    <ClInclude Include="source\spirv\reflection_desc.h" />
+    <ClInclude Include="source\impl\shader_reflection_impl.h" />
+    <ClInclude Include="source\spirv\spirv_parser.h" />
+    <ClInclude Include="source\debug\renderdoc_app.h" />
     <ClInclude Include="source\typography\font_impl_base.h" />
     <ClInclude Include="source\typography\open_type.h" />
-    <ClInclude Include="source\impl\detail\resource_binding_desc.h" />
-    <ClInclude Include="source\impl\detail\shader_reflection.h" />
     <ClInclude Include="source\graphics\pixel.h" />
     <ClInclude Include="source\impl\buffer_impl.h" />
     <ClInclude Include="source\impl\device_memory_impl.h" />
@@ -271,10 +284,8 @@
     <ClInclude Include="include\vera\core\device.h" />
     <ClInclude Include="include\vera\core\exception.h" />
     <ClInclude Include="include\vera\core\fence.h" />
-    <ClInclude Include="include\vera\graphics\format.h" />
     <ClInclude Include="include\vera\graphics\graphics_state.h" />
     <ClInclude Include="include\vera\core\device_memory.h" />
-    <ClInclude Include="include\vera\graphics\shader_parameter.h" />
     <ClInclude Include="include\vera\util\rect.h" />
     <ClInclude Include="include\vera\util\small_vector.h" />
     <ClInclude Include="source\impl\device_impl.h" />
@@ -310,22 +321,20 @@
     <ClInclude Include="source\impl\render_context_impl.h" />
     <ClInclude Include="source\impl\descriptor_set_layout_impl.h" />
     <ClInclude Include="source\impl\shader_impl.h" />
-    <ClInclude Include="source\impl\shader_storage_impl.h" />
+    <ClInclude Include="source\impl\shader_parameter_impl.h" />
     <ClInclude Include="source\impl\swapchain_impl.h" />
     <ClInclude Include="source\impl\texture_impl.h" />
     <ClInclude Include="include\vera\core\texture_view.h" />
     <ClInclude Include="source\internal\include_vulkan.h" />
-    <ClInclude Include="source\internal\format.h" />
     <ClInclude Include="source\impl\window_impl.h" />
     <ClCompile Include="source\core\command_buffer_sync.cpp" />
     <ClCompile Include="source\core\exception.cpp" />
     <ClCompile Include="source\typography\font.cpp" />
-    <ClCompile Include="source\impl\detail\shader_reflection.cpp" />
     <ClCompile Include="source\core_object\descriptor_pool.cpp" />
     <ClCompile Include="source\core_object\buffer_view.cpp" />
     <ClCompile Include="source\core_object\framebuffer.cpp" />
     <ClCompile Include="source\core_object\decriptor_set.cpp" />
-    <ClCompile Include="source\core_object\shader_storage.cpp" />
+    <ClCompile Include="source\core_object\shader_parameter.cpp" />
     <ClCompile Include="source\core_object\texture_view.cpp" />
     <ClCompile Include="source\core_object\buffer.cpp" />
     <ClCompile Include="source\colormap.cpp" />
@@ -359,7 +368,6 @@
     <ClCompile Include="source\scene\mesh_attribute.cpp" />
     <ClCompile Include="source\scene\scene.cpp" />
     <ClCompile Include="source\scene\scene_node.cpp" />
-    <ClCompile Include="source\graphics\shader_parameter.cpp" />
     <ClCompile Include="source\core_object\swapchain.cpp" />
     <ClCompile Include="source\core_object\texture.cpp" />
     <ClCompile Include="source\typography\font_atlas.cpp" />
@@ -378,6 +386,7 @@
     <Natvis Include="vera.natvis" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="cpp.hint" />
     <None Include="glsl shader\font_atlas\mesh_sdf.frag.glsl" />
     <None Include="glsl shader\font_atlas\mesh_sdf.mesh.glsl" />
     <None Include="glsl shader\shader_toy\shader_toy3.frag.glsl" />

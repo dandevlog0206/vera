@@ -1,44 +1,9 @@
 #pragma once
 
-#include "core_object.h"
+#include "device.h"
 #include "../graphics/color.h"
 
 VERA_NAMESPACE_BEGIN
-
-class Device;
-
-enum class SamplerFilter
-{
-	Nearest,
-	Linear
-};
-
-enum class SamplerMipmapMode
-{
-	Nearest,
-	Linear
-};
-
-enum class SamplerAddressMode
-{
-	Repeat,
-	MirroredRepeat,
-	ClampToEdge,
-	ClampToBorder,
-	MirrorClampToEdge
-};
-
-enum class SamplerCompareOp
-{
-	Never,
-	Less,
-	Equal,
-	LessOrEqual,
-	Greater,
-	NotEqual,
-	GreaterOrEqual,
-	Always
-};
 
 struct SamplerCreateInfo
 {

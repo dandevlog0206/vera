@@ -1,7 +1,6 @@
 #pragma once
 
-#include "core_object.h"
-#include "../graphics/format.h"
+#include "device.h"
 #include "../util/extent.h"
 
 VERA_NAMESPACE_BEGIN
@@ -11,15 +10,7 @@ class Window;
 
 VERA_OS_NAMESPACE_END
 
-class Device;
 class FrameBuffer;
-
-enum class PresentMode
-{
-	Fifo,
-	Immediate,
-	Mailbox
-};
 
 struct SwapchainCreateInfo
 {

@@ -68,6 +68,24 @@
 
 #define VERA_VERSION VERA_MAKE_VERSION(VERA_VERSION_MAJOR, VERA_VERSION_MINOR, VERA_VERSION_PATCH)
 
+#define VERA_CONCAT_TOKEN_IMPL(a, b) a ## b
+#define VERA_CONCAT_TOKEN(a, b) VERA_CONCAT_TOKEN_IMPL(a, b)
+
+#define VERA_MEMBER_PADDING(size)                           \
+private:                                                    \
+    uint8_t VERA_CONCAT_TOKEN(_padding_, __LINE__)[(size)]; \
+public:
+
+#define VERA_ENUM_COUNT(enum_type) \
+    static_cast<uint32_t>(enum_type::__COUNT__)
+
+#define VERA_KIB(x) (1024 * x)
+#define VERA_MIB(x) (1024 * 1024 * x)
+#define VERA_GIB(x) (1024 * 1024 * 1024 * x)
+#define VERA_KB(x)  (1000 * x)
+#define VERA_MB(x)  (1000 * 1000 * x)
+#define VERA_GB(x)  (1000 * 1000 * 1000 * x)
+
 #ifdef _DEBUG
 #define VERA_IS_DEBUG true
 #else
@@ -88,6 +106,7 @@
 #define VERA_DEPRECATED_MSG(msg) [[deprecated(msg)]]
 #define VERA_NODISCARD [[nodiscard]]
 #define VERA_FALLTHROUGH [[fallthrough]]
+#define VERA_NORETURN [[noreturn]]
 
 // defines
 #define VERA_ENUM : uint32_t

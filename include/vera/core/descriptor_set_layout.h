@@ -1,40 +1,8 @@
 #pragma once
 
-#include "shader.h"
-#include "../util/index_map.h"
-#include <vector>
+#include "device.h"
 
 VERA_NAMESPACE_BEGIN
-
-enum class DescriptorSetLayoutCreateFlagBits VERA_FLAG_BITS
-{
-	UpdateAfterBindPool = 1 << 0,
-	PushBinding         = 1 << 1
-} VERA_ENUM_FLAGS(DescriptorSetLayoutCreateFlagBits, DescriptorSetLayoutCreateFlags)
-
-enum class DescriptorSetLayoutBindingFlagBits VERA_FLAG_BITS
-{
-	UpdateAfterBind          = 1 << 0,
-	UpdateUnusedWhilePending = 1 << 1,
-	PartiallyBound           = 1 << 2,
-	VariableDescriptorCount  = 1 << 3
-} VERA_ENUM_FLAGS(DescriptorSetLayoutBindingFlagBits, DescriptorSetLayoutBindingFlags)
-
-enum class DescriptorType VERA_ENUM
-{
-	Unknown,
-	Sampler,
-	CombinedImageSampler,
-	SampledImage,
-	StorageImage,
-	UniformTexelBuffer,
-	StorageTexelBuffer,
-	UniformBuffer,
-	StorageBuffer,
-	UniformBufferDynamic,
-	StorageBufferDynamic,
-	InputAttachment
-};
 
 struct DescriptorSetLayoutBinding
 {
@@ -58,11 +26,13 @@ public:
 	static obj<DescriptorSetLayout> create(obj<Device> device, const DescriptorSetLayoutCreateInfo& info);
 	~DescriptorSetLayout();
 
-	obj<Device> getDevice();
+	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 
-	const std::vector<DescriptorSetLayoutBinding>& getBindings() const;
+	VERA_NODISCARD uint32_t getBindingCount() const VERA_NOEXCEPT;
+	VERA_NODISCARD const DescriptorSetLayoutBinding& getBinding(uint32_t binding) const VERA_NOEXCEPT;
+	VERA_NODISCARD const std::vector<DescriptorSetLayoutBinding>& getBindings() const VERA_NOEXCEPT;
 
-	uint64_t hash() const;
+	VERA_NODISCARD uint64_t hash() const VERA_NOEXCEPT;
 };
 
 VERA_NAMESPACE_END
