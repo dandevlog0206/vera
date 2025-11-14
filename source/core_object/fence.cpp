@@ -74,13 +74,14 @@ obj<Fence> Fence::create(obj<Device> device, bool signaled)
 	auto  vk_device = get_vk_device(device);
 
 	vk::FenceCreateInfo fence_info;
+
 	if (signaled)
 		fence_info.flags = vk::FenceCreateFlagBits::eSignaled;
 
 	impl.device = std::move(device);
 	impl.fence  = vk_device.createFence(fence_info);
 
-	return std::move(obj);
+	return obj;
 }
 
 Fence::~Fence()

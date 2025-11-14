@@ -23,7 +23,7 @@ static void append_render_frame(RenderContextImpl& impl, uint32_t at, uint64_t i
 
 	render_frame->commandBuffer     = CommandBuffer::create(impl.device);
 	render_frame->framebuffers      = {};
-	render_frame->commandBufferSync = render_frame->commandBuffer->getSync();
+	render_frame->commandBufferSync = {};
 	render_frame->frameID           = id;
 
 	render_frame->commandBuffer->begin();
@@ -33,7 +33,7 @@ static void reset_render_frame(RenderContextImpl& impl, RenderContextFrame& rend
 {
 	render_frame.commandBuffer->reset();
 	render_frame.framebuffers.clear();
-	render_frame.commandBufferSync = render_frame.commandBuffer->getSync();
+	render_frame.commandBufferSync = {};
 	render_frame.frameID           = id;
 
 	render_frame.commandBuffer->begin();
@@ -42,11 +42,14 @@ static void reset_render_frame(RenderContextImpl& impl, RenderContextFrame& rend
 static void render_context_next_frame(RenderContextImpl& impl)
 {
 	auto  next_idx   = (impl.frameIndex + 1) % static_cast<int32_t>(impl.renderFrames.size());
+	auto& curr_frame = *impl.renderFrames[impl.frameIndex];
 	auto& next_frame = *impl.renderFrames[next_idx];
+	auto& next_sync  = next_frame.commandBufferSync;
 
+	curr_frame.commandBufferSync = curr_frame.commandBuffer->getSync();
 	impl.currentFrameID++;
 
-	if (next_frame.commandBufferSync.isComplete()) {
+	if (next_idx != impl.frameIndex && (next_sync.empty() || next_sync.isComplete())) {
 		reset_render_frame(impl, next_frame, impl.currentFrameID);
 		impl.frameIndex = next_idx;
 	} else if (impl.dynamicFrameCount) {
@@ -161,9 +164,38 @@ void RenderContext::transitionImageLayout(ref<Texture> texture, TextureLayout ol
 
 void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32_t vtx_off)
 {
-	auto& impl     = getImpl(this);
-	auto& cmd      = get_current_frame(impl).commandBuffer;
+	auto& impl = getImpl(this);
+	auto& cmd  = get_current_frame(impl).commandBuffer;
 
+	// TODO: verify image layout transition
+	for (auto& color : states.getRenderingInfo().colorAttachments) {
+		auto& texture_impl = getImpl(color.texture);
+
+		// Identify swapchain image and save for future use
+		if (texture_impl.textureUsage.has(TextureUsageFlagBits::FrameBuffer)) {
+			auto& render_frame = *impl.renderFrames[impl.frameIndex];
+
+			// TODO: optimize
+			if (std::none_of(VERA_SPAN(render_frame.framebuffers),
+				[=](const auto& elem) {
+					return elem == texture_impl.frameBuffer;
+				})) {
+				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
+				
+				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
+				framebuffer_impl.commandBufferSync = render_frame.commandBuffer->getSync();
+			}
+		}
+
+		cmd->transitionImageLayout(
+			color.texture,
+			vr::PipelineStageFlagBits::ColorAttachmentOutput,
+			vr::PipelineStageFlagBits::ColorAttachmentOutput,
+			vr::AccessFlagBits{},
+			vr::AccessFlagBits::ColorAttachmentWrite,
+			vr::TextureLayout::Undefined,
+			vr::TextureLayout::ColorAttachmentOptimal);
+	}
 
 	cmd->bindGraphicsState(states);
 
@@ -195,7 +227,7 @@ void RenderContext::draw(
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.commandBufferSync = render_frame.commandBufferSync;
+				framebuffer_impl.commandBufferSync = render_frame.commandBuffer->getSync();
 			}
 		}
 
@@ -241,7 +273,7 @@ void RenderContext::drawIndexed(
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.commandBufferSync = render_frame.commandBufferSync;
+				framebuffer_impl.commandBufferSync = render_frame.commandBuffer->getSync();
 			}
 		}
 
@@ -278,16 +310,11 @@ void RenderContext::submit()
 
 	cmd_impl.state = CommandBufferState::Submitted;
 
-	vk::TimelineSemaphoreSubmitInfo timeline_info;
-	timeline_info.signalSemaphoreValueCount = 1;
-	timeline_info.pSignalSemaphoreValues    = &cmd_impl.submitID;
-
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount   = 1;
 	submit_info.pCommandBuffers      = &cmd_impl.commandBuffer;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &get_vk_semaphore(cmd_impl.semaphore);
-	submit_info.pNext                = &timeline_info;
 
 	static_vector<vk::Semaphore, 32>          semaphores;
 	static_vector<vk::PipelineStageFlags, 32> stage_masks;

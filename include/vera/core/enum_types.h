@@ -4,6 +4,17 @@
 
 VERA_NAMESPACE_BEGIN
 
+VERA_VK_ABI_COMPATIBLE enum class DeviceFaultAddressType VERA_ENUM
+{
+	Unknown               = 0,
+	Read                  = 1,
+	Write                 = 2,
+	Execute               = 3,
+	Inaccessible          = 4,
+	OutOfBounds           = 5,
+	InvalidPageTableEntry = 6
+};
+
 VERA_VK_ABI_COMPATIBLE enum class MemoryHeapFlagBits VERA_FLAG_BITS
 {
 	None          = 0,

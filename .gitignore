@@ -3,7 +3,13 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
-# Renderdoc capture Files
+# experimental features
+experimental/
+
+# crush dump files
+dump/
+
+# Renderdoc capture files
 renderdoc/
 
 # Private image files

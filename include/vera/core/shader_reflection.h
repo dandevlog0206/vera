@@ -8,7 +8,7 @@ VERA_NAMESPACE_BEGIN
 
 class PipelineLayout;
 class Shader;
-struct ReflectionNode;
+class ReflectionNode;
 
 class ShaderReflectionBuilder
 {

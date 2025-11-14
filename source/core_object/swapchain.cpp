@@ -259,7 +259,6 @@ ref<FrameBuffer> Swapchain::acquireNextImage()
 
 	if (sync.imageIndex != -1) {
 		auto& framebuffer_impl = getImpl(impl.framebuffers[sync.imageIndex]);
-		
 		framebuffer_impl.commandBufferSync.waitForComplete();
 	}
 

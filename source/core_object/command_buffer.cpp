@@ -10,6 +10,7 @@
 #include "../impl/device_memory_impl.h"
 #include "../impl/shader_parameter_impl.h"
 
+#include "../../include/vera/core/context.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/fence.h"
 #include "../../include/vera/core/semaphore.h"
@@ -84,7 +85,7 @@ obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 	alloc_info.commandBufferCount = 1;
 
 	impl.device                = device;
-	impl.semaphore             = Semaphore::createTimeline(impl.device);
+	impl.semaphore             = Semaphore::create(impl.device);
 	impl.fence                 = Fence::create(impl.device);
 	impl.commandPool           = alloc_info.commandPool;
 	impl.commandBuffer         = vk_device.allocateCommandBuffers(alloc_info).front();
@@ -495,7 +496,6 @@ void CommandBuffer::draw(
 ) {
 	auto& impl = getImpl(this);
 	impl.commandBuffer.draw(vtx_count, instance_count, vtx_offset, instance_offset);
-	impl.commandBuffer.setCheckpointNV(0);
 }
 
 void CommandBuffer::drawIndexed(
@@ -544,16 +544,11 @@ CommandBufferSync CommandBuffer::submit()
 
 	impl.state = CommandBufferState::Submitted;
 
-	vk::TimelineSemaphoreSubmitInfo timeline_info;
-	timeline_info.signalSemaphoreValueCount = 1;
-	timeline_info.pSignalSemaphoreValues    = &impl.submitID;
-
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount   = 1;
 	submit_info.pCommandBuffers      = &impl.commandBuffer;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &get_vk_semaphore(impl.semaphore);
-	submit_info.pNext                = &timeline_info;
 
 	for (auto& obj : impl.boundShaderParameters) {
 		auto& param_impl = getImpl(obj);

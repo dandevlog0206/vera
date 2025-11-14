@@ -2,17 +2,21 @@
 
 #include "../../include/vera/core/buffer.h"
 #include "../../include/vera/core/texture_view.h"
-
-#include <random>
+#include <sstream>
 
 VERA_NAMESPACE_BEGIN
 
-GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& info) :
-	m_device(device),
-	m_depth_format(info.depthFormat),
-	m_vertex_count(info.vertexCount),
-	m_index_count(info.indexCount)
+std::stringstream ss;
+
+obj<GraphicsPass> GraphicsPass::create(obj<Device> device, const GraphicsPassCreateInfo& info)
 {
+	obj<GraphicsPass> obj = new GraphicsPass;
+
+	obj->m_device       = device;
+	obj->m_depth_format = info.depthFormat;
+	obj->m_vertex_count = info.vertexCount;
+	obj->m_index_count  = info.indexCount;
+
 	GraphicsPipelineCreateInfo pipeline_info = {
 		.vertexShader                   = info.vertexShader,
 		.geometryShader                 = info.geometryShader,
@@ -36,13 +40,13 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 
 		pipeline_info.vertexInputInfo = info.vertexInput;
 
-		m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * vertex_size);
-		m_states.setVertexBuffer(m_vertex_buffer);
+		obj->m_vertex_buffer = Buffer::createVertex(device, info.vertexCount * vertex_size);
+		obj->m_states.setVertexBuffer(obj->m_vertex_buffer);
 	}
 
 	if (info.indexType != IndexType::Unknown) {
-		m_index_buffer = Buffer::createIndex(device, info.indexType, info.indexCount);
-		m_states.setIndexBuffer(m_index_buffer);
+		obj->m_index_buffer = Buffer::createIndex(device, info.indexType, info.indexCount);
+		obj->m_states.setIndexBuffer(obj->m_index_buffer);
 	}
 
 	if (info.depthFormat != DepthFormat::Unknown) {
@@ -53,12 +57,13 @@ GraphicsPass::GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& inf
 		};
 	}
 
-	m_pipeline = Pipeline::create(device, pipeline_info);
-
-	m_param    = ShaderParameter::create(m_pipeline->getPipelineLayout());
+	obj->m_pipeline = Pipeline::create(device, pipeline_info);
+	obj->m_param    = ShaderParameter::create(obj->m_pipeline->getPipelineLayout());
 	// m_param    = ShaderParameter::create(nullptr);
-	m_param = nullptr;
-	m_states.setPipeline(m_pipeline);
+	obj->m_param = nullptr;
+	obj->m_states.setPipeline(obj->m_pipeline);
+
+	return obj;
 }
 
 GraphicsPass::~GraphicsPass()

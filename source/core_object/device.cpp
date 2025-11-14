@@ -16,6 +16,15 @@
 #include "../../include/vera/core/descriptor_set_layout.h"
 #include <fstream>
 
+#define CHAIN_DEVICE_FEATURE(chain, type, name) \
+	type name;                                  \
+	name.pNext = chain;                         \
+	chain      = &name;
+
+#define CHAIN_STRUCT(chain, name) \
+	name.pNext = chain;           \
+	chain      = &name;
+
 VERA_NAMESPACE_BEGIN
 
 static MemoryHeapFlags to_memory_heap_flags(vk::MemoryHeapFlags flags)
@@ -50,6 +59,13 @@ static MemoryPropertyFlags to_memory_property_flags(vk::MemoryPropertyFlags flag
 	return result;
 }
 
+static void get_device_features(vk::PhysicalDevice physical_device, void* chain)
+{
+	vk::PhysicalDeviceFeatures2 device_features2;
+	device_features2.pNext = chain;
+	physical_device.getFeatures2(&device_features2);
+}
+
 const vk::Device& get_vk_device(const_ref<Device> device) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(device).device;
@@ -58,6 +74,20 @@ const vk::Device& get_vk_device(const_ref<Device> device) VERA_NOEXCEPT
 vk::Device& get_vk_device(ref<Device> device) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(device).device;
+}
+
+void DeviceFaultInfo::saveVendorBinaryToFile(std::string_view path) const
+{
+	if (vendorBinaryData.empty())
+		throw Exception("no vendor binary data to save");
+
+	std::ofstream file(path.data(), std::ios::binary);
+
+	if (!file.is_open())
+		throw Exception("failed to open file to save vendor binary data");
+
+	file.write(reinterpret_cast<const char*>(vendorBinaryData.data()), vendorBinaryData.size());
+	file.close();
 }
 
 obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
@@ -138,42 +168,35 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	device_extensions.push_back(VK_KHR_MAINTENANCE_4_EXTENSION_NAME);
 	device_extensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 
-
-	device_extensions.push_back(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
-	device_extensions.push_back(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME);
-	vk::DeviceDiagnosticsConfigCreateInfoNV aftermath_info;
-	aftermath_info.flags = 
-		vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableAutomaticCheckpoints |
-		vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableResourceTracking |
-		vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableShaderDebugInfo |
-		vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableShaderErrorReporting;
-
 	// Check physical device features
-	vk::PhysicalDeviceDynamicRenderingFeatures dynamic_rendering;
-	dynamic_rendering.pNext = &aftermath_info;
-	vk::PhysicalDeviceDescriptorIndexingFeatures descriptor_indexing;
-	descriptor_indexing.pNext = &dynamic_rendering;
-	vk::PhysicalDeviceMaintenance4Features maintenance4_features;
-	maintenance4_features.pNext = &descriptor_indexing;
-	vk::PhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features;
-	mesh_shader_features.pNext = &maintenance4_features;
-	vk::PhysicalDeviceFeatures2 device_features2;
-	device_features2.pNext = &mesh_shader_features;
+	void* curr_chain = nullptr;
 
-	physical_device.getFeatures2(&device_features2);
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceTimelineSemaphoreFeatures, timeline_semaphore)
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceDynamicRenderingFeatures, dynamic_rendering)
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceDescriptorIndexingFeatures, descriptor_indexing)
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceMaintenance4Features, maintenance4_features)
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_features)
+
+	vk::PhysicalDeviceFaultFeaturesEXT device_fault;
+	if (ctx_impl.enableDeviceFault) {
+		device_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
+		CHAIN_STRUCT(curr_chain, device_fault);
+	}
+
+	get_device_features(physical_device, curr_chain);
 
 	mesh_shader_features.multiviewMeshShader                    = VK_FALSE;
 	mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
 	
-	vk::PhysicalDeviceFeatures device_features;
-	device_features.geometryShader           = true;
-	device_features.fragmentStoresAndAtomics = true;
-
 	if (!dynamic_rendering.dynamicRendering)
 		throw Exception("dynamic rendering feature is not supported");
 	if (!descriptor_indexing.runtimeDescriptorArray ||
 		!descriptor_indexing.shaderSampledImageArrayNonUniformIndexing)
 		throw Exception("descriptor indexing feature is not supported");
+
+	vk::PhysicalDeviceFeatures device_features;
+	device_features.geometryShader           = true;
+	device_features.fragmentStoresAndAtomics = true;
 
 	// Get physical device properties
 	vk::PhysicalDeviceProperties2 device_props;
@@ -190,7 +213,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	device_info.enabledExtensionCount   = static_cast<uint32_t>(device_extensions.size());
 	device_info.ppEnabledExtensionNames = device_extensions.data();
 	device_info.pEnabledFeatures        = &device_features;
-	device_info.pNext                   = &mesh_shader_features;
+	device_info.pNext                   = curr_chain;
 
 	impl.physicalDevice         = physical_device;
 	impl.deviceProperties       = physical_device.getProperties();
@@ -304,9 +327,49 @@ obj<BufferView> Device::getDefaultBufferView() VERA_NOEXCEPT
 	return nullptr;
 }
 
-const std::vector<DeviceMemoryType>& Device::getMemoryTypes() const
+array_view<DeviceMemoryType> Device::enumerateMemoryTypes() const
 {
 	return getImpl(this).memoryTypes;
+}
+
+DeviceFaultInfo Device::getDeviceFaultInfo() const
+{
+	auto& impl     = getImpl(this);
+	auto& ctx_impl = getImpl(impl.context);
+
+	if (!ctx_impl.enableDeviceFault)
+		throw Exception("device fault info is not enabled");
+
+	DeviceFaultInfo          result;
+	vk::DeviceFaultCountsEXT fault_counts;
+	vk::DeviceFaultInfoEXT   fault_info;
+
+	if (impl.device.getFaultInfoEXT(&fault_counts, nullptr) != vk::Result::eSuccess)
+		throw Exception("failed to get device fault counts");
+
+	result.addressInfos.resize(fault_counts.addressInfoCount);
+	result.vendorInfos.resize(fault_counts.vendorInfoCount);
+	result.vendorBinaryData.resize(fault_counts.vendorBinarySize);
+
+	fault_info.pAddressInfos     =
+		reinterpret_cast<vk::DeviceFaultAddressInfoEXT*>(result.addressInfos.data());
+	fault_info.pVendorInfos      =
+		reinterpret_cast<vk::DeviceFaultVendorInfoEXT*>(result.vendorInfos.data());
+	fault_info.pVendorBinaryData =
+		reinterpret_cast<void*>(result.vendorBinaryData.data());
+
+	if (impl.device.getFaultInfoEXT(&fault_counts, &fault_info) != vk::Result::eSuccess)
+		throw Exception("failed to get device fault info");
+
+	fault_info.pAddressInfos     = nullptr;
+	fault_info.pVendorInfos      = nullptr;
+	fault_info.pVendorBinaryData = nullptr;
+
+	result.description.assign(
+		fault_info.description.data(),
+		fault_info.description.size());
+
+	return result;
 }
 
 void Device::waitIdle() const

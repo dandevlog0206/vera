@@ -10,22 +10,31 @@ class Semaphore : protected CoreObject
 	VERA_CORE_OBJECT_INIT(Semaphore)
 public:
 	static bool waitAll(std::span<obj<Semaphore>> semaphores, uint64_t timeout = UINT64_MAX);
-	static bool waitAll(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout = UINT64_MAX);
 	static bool waitAny(std::span<obj<Semaphore>> semaphores, uint64_t timeout = UINT64_MAX);
-	static bool waitAny(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout = UINT64_MAX);
 
 	static obj<Semaphore> create(obj<Device> device);
-	static obj<Semaphore> createTimeline(obj<Device> device, uint64_t initial_value = 0);
 	~Semaphore();
 
 	obj<Device> getDevice();
 
-	bool wait(uint64_t timeout = UINT64_MAX);
+	bool wait(uint64_t timeout = UINT64_MAX) const;
+};
 
-	// for timeline semaphore
-	bool wait(uint64_t value, uint64_t timeout = UINT64_MAX);
+class TimelineSemaphore : protected CoreObject
+{
+	VERA_CORE_OBJECT_INIT(TimelineSemaphore)
+public:
+	static bool waitAll(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout = UINT64_MAX);
+	static bool waitAny(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout = UINT64_MAX);
+
+	static obj<TimelineSemaphore> create(obj<Device> device, uint64_t initial_value = 0);
+	~TimelineSemaphore();
+
+	obj<Device> getDevice();
+
+	bool wait(uint64_t value, uint64_t timeout = UINT64_MAX) const;
 	void signal(uint64_t value);
-	uint64_t value();
+	VERA_NODISCARD uint64_t value() const;
 };
 
 VERA_NAMESPACE_END

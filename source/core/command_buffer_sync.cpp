@@ -14,17 +14,7 @@ CommandBufferSync::CommandBufferSync() VERA_NOEXCEPT :
 	m_impl(nullptr),
 	m_submit_id(0) {}
 
-CommandBufferState CommandBufferSync::getState() const VERA_NOEXCEPT
-{
-	VERA_ASSERT_MSG(m_impl, "empty command buffer sync");
-
-	if (m_submit_id < m_impl->submitID || m_impl->fence->signaled())
-		return CommandBufferState::Completed;
-
-	return m_impl->state;
-}
-
-const_ref<Semaphore> CommandBufferSync::getCompleteSemaphore() const VERA_NOEXCEPT
+obj<Semaphore> CommandBufferSync::getCompleteSemaphore() const VERA_NOEXCEPT
 {
 	VERA_ASSERT_MSG(m_impl, "empty command buffer sync");
 
@@ -35,11 +25,32 @@ const_ref<Semaphore> CommandBufferSync::getCompleteSemaphore() const VERA_NOEXCE
 	return nullptr;
 }
 
-void CommandBufferSync::waitForComplete() const VERA_NOEXCEPT
+obj<Fence> CommandBufferSync::getCompleteFence() const VERA_NOEXCEPT
+{
+	VERA_ASSERT_MSG(m_impl, "empty command buffer sync");
+
+	return m_impl->fence;
+}
+
+CommandBufferState CommandBufferSync::getState() const VERA_NOEXCEPT
 {
 	VERA_ASSERT_MSG(m_impl, "empty command buffer sync");
 
 	if (m_submit_id < m_impl->submitID || m_impl->fence->signaled())
+		return CommandBufferState::Completed;
+
+	return m_impl->state;
+}
+
+uint64_t CommandBufferSync::getSumbitID() const VERA_NOEXCEPT
+{
+	VERA_ASSERT_MSG(m_impl, "empty command buffer sync");
+	return m_submit_id;
+}
+
+void CommandBufferSync::waitForComplete() const VERA_NOEXCEPT
+{
+	if (!m_impl || m_submit_id < m_impl->submitID || m_impl->fence->signaled())
 		return;
 
 	m_impl->fence->wait();
@@ -47,8 +58,7 @@ void CommandBufferSync::waitForComplete() const VERA_NOEXCEPT
 
 bool CommandBufferSync::isComplete() const VERA_NOEXCEPT
 {
-	VERA_ASSERT_MSG(m_impl, "empty command buffer sync");
-
+	if (!m_impl) return false;
 	return m_submit_id < m_impl->submitID || m_impl->fence->signaled();
 }
 

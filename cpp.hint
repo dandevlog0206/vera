@@ -1,4 +1,24 @@
 // Hint files help the Visual Studio IDE interpret Visual C++ identifiers
 // such as names of functions and macros.
 // For more information see https://go.microsoft.com/fwlink/?linkid=865984
+
+#define VERA_NAMESPACE_BEGIN namespace vr {
+#define VERA_NAMESPACE_END }
+#define VERA_OS_NAMESPACE_BEGIN namespace os {
+#define VERA_OS_NAMESPACE_END }
+#define VERA_SCENE_NAMESPACE_BEGIN namespace scene {
+#define VERA_SCENE_NAMESPACE_END }
+#define VERA_SDF_NAMESPACE_BEGIN namespace sdf {
+#define VERA_SDF_NAMESPACE_END }
+#define VERA_PRIV_NAMESPACE_BEGIN namespace priv {
+#define VERA_PRIV_NAMESPACE_END }
+
+#define VERA_DEPRECATED [[deprecated]]
+#define VERA_DEPRECATED_MSG(msg) [[deprecated(msg)]]
 #define VERA_NODISCARD [[nodiscard]]
+#define VERA_FALLTHROUGH [[fallthrough]]
+#define VERA_NORETURN [[noreturn]]
+
+#define VERA_INLINE
+#define VERA_NOEXCEPT
+#define VERA_CONSTEXPR

@@ -33,6 +33,7 @@ class Context;
 		// Syncronization
 		class Fence;
 		class Semaphore;
+		class TimelineSemaphore;
 
 		// Resources
 		class Swapchain;
@@ -85,6 +86,12 @@ class ReflectionRootNode;
 const ReflectionDesc& get_reflection_desc(const_ref<ShaderReflection> shader_reflection) VERA_NOEXCEPT;
 ReflectionDesc& get_reflection_desc(ref<ShaderReflection> shader_reflection) VERA_NOEXCEPT;
 const ReflectionRootNode* get_reflection_root_node(const_ref<ShaderReflection> shader_reflection) VERA_NOEXCEPT;
+
+static vk::DeviceFaultAddressTypeEXT to_vk_device_fault_address_type(DeviceFaultAddressType type) VERA_NOEXCEPT
+{
+	// vr::DeviceFaultAddressType is VERA_VK_ABI_COMPATIBLE with vk::DeviceFaultAddressTypeEXT
+	return std::bit_cast<vk::DeviceFaultAddressTypeEXT>(type);
+}
 
 static vk::MemoryHeapFlags to_vk_memory_heap_flags(MemoryHeapFlags flags) VERA_NOEXCEPT
 {

@@ -45,7 +45,12 @@ obj<Shader> Shader::create(obj<Device> device, std::string_view path)
 
 	file.read(reinterpret_cast<char*>(binary.data()), binary.size());
 
-	return create(std::move(device), reinterpret_cast<uint32_t*>(binary.data()), binary.size());
+	auto obj   = create(std::move(device), reinterpret_cast<uint32_t*>(binary.data()), binary.size());
+	auto& impl = getImpl(obj);
+
+	impl.filePath = path;
+
+	return obj;
 }
 
 obj<Shader> Shader::create(obj<Device> device, const uint32_t* spirv_code, size_t size_in_byte)

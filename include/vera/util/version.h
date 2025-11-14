@@ -21,8 +21,8 @@ public:
 	{
 		std::string str;
 		str += std::to_string(major) + '.';
-		str += std::to_string(major) + '.';
-		str += std::to_string(major);
+		str += std::to_string(minor) + '.';
+		str += std::to_string(patch);
 
 		return str;
 	}

@@ -2,6 +2,7 @@
 
 #include "pipeline_layout.h"
 #include "../graphics/vertex_input.h"
+#include "../util/bool32.h"
 #include <optional>
 #include <vector>
 #include <array>
@@ -27,8 +28,8 @@ struct VertexInputInfo
 
 struct PrimitiveInfo
 {
-	bool              enableRestart;
-	PrimitiveTopology topology;
+	bool              enableRestart = false;
+	PrimitiveTopology topology      = PrimitiveTopology::TriangleList;
 };
 
 struct RasterizationInfo
@@ -60,7 +61,7 @@ struct DepthStencilInfo
 
 VERA_VK_ABI_COMPATIBLE struct ColorBlendAttachmentState
 {
-	bool                blendEnable         = false;
+	bool32              blendEnable         = false;
 	BlendFactor         srcColorBlendFactor = BlendFactor::SrcAlpha;
 	BlendFactor         dstColorBlendFactor = BlendFactor::OneMinusSrcAlpha;
 	BlendOp             colorBlendOp        = BlendOp::Add;

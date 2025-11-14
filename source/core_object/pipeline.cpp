@@ -482,7 +482,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 	std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
 	vk::VertexInputBindingDescription                vertex_binding_descs[2];
-	uint32_t                                         vertex_binding_desc_count = 1;
+	uint32_t                                         vertex_binding_desc_count = 0;
 	uint32_t                                         vertex_location           = 0;
 
 	if (info.vertexInputInfo.has_value()) {
@@ -490,7 +490,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 
 		if (!vertex_info.vertexInputDescriptor.empty()) {
 			auto& desc    = vertex_info.vertexInputDescriptor;
-			auto& binding = vertex_binding_descs[0];
+			auto& binding = vertex_binding_descs[vertex_binding_desc_count++];
 			
 			fill_vertex_input_attributes(
 				vertex_attributes,

@@ -71,9 +71,9 @@
 #define VERA_CONCAT_TOKEN_IMPL(a, b) a ## b
 #define VERA_CONCAT_TOKEN(a, b) VERA_CONCAT_TOKEN_IMPL(a, b)
 
-#define VERA_MEMBER_PADDING(size)                           \
-private:                                                    \
-    uint8_t VERA_CONCAT_TOKEN(_padding_, __LINE__)[(size)]; \
+#define VERA_MEMBER_PADDING(size)                                \
+private:                                                         \
+    uint8_t VERA_CONCAT_TOKEN(_padding_, __LINE__)[(size)] = {}; \
 public:
 
 #define VERA_ENUM_COUNT(enum_type) \

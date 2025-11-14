@@ -94,6 +94,9 @@ obj<Context> Context::create(const ContextCreateInfo& info)
 	auto  obj  = createNewCoreObject<Context>();
 	auto& impl = getImpl(obj);
 
+	impl.applicationName    = info.applicationName;
+	impl.applicationVersion = info.applicationVersion;
+
 	vk::ApplicationInfo app_info;
 	app_info.pApplicationName   = info.applicationName.data();
 	app_info.applicationVersion = info.applicationVersion;
@@ -146,6 +149,8 @@ obj<Context> Context::create(const ContextCreateInfo& info)
 		impl.debugUtilsMessenger      = impl.instance.createDebugUtilsMessengerEXT(debug_info);
 		impl.debugUtilsMessengerLevel = info.debugUtilsMessengerLevel;
 	}
+
+	impl.enableDeviceFault = info.enableDeviceFault;
 	
 	return obj;
 }

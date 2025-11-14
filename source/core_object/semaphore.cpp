@@ -98,18 +98,6 @@ bool Semaphore::waitAll(std::span<obj<Semaphore>> semaphores, uint64_t timeout)
 	return wait_semaphores(vk_device, semaphores, timeout, WAIT_ALL);
 }
 
-bool Semaphore::waitAll(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout)
-{
-	if (semaphores.empty())
-		return true;
-
-	VERA_ASSERT_MSG(check_same_device(semaphores), "semaphores don't share same device");
-
-	auto vk_device = get_vk_device(getImpl(semaphores.front()).device);
-
-	return wait_timeline_semaphores(vk_device, semaphores, value, timeout, WAIT_ALL);
-}
-
 bool Semaphore::waitAny(std::span<obj<Semaphore>> semaphores, uint64_t timeout)
 {
 	if (semaphores.empty())
@@ -122,18 +110,6 @@ bool Semaphore::waitAny(std::span<obj<Semaphore>> semaphores, uint64_t timeout)
 	return wait_semaphores(vk_device, semaphores, timeout, WAIT_ANY);
 }
 
-bool Semaphore::waitAny(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout)
-{
-	if (semaphores.empty())
-		return true;
-
-	VERA_ASSERT_MSG(check_same_device(semaphores), "semaphores don't share same device");
-
-	auto vk_device = get_vk_device(getImpl(semaphores.front()).device);
-
-	return wait_timeline_semaphores(vk_device, semaphores, value, timeout, WAIT_ANY);
-}
-
 obj<Semaphore> Semaphore::create(obj<Device> device)
 {
 	auto  obj       = createNewCoreObject<Semaphore>();
@@ -142,27 +118,6 @@ obj<Semaphore> Semaphore::create(obj<Device> device)
 
 	impl.device        = std::move(device);
 	impl.semaphore     = vk_device.createSemaphore({});
-	impl.semaphoreType = vk::SemaphoreType::eBinary;
-
-	return obj;
-}
-
-obj<Semaphore> Semaphore::createTimeline(obj<Device> device, uint64_t initial_value)
-{
-	auto  obj       = createNewCoreObject<Semaphore>();
-	auto& impl      = getImpl(obj);
-	auto  vk_device = get_vk_device(device);
-
-	vk::SemaphoreTypeCreateInfo semaphore_type_info;
-	semaphore_type_info.semaphoreType = vk::SemaphoreType::eTimeline;
-	semaphore_type_info.initialValue  = initial_value;
-
-	vk::SemaphoreCreateInfo semaphore_info;
-	semaphore_info.pNext = &semaphore_type_info;
-
-	impl.device        = std::move(device);
-	impl.semaphore     = vk_device.createSemaphore({});
-	impl.semaphoreType = vk::SemaphoreType::eTimeline;
 
 	return obj;
 }
@@ -182,7 +137,7 @@ obj<Device> Semaphore::getDevice()
 	return getImpl(this).device;
 }
 
-bool Semaphore::wait(uint64_t timeout)
+bool Semaphore::wait(uint64_t timeout) const
 {
 	auto&    impl      = getImpl(this);
 	auto     vk_device = get_vk_device(impl.device);
@@ -201,14 +156,61 @@ bool Semaphore::wait(uint64_t timeout)
 	throw Exception("failed to wait semaphore");
 }
 
-bool Semaphore::wait(uint64_t value, uint64_t timeout)
+bool TimelineSemaphore::waitAll(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout)
 {
-	auto&    impl      = getImpl(this);
-	auto     vk_device = get_vk_device(impl.device);
+	if (semaphores.empty())
+		return true;
 
-	VERA_ASSERT_MSG(
-		impl.semaphoreType == vk::SemaphoreType::eTimeline,
-		"only timeline semaphore supports wait with value");
+	VERA_ASSERT_MSG(check_same_device(semaphores), "semaphores don't share same device");
+
+	auto vk_device = get_vk_device(getImpl(semaphores.front()).device);
+
+	return wait_timeline_semaphores(vk_device, semaphores, value, timeout, WAIT_ALL);
+}
+
+bool TimelineSemaphore::waitAny(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout)
+{
+	if (semaphores.empty())
+		return true;
+
+	VERA_ASSERT_MSG(check_same_device(semaphores), "semaphores don't share same device");
+
+	auto vk_device = get_vk_device(getImpl(semaphores.front()).device);
+
+	return wait_timeline_semaphores(vk_device, semaphores, value, timeout, WAIT_ANY);
+}
+
+obj<TimelineSemaphore> TimelineSemaphore::create(obj<Device> device, uint64_t initial_value)
+{
+	auto  obj       = createNewCoreObject<TimelineSemaphore>();
+	auto& impl      = getImpl(obj);
+	auto  vk_device = get_vk_device(device);
+
+	vk::SemaphoreTypeCreateInfo semaphore_type_info;
+	semaphore_type_info.semaphoreType = vk::SemaphoreType::eTimeline;
+	semaphore_type_info.initialValue  = initial_value;
+	
+	vk::SemaphoreCreateInfo semaphore_info;
+	semaphore_info.pNext = &semaphore_type_info;
+
+	impl.device        = std::move(device);
+	impl.semaphore     = vk_device.createSemaphore(semaphore_info);
+	
+	return obj;
+}
+
+TimelineSemaphore::~TimelineSemaphore()
+{
+	auto& impl      = getImpl(this);
+	auto  vk_device = get_vk_device(impl.device);
+	vk_device.destroy(impl.semaphore);
+	destroyObjectImpl(this);
+}
+
+bool TimelineSemaphore::wait(uint64_t value, uint64_t timeout) const
+{
+	auto& impl      = getImpl(this);
+	auto  vk_device = get_vk_device(impl.device);
 
 	vk::SemaphoreWaitInfo wait_info;
 	wait_info.semaphoreCount = 1;
@@ -225,14 +227,10 @@ bool Semaphore::wait(uint64_t value, uint64_t timeout)
 	throw Exception("failed to wait semaphore");
 }
 
-void Semaphore::signal(uint64_t value)
+void TimelineSemaphore::signal(uint64_t value)
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
-
-	VERA_ASSERT_MSG(
-		impl.semaphoreType == vk::SemaphoreType::eTimeline,
-		"only timeline semaphore supports signal with value");
 
 	vk::SemaphoreSignalInfo signal_info;
 	signal_info.semaphore = impl.semaphore;
@@ -241,14 +239,10 @@ void Semaphore::signal(uint64_t value)
 	vk_device.signalSemaphore(signal_info);
 }
 
-uint64_t Semaphore::value()
+uint64_t TimelineSemaphore::value() const
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
-
-	VERA_ASSERT_MSG(
-		impl.semaphoreType == vk::SemaphoreType::eTimeline,
-		"only timeline semaphore supports querying value");
 
 	return vk_device.getSemaphoreCounterValue(impl.semaphore);
 }

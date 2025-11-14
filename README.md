@@ -54,7 +54,7 @@ int main()
 	auto ctx       = vr::RenderContext::create(device);
 	auto swapchain = vr::Swapchain::create(ctx, window);
 
-	vr::GraphicsPass pass(device, vr::GraphicsPassCreateInfo{
+	auto pass = vr::GraphicsPass::create(device, vr::GraphicsPassCreateInfo{
 		.vertexShader   = vr::Shader::create(device, "shader/triangle_minimal.vert.glsl.spv"),
 		.fragmentShader = vr::Shader::create(device, "shader/triangle.frag.glsl.spv"),
 		.vertexCount    = 3
@@ -63,7 +63,7 @@ int main()
 	while (!window.needClose()) {
 		window.handleEvent();
 
-		pass.execute(ctx, swapchain->acquireNextImage());
+		pass->execute(ctx, swapchain->acquireNextImage());
 
 		ctx->submit();
 		swapchain->present();

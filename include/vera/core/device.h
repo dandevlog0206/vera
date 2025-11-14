@@ -2,9 +2,11 @@
 
 #include "core_object.h"
 #include "enum_types.h"
+#include "../util/array_view.h"
 #include "../util/flag.h"
-#include <vector>
 #include <string_view>
+#include <string>
+#include <vector>
 
 VERA_NAMESPACE_BEGIN
 
@@ -14,6 +16,31 @@ class Texture;
 class TextureView;
 class Buffer;
 class BufferView;
+
+struct DeviceFaultAddressInfo
+{
+	DeviceFaultAddressType type;
+	uint64_t               address;
+	uint64_t               addressPrecision;
+};
+
+struct DeviceFaultVenderInfo
+{
+	char     description[256];
+	uint64_t vendorID;
+	uint64_t deviceID;
+};
+
+class DeviceFaultInfo
+{
+public:
+	std::string                         description;
+	std::vector<DeviceFaultAddressInfo> addressInfos;
+	std::vector<DeviceFaultVenderInfo>  vendorInfos;
+	std::vector<uint8_t>                vendorBinaryData;
+
+	void saveVendorBinaryToFile(std::string_view path) const;
+};
 
 struct DeviceMemoryType
 {
@@ -52,7 +79,9 @@ public:
 	VERA_NODISCARD obj<Buffer> getDefaultBuffer() VERA_NOEXCEPT;
 	VERA_NODISCARD obj<BufferView> getDefaultBufferView() VERA_NOEXCEPT;
 
-	const std::vector<DeviceMemoryType>& getMemoryTypes() const;
+	array_view<DeviceMemoryType> enumerateMemoryTypes() const;
+	
+	DeviceFaultInfo getDeviceFaultInfo() const;
 
 	void waitIdle() const;
 };

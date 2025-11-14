@@ -510,6 +510,9 @@
     <ClInclude Include="source\spirv\spirv_parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vera\util\bool32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\os\window.cpp">
@@ -675,6 +678,7 @@
   <ItemGroup>
     <Text Include="include\vera\scene\sample_scene.txt" />
     <Text Include="vera.natjmc" />
+    <Text Include="LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="vera.natvis" />
@@ -685,5 +689,8 @@
     <None Include="glsl shader\font_atlas\mesh_sdf.mesh.glsl" />
     <None Include="glsl shader\font_atlas\mesh_sdf.frag.glsl" />
     <None Include="cpp.hint" />
+    <None Include=".gitignore" />
+    <None Include=".gitmodules" />
+    <None Include="README.md" />
   </ItemGroup>
 </Project>

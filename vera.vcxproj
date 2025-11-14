@@ -113,7 +113,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\nsight_aftermath\include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -138,7 +138,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\nsight_aftermath\include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -233,6 +233,7 @@
     <ClInclude Include="include\vera\graphics\colormap.h" />
     <ClInclude Include="include\vera\asset\asset_loader.h" />
     <ClInclude Include="include\vera\util\array_view.h" />
+    <ClInclude Include="include\vera\util\bool32.h" />
     <ClInclude Include="include\vera\util\camera.h" />
     <ClInclude Include="include\vera\util\direction.h" />
     <ClInclude Include="include\vera\util\flat_hash_map.h" />
@@ -380,17 +381,21 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="include\vera\scene\sample_scene.txt" />
+    <Text Include="LICENSE.txt" />
     <Text Include="vera.natjmc" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="vera.natvis" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include=".gitmodules" />
     <None Include="cpp.hint" />
     <None Include="glsl shader\font_atlas\mesh_sdf.frag.glsl" />
     <None Include="glsl shader\font_atlas\mesh_sdf.mesh.glsl" />
     <None Include="glsl shader\shader_toy\shader_toy3.frag.glsl" />
     <None Include="glsl shader\shader_toy\shader_toy4.frag.glsl" />
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

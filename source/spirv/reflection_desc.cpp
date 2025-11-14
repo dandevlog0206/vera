@@ -101,6 +101,25 @@ typedef static_vector<const ReflectionPushConstantNode*, MAX_SHADER_STAGE_COUNT>
 
 typedef std::pmr::polymorphic_allocator<const ReflectionRootMemberNode*> ReflectionRootMemberAllocator;
 
+class TestMemoryResource : public std::pmr::memory_resource
+{
+protected:
+	void* do_allocate(size_t _Bytes, size_t _Align) override
+	{
+		return _aligned_malloc(_Bytes, 8);
+	}
+
+	void do_deallocate(void* _Ptr, size_t _Bytes, size_t _Align) override
+	{
+		_aligned_free(_Ptr);
+	}
+
+	bool do_is_equal(const memory_resource& _That) const noexcept override
+	{
+		return this == &_That;
+	}
+};
+
 struct ReflectionContext
 {
 	std::pmr::memory_resource* memory;

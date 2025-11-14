@@ -25,10 +25,11 @@ struct GraphicsPassCreateInfo
 	DepthFormat       depthFormat       = DepthFormat::Unknown;
 };
 
-class GraphicsPass
+class GraphicsPass : public ManagedObject
 {
+	GraphicsPass() = default;
 public:
-	GraphicsPass(obj<Device> device, const GraphicsPassCreateInfo& info);
+	static obj<GraphicsPass> create(obj<Device> device, const GraphicsPassCreateInfo& info);
 	virtual ~GraphicsPass();
 
 	obj<Device> getDevice();

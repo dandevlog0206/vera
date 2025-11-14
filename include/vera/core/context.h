@@ -47,6 +47,7 @@ struct ContextCreateInfo
 	bool                          enableValidation         = false;
 	bool                          enableDebugUtils         = false;
 	uint32_t                      debugUtilsMessengerLevel = 0;
+	bool                          enableDeviceFault        = false;
 };
 
 class Context : protected CoreObject

@@ -15,6 +15,7 @@ public:
 	vk::ShaderModule      shader           = {};
 
 	std::vector<uint32_t> spirvCode        = {};
+	std::string           filePath         = {};
 	size_t                hashValue        = {};
 
 	obj<ShaderReflection> getOrCreateShaderReflection() VERA_NOEXCEPT;

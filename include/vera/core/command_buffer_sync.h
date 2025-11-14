@@ -1,10 +1,10 @@
 #pragma once
 
-#include "intrusive_ptr.h"
+#include "semaphore.h"
+#include "fence.h"
 
 VERA_NAMESPACE_BEGIN
 
-class Semaphore;
 class CommandBufferImpl;
 
 enum class CommandBufferState VERA_ENUM
@@ -26,9 +26,11 @@ public:
 	CommandBufferSync() VERA_NOEXCEPT;
 	CommandBufferSync(const CommandBufferSync&) = default;
 
-	VERA_NODISCARD CommandBufferState getState() const VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Semaphore> getCompleteSemaphore() const VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Fence> getCompleteFence() const VERA_NOEXCEPT;
 
-	VERA_NODISCARD const_ref<Semaphore> getCompleteSemaphore() const VERA_NOEXCEPT;
+	VERA_NODISCARD CommandBufferState getState() const VERA_NOEXCEPT;
+	VERA_NODISCARD uint64_t getSumbitID() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD void waitForComplete() const VERA_NOEXCEPT;
 	VERA_NODISCARD bool isComplete() const VERA_NOEXCEPT;
