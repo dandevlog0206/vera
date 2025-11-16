@@ -4,21 +4,21 @@
 
 VERA_NAMESPACE_BEGIN
 
-struct PushConstantRange;
+class ShaderParserInfo;
 
 class ShaderImpl
 {
 public:
-	obj<Device>           device           = {};
-	obj<ShaderReflection> shaderReflection = {};
+	using ShaderParseInfoUnique = std::unique_ptr<ShaderParserInfo>;
 
-	vk::ShaderModule      shader           = {};
+	obj<Device>                   device           = {};
+	mutable obj<ShaderLayout>     shaderLayout     = {};
+	mutable obj<ShaderReflection> shaderReflection = {};
 
-	std::vector<uint32_t> spirvCode        = {};
-	std::string           filePath         = {};
-	size_t                hashValue        = {};
+	vk::ShaderModule              shaderModule     = {};
 
-	obj<ShaderReflection> getOrCreateShaderReflection() VERA_NOEXCEPT;
+	mutable ShaderParseInfoUnique parserInfo       = {};
+	size_t                        hashValue        = {};
 };
 
 VERA_NAMESPACE_END

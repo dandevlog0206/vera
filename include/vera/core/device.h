@@ -37,7 +37,7 @@ public:
 	std::string                         description;
 	std::vector<DeviceFaultAddressInfo> addressInfos;
 	std::vector<DeviceFaultVenderInfo>  vendorInfos;
-	std::vector<uint8_t>                vendorBinaryData;
+	std::vector<std::byte>              vendorBinaryData;
 
 	void saveVendorBinaryToFile(std::string_view path) const;
 };
@@ -71,13 +71,15 @@ public:
 	static obj<Device> create(obj<Context> context, const DeviceCreateInfo& info = {});
 	~Device();
 
-	obj<Context> getContext();
+	VERA_NODISCARD obj<Context> getContext() VERA_NOEXCEPT;
 
 	VERA_NODISCARD obj<Sampler> getDefaultSampler() VERA_NOEXCEPT;
 	VERA_NODISCARD obj<Texture> getDefaultTexture() VERA_NOEXCEPT;
 	VERA_NODISCARD obj<TextureView> getDefaultTextureView() VERA_NOEXCEPT;
 	VERA_NODISCARD obj<Buffer> getDefaultBuffer() VERA_NOEXCEPT;
 	VERA_NODISCARD obj<BufferView> getDefaultBufferView() VERA_NOEXCEPT;
+
+	VERA_NODISCARD bool isFeatureEnabled(DeviceFeatureType feature) const VERA_NOEXCEPT;
 
 	array_view<DeviceMemoryType> enumerateMemoryTypes() const;
 	

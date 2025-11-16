@@ -44,8 +44,8 @@ struct ContextCreateInfo
 	std::vector<std::string_view> instanceLayers           = {};
 	std::vector<std::string_view> instanceExtensions       = {};
 
-	bool                          enableValidation         = false;
-	bool                          enableDebugUtils         = false;
+	bool                          enableValidation         = VERA_IS_DEBUG;
+	bool                          enableDebugUtils         = VERA_IS_DEBUG;
 	uint32_t                      debugUtilsMessengerLevel = 0;
 	bool                          enableDeviceFault        = false;
 };

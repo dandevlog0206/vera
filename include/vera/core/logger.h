@@ -2,6 +2,7 @@
 
 #include "coredefs.h"
 #include <string_view>
+#include <format>
 
 VERA_NAMESPACE_BEGIN
 
@@ -41,6 +42,7 @@ public:
 	};
 
 	static void log(LogType type, std::string_view msg);
+	
 	static void trace(std::string_view msg);
 	static void debug(std::string_view msg);
 	static void info(std::string_view msg);
@@ -49,6 +51,62 @@ public:
 	static void error(std::string_view msg);
 	static void exception(std::string_view msg);
 	static void assertion(std::string_view msg);
+
+	template <class... Args>
+	static _NODISCARD void trace(const std::format_string<Args...> fmt, Args&&... params)
+	{
+	    auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Trace, str);
+	}
+
+	template <class... Args>
+	static _NODISCARD void debug(const std::format_string<Args...> fmt, Args&&... params)
+	{
+		auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Debug, str);
+	}
+
+	template <class... Args>
+	static _NODISCARD void info(const std::format_string<Args...> fmt, Args&&... params)
+	{
+		auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Info, str);
+	}
+
+	template <class... Args>
+	static _NODISCARD void verbose(const std::format_string<Args...> fmt, Args&&... params)
+	{
+		auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Verbose, str);
+	}
+
+	template <class... Args>
+	static _NODISCARD void warn(const std::format_string<Args...> fmt, Args&&... params)
+	{
+		auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Warning, str);
+	}
+
+	template <class... Args>
+	static _NODISCARD void error(const std::format_string<Args...> fmt, Args&&... params)
+	{
+		auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Error, str);
+	}
+
+	template <class... Args>
+	static _NODISCARD void exception(const std::format_string<Args...> fmt, Args&&... params)
+	{
+		auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Exception, str);
+	}
+
+	template <class... Args>
+	static _NODISCARD void assertion(const std::format_string<Args...> fmt, Args&&... params)
+	{
+		auto str = std::vformat(fmt.get(), std::make_format_args(params...));
+		log(LogType::Assert, str);
+	}
 
 	static void setStream(std::ostream& os);
 	static void enableColor(bool value);

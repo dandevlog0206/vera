@@ -14,7 +14,7 @@ public:
 	Version(uint32_t version) :
 		major(version >> 22), minor(minor >> 12), patch(patch) {}
 	
-	Version(uint16_t major, uint16_t minor, uint16_t patch) :
+	Version(uint32_t major, uint32_t minor, uint32_t patch) :
 		major(major), minor(minor), patch(patch) {}
 
 	std::string format() const

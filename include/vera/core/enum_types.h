@@ -4,6 +4,33 @@
 
 VERA_NAMESPACE_BEGIN
 
+enum class DeviceFeatureType VERA_ENUM
+{
+	Swapchain,
+	TimelineSemaphore,
+	DynamicRendering,
+	DescriptorIndexing,
+	ExtendedDynamicState2,
+	ExtendedDynamicState3,
+	Maintenance1,
+	Maintenance2,
+	Maintenance3,
+	Maintenance4,
+	Maintenance5,
+	Maintenance6,
+	Maintenance7,
+	Maintenance8,
+	Maintenance9,
+	TaskShader,
+	MeshShader,
+	MultiviewMeshShader,
+	PrimitiveFragmentShadingRateMeshShader,
+	MeshShaderQueries,
+	RayTracing,
+	DeviceFault,
+	__COUNT__
+};
+
 VERA_VK_ABI_COMPATIBLE enum class DeviceFaultAddressType VERA_ENUM
 {
 	Unknown               = 0,
@@ -276,7 +303,27 @@ VERA_VK_ABI_COMPATIBLE enum class ShaderStageFlagBits VERA_FLAG_BITS
 	Miss                   = 1 << 11,
 	Intersection           = 1 << 12,
 	Callable               = 1 << 13,
+	All                    = 0x00001FFF
 } VERA_ENUM_FLAGS(ShaderStageFlagBits, ShaderStageFlags)
+
+enum class ReflectionTargetFlagBits VERA_ENUM
+{
+	None                = 0,
+	DescriptorSetLayout = 1 << 0,
+	Shader              = 1 << 1,
+	PipelineLayout      = 1 << 2 
+} VERA_ENUM_FLAGS(ReflectionTargetFlagBits, ReflectionTargetFlags)
+
+enum class ReflectionVariableType VERA_ENUM
+{
+	Unknown,
+	Descriptor,
+	DescriptorArray,
+	PushConstant,
+	Struct,
+	Array,
+	Primitive
+};
 
 enum class ReflectionPrimitiveType VERA_ENUM
 {

@@ -255,8 +255,7 @@ public:
 
 		if (pos == m_size) {
 			std::uninitialized_fill_n(m_storage.elem + m_size, count, value);
-		}
-		else {
+		} else {
 			T* first_elem = m_storage.elem + pos;
 			T* last_elem  = m_storage.elem + m_size - 1;
 

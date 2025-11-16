@@ -158,6 +158,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\core\shader_variable.cpp" />
+    <ClCompile Include="source\core_object\shader_layout.cpp" />
     <ClCompile Include="source\core_object\shader_reflection.cpp" />
     <ClCompile Include="source\spirv\reflection_desc.cpp" />
     <ClCompile Include="source\spirv\spirv_parser.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="include\vera\core\render_frame.h" />
     <ClInclude Include="include\vera\core\descriptor_set.h" />
     <ClInclude Include="include\vera\core\descriptor_pool.h" />
+    <ClInclude Include="include\vera\core\shader_layout.h" />
     <ClInclude Include="include\vera\core\shader_parameter.h" />
     <ClInclude Include="include\vera\core\intrusive_ptr.h" />
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
@@ -253,6 +255,7 @@
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
+    <ClInclude Include="source\impl\shader_layout_impl.h" />
     <ClInclude Include="source\spirv\reflection_desc.h" />
     <ClInclude Include="source\impl\shader_reflection_impl.h" />
     <ClInclude Include="source\spirv\spirv_parser.h" />

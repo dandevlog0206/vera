@@ -14,8 +14,13 @@
 #include "../../include/vera/core/texture_view.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/descriptor_set_layout.h"
+#include "../../include/vera/util/static_vector.h"
 #include <fstream>
 
+#define MAX_EXTENSION_COUNT 128
+
+#define FEATURE_INDEX(type) static_cast<size_t>(type)
+#define ENABLE_FEATURE(enum_value) impl.enabledFeatures[static_cast<uint32_t>(enum_value)] = 1;
 #define CHAIN_DEVICE_FEATURE(chain, type, name) \
 	type name;                                  \
 	name.pNext = chain;                         \
@@ -92,8 +97,8 @@ void DeviceFaultInfo::saveVendorBinaryToFile(std::string_view path) const
 
 obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 {
-	std::vector<const char*> device_layers;
-	std::vector<const char*> device_extensions;
+	static_vector<const char*, MAX_EXTENSION_COUNT> device_layers;
+	static_vector<const char*, MAX_EXTENSION_COUNT> device_extensions;
 
 	auto  obj      = createNewCoreObject<Device>();
 	auto& impl     = getImpl(obj);
@@ -130,7 +135,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	if (transfer_family == -1)
 		transfer_family = graphics_family;
 
-	std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
+	static_vector<vk::DeviceQueueCreateInfo, 3> queue_create_infos;
 
 	vk::DeviceQueueCreateInfo graphics_queue_info;
 	graphics_queue_info.queueFamilyIndex = graphics_family;
@@ -164,30 +169,40 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	device_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 	device_extensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);
-	device_extensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
 	device_extensions.push_back(VK_KHR_MAINTENANCE_4_EXTENSION_NAME);
 	device_extensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 
 	// Check physical device features
 	void* curr_chain = nullptr;
-
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceTimelineSemaphoreFeatures, timeline_semaphore)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceDynamicRenderingFeatures, dynamic_rendering)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceDescriptorIndexingFeatures, descriptor_indexing)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceMaintenance4Features, maintenance4_features)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_features)
-
-	vk::PhysicalDeviceFaultFeaturesEXT device_fault;
-	if (ctx_impl.enableDeviceFault) {
-		device_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
-		CHAIN_STRUCT(curr_chain, device_fault);
-	}
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceFaultFeaturesEXT, device_fault)
 
 	get_device_features(physical_device, curr_chain);
 
-	mesh_shader_features.multiviewMeshShader                    = VK_FALSE;
-	mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
-	
+	impl.enabledFeatures.resize(VERA_ENUM_COUNT(DeviceFeatureType), 0);
+
+	if (timeline_semaphore.timelineSemaphore) {
+		device_extensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+		ENABLE_FEATURE(DeviceFeatureType::TimelineSemaphore);
+	}
+	if (mesh_shader_features.meshShader) {
+		device_extensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+		mesh_shader_features.multiviewMeshShader                    = VK_FALSE;
+		mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
+		mesh_shader_features.meshShaderQueries                      = VK_FALSE;
+		if (mesh_shader_features.taskShader)
+			ENABLE_FEATURE(DeviceFeatureType::TaskShader);
+		ENABLE_FEATURE(DeviceFeatureType::MeshShader);
+	}
+	if (ctx_impl.enableDeviceFault && device_fault.deviceFault) {
+		device_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
+		ENABLE_FEATURE(DeviceFeatureType::DeviceFault);
+	}
+
 	if (!dynamic_rendering.dynamicRendering)
 		throw Exception("dynamic rendering feature is not supported");
 	if (!descriptor_indexing.runtimeDescriptorArray ||
@@ -275,6 +290,7 @@ Device::~Device()
 	auto& ctx_impl = getImpl(impl.context);
 
 	VERA_ASSERT_MSG(impl.shaderCacheMap.empty(), "shader cache is not empty");
+	VERA_ASSERT_MSG(impl.shaderLayoutCacheMap.empty(), "shader layout cache is not empty");
 	VERA_ASSERT_MSG(impl.descriptorSetLayoutCacheMap.empty(), "descriptor set layout cache is not empty");
 	VERA_ASSERT_MSG(impl.pipelineLayoutCacheMap.empty(), "pipeline layout cache is not empty");
 	VERA_ASSERT_MSG(impl.pipelineLayoutCacheMapWithShader.empty(), "pipeline layout with shader cache is not empty");
@@ -297,7 +313,7 @@ Device::~Device()
 	destroyObjectImpl<Device>(this);
 }
 
-obj<Context> Device::getContext()
+obj<Context> Device::getContext() VERA_NOEXCEPT
 {
 	return getImpl(this).context;
 }
@@ -377,6 +393,11 @@ void Device::waitIdle() const
 	getImpl(this).device.waitIdle();
 }
 
+bool DeviceImpl::isFeatureEnabled(DeviceFeatureType feature) const VERA_NOEXCEPT
+{
+	return enabledFeatures[FEATURE_INDEX(feature)] != 0;
+}
+
 uint32_t DeviceImpl::findMemoryTypeIndex(MemoryPropertyFlags flags, std::bitset<32> type_mask) VERA_NOEXCEPT
 {
 	for (uint32_t i = 0; i < memoryTypes.size(); ++i)
@@ -392,6 +413,13 @@ void DeviceImpl::registerShader(hash_t hash_value, ref<Shader> shader)
 
 	if (!shaderCacheMap.emplace(hash_value, std::move(shader)).second)
 		throw Exception("Failed to register shader: hash collision(hash= {:016x})", hash_value);
+}
+
+void DeviceImpl::registerShaderLayout(hash_t hash_value, ref<ShaderLayout> shader_layout)
+{
+	VERA_ASSERT(hash_value != 0);
+	if (!shaderLayoutCacheMap.emplace(hash_value, std::move(shader_layout)).second)
+		throw Exception("Failed to register shader layout: hash collision(hash= {:016x})", hash_value);
 }
 
 void DeviceImpl::registerDescriptorSetLayout(hash_t hash_value, ref<DescriptorSetLayout> descriptor_set_layout)
@@ -438,6 +466,13 @@ void DeviceImpl::unregisterShader(hash_t hash_value) VERA_NOEXCEPT
 {
 	size_t erased = shaderCacheMap.erase(hash_value);
 	VERA_ASSERT_MSG(erased == 1, "shader not found in cache");
+	(void)erased;
+}
+
+void DeviceImpl::unregisterShaderLayout(hash_t hash_value) VERA_NOEXCEPT
+{
+	size_t erased = shaderLayoutCacheMap.erase(hash_value);
+	VERA_ASSERT_MSG(erased == 1, "shader layout not found in cache");
 	(void)erased;
 }
 

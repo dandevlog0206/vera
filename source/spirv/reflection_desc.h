@@ -12,13 +12,11 @@
 
 VERA_NAMESPACE_BEGIN
 
-enum class ReflectionTargetFlagBits VERA_ENUM
+enum class ReflectionParseMode VERA_ENUM
 {
-	None                = 0,
-	DescriptorSetLayout = 1 << 0,
-	Shader              = 1 << 1,
-	PipelineLayout      = 1 << 2 
-} VERA_ENUM_FLAGS(ReflectionTargetFlagBits, ReflectionTargetFlags)
+	Minimal,
+	Full
+};
 
 enum class ReflectionPropertyFlagBits VERA_FLAG_BITS
 {
@@ -464,16 +462,20 @@ class ReflectionRootNode : public ReflectionNode
 public:
 //	ReflectionType                              type;
 	ShaderStageFlags                            stageFlags;
+	ReflectionTargetFlags                       targetFlags;
+	ReflectionParseMode                         parseMode;
 	array_view<ReflectionEntryPoint>            entryPoints;
-	uint32_t                                    minSet;
-	uint32_t                                    maxSet;
 	array_view<const ReflectionRootMemberNode*> memberNodes;
 	ReflectionNameMap                           nameMap;
 	ReflectionBindingMap                        bindingMap;
 	array_view<ReflectionSetRange>              setRanges;
 	uint32_t                                    descriptorCount;
 	uint32_t                                    pushConstantCount;
-	ReflectionTargetFlags                       targetFlags;
+	uint32_t                                    minSet;
+	uint32_t                                    maxSet;
+	uint32_t                                    localSizeX;
+	uint32_t                                    localSizeY;
+	uint32_t                                    localSizeZ;
 
 	VERA_NODISCARD ShaderStageFlags getShaderStageFlags() const VERA_NOEXCEPT;
 	VERA_NODISCARD ReflectionTargetFlags getTargetFlags() const VERA_NOEXCEPT;
@@ -632,24 +634,28 @@ class ReflectionDesc
 public:
 	static array_view<uint32_t> stripReflectionInstructions(
 		const uint32_t* spirv_code,
-		size_t          size_in_byte
-	);
+		size_t          size_in_byte);
 
-	ReflectionDesc();
-	~ReflectionDesc();
+	ReflectionDesc() {};
+	~ReflectionDesc() {};
 
-	void parse(const uint32_t* spirv_code, size_t size_in_byte);
-	void merge(array_view<const ReflectionDesc*> reflections);
+	void parse(
+		const uint32_t*           spirv_code,
+		const size_t              size_in_byte,
+		const ReflectionParseMode mode = ReflectionParseMode::Full);
 
-	const ReflectionRootNode* getRootNode() const VERA_NOEXCEPT;
+	void merge(array_view<const ReflectionRootNode*> root_nodes);
 
-	VERA_NODISCARD void clear() VERA_NOEXCEPT;
+	VERA_NODISCARD const ReflectionRootNode* getRootNode() const VERA_NOEXCEPT;
+
+	void clear() VERA_NOEXCEPT;
 
 	VERA_NODISCARD bool empty() const VERA_NOEXCEPT;
 
 private:
 	std::pmr::monotonic_buffer_resource m_memory;
-	const ReflectionRootNode*           m_root_node;
+	ReflectionRootNode*                 m_root_node;
+	hash_t                              m_spirv_hash;
 };
 
 VERA_NAMESPACE_END

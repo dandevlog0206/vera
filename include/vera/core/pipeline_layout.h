@@ -1,6 +1,7 @@
 #pragma once
 
 #include "device.h"
+#include "shader_layout.h"
 #include "descriptor_set_layout.h"
 #include "shader_reflection.h"
 #include "../util/array_view.h"
@@ -8,18 +9,12 @@
 
 VERA_NAMESPACE_BEGIN
 
-struct PushConstantRange
-{
-	uint32_t         offset     = {};
-	uint32_t         size       = {};
-	ShaderStageFlags stageFlags = {};
-};
+class ShaderReflection;
 
 struct PipelineLayoutCreateInfo
 {
 	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts = {};
 	std::vector<PushConstantRange>        pushConstantRanges   = {};
-	PipelineBindPoint                     pipelineBindPoint    = {};
 };
 
 class PipelineLayout : protected CoreObject
@@ -27,7 +22,12 @@ class PipelineLayout : protected CoreObject
 	VERA_CORE_OBJECT_INIT(PipelineLayout)
 public:
 	static obj<PipelineLayout> create(obj<Device> device, array_view<obj<Shader>> shaders);
+	static obj<PipelineLayout> create(obj<Device> device, obj<ShaderReflection> shader_reflection);
 	static obj<PipelineLayout> create(obj<Device> device, const PipelineLayoutCreateInfo& info);
+	static obj<PipelineLayout> create(
+		obj<Device>                          device,
+		array_view<obj<DescriptorSetLayout>> set_layouts,
+		array_view<PushConstantRange>        pc_ranges);
 	~PipelineLayout();
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;

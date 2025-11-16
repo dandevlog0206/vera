@@ -1,8 +1,8 @@
 #include "../../include/vera/core/pipeline.h"
-#include "../spirv/reflection_desc.h"
 #include "../impl/device_impl.h"
 #include "../impl/pipeline_impl.h"
 #include "../impl/shader_impl.h"
+#include "../impl/shader_reflection_impl.h"
 
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/pipeline_layout.h"
@@ -42,19 +42,20 @@ static const vk::PipelineViewportStateCreateInfo* get_default_viewport_state_inf
 }
 
 static void check_shader_stage(const obj<Shader>& shader, ShaderStageFlagBits stage)
-{
-	// create shader reflection if not yet created
-	(void)const_cast<obj<Shader>&>(shader)->getShaderReflection();
-	
-	const auto& shader_impl = CoreObject::getImpl(shader);
-	const auto* root_node   = get_reflection_root_node(shader_impl.shaderReflection);
+{	
+	VERA_NOT_IMPLEMENTED;
+	auto& shader_impl = const_cast<ShaderImpl&>(CoreObject::getImpl(shader));
+	// auto* root_node   = get_reflection_root_node(shader_impl.getOrCreateShaderReflection());
 
-	if (!root_node->getShaderStageFlags().has(stage))
-		throw Exception("shader has no desired stage");
+	//if (!root_node->getShaderStageFlags().has(stage))
+	//	throw Exception("shader has no desired stage");
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const GraphicsPipelineCreateInfo& info)
 {
+	if (info.pipelineLayout)
+		return info.pipelineLayout;
+
 	static_vector<obj<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
 	
 	check_shader_stage(info.vertexShader, ShaderStageFlagBits::Vertex);
@@ -76,11 +77,15 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Gr
 		shaders.push_back(info.geometryShader);
 	}
 
+
 	return PipelineLayout::create(device, shaders);
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const MeshPipelineCreateInfo& info)
 {
+	if (info.pipelineLayout)
+		return info.pipelineLayout;
+
 	static_vector<obj<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
 
 	check_shader_stage(info.meshShader, ShaderStageFlagBits::Mesh);
@@ -99,6 +104,9 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Me
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const ComputePipelineCreateInfo& info)
 {
+	if (info.pipelineLayout)
+		return info.pipelineLayout;
+
 	check_shader_stage(info.computeShader, ShaderStageFlagBits::Compute);
 
 	return PipelineLayout::create(device, info.computeShader);
@@ -114,11 +122,12 @@ static void add_shader_stage(
 
 	vk::PipelineShaderStageCreateInfo shader_info;
 
-	auto& shader_impl = CoreObject::getImpl(shader);
-	auto* root_node   = get_reflection_root_node(shader_impl.shaderReflection);
+	auto& shader_impl = const_cast<ShaderImpl&>(CoreObject::getImpl(shader));
+	auto& refl_impl   = CoreObject::getImpl(shader_impl.shaderReflection);
+	auto* root_node   = refl_impl.requestMinimalReflectionRootNode();
 
 	shader_info.stage               = to_vk_shader_stage_flag_bits(stage);
-	shader_info.module              = shader_impl.shader;
+	shader_info.module              = shader_impl.shaderModule;
 	shader_info.pName               = root_node->getEntryPointName(stage);
 	shader_info.pSpecializationInfo = nullptr;
 
@@ -650,7 +659,11 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 		return obj<Pipeline>(it->second.get());
 	}
 
-	// create pipline layout first to check shader stages
+	if (info.taskShader && !device_impl.isFeatureEnabled(DeviceFeatureType::TaskShader))
+		throw Exception("task shader feature is not enabled on device");
+	if (!device_impl.isFeatureEnabled(DeviceFeatureType::MeshShader))
+		throw Exception("mesh shader feature is not enabled on device");
+
 	auto pipeline_layout = register_pipeline_layout(device, info);
 
 	auto  obj  = createNewCoreObject<Pipeline>();
@@ -767,12 +780,14 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 	auto  obj         = createNewCoreObject<Pipeline>();
 	auto& impl        = getImpl(obj);
 	auto& shader_impl = getImpl(info.computeShader);
-	auto* root_node   = get_reflection_root_node(shader_impl.shaderReflection);
+	// auto* root_node   = get_reflection_root_node(shader_impl.shaderReflection);
+
+	VERA_NOT_IMPLEMENTED;
 
 	vk::ComputePipelineCreateInfo pipeline_info;
 	pipeline_info.stage.stage  = vk::ShaderStageFlagBits::eCompute;
-	pipeline_info.stage.module = shader_impl.shader;
-	pipeline_info.stage.pName  = root_node->getEntryPointName(ShaderStageFlagBits::Compute);
+	pipeline_info.stage.module = shader_impl.shaderModule;
+	pipeline_info.stage.pName  = "main"; //root_node->getEntryPointName(ShaderStageFlagBits::Compute);
 	pipeline_info.layout       = get_vk_pipeline_layout(pipeline_layout);
 
 	auto result = device_impl.device.createComputePipeline(device_impl.pipelineCache, pipeline_info);

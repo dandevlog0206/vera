@@ -18,6 +18,7 @@ class Context;
 		
 		// Shader
 		class Shader;
+		class ShaderLayout;
 		class ShaderReflection;
 		class ShaderParameter;
 		
@@ -79,13 +80,6 @@ const vk::Image& get_vk_image(const_ref<Texture> texture) VERA_NOEXCEPT;
 vk::Image& get_vk_image(ref<Texture> texture) VERA_NOEXCEPT;
 const vk::ImageView& get_vk_image_view(const_ref<TextureView> texture_view) VERA_NOEXCEPT;
 vk::ImageView& get_vk_image_view(ref<TextureView> texture_view) VERA_NOEXCEPT;
-
-class ReflectionDesc;
-class ReflectionRootNode;
-
-const ReflectionDesc& get_reflection_desc(const_ref<ShaderReflection> shader_reflection) VERA_NOEXCEPT;
-ReflectionDesc& get_reflection_desc(ref<ShaderReflection> shader_reflection) VERA_NOEXCEPT;
-const ReflectionRootNode* get_reflection_root_node(const_ref<ShaderReflection> shader_reflection) VERA_NOEXCEPT;
 
 static vk::DeviceFaultAddressTypeEXT to_vk_device_fault_address_type(DeviceFaultAddressType type) VERA_NOEXCEPT
 {

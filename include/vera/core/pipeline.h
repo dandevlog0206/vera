@@ -91,6 +91,7 @@ struct GraphicsPipelineCreateInfo
 	obj<Shader>                      tessellationEvaluationShader;
 	obj<Shader>                      geometryShader;
 	obj<Shader>                      fragmentShader;
+	obj<PipelineLayout>              pipelineLayout; // optional
 
 	std::optional<VertexInputInfo>   vertexInputInfo;
 	std::optional<PrimitiveInfo>     primitiveInfo;
@@ -107,6 +108,7 @@ struct MeshPipelineCreateInfo
 	obj<Shader>                      taskShader;
 	obj<Shader>                      meshShader;
 	obj<Shader>                      fragmentShader;
+	obj<PipelineLayout>              pipelineLayout; // optional
 
 	std::optional<RasterizationInfo> rasterizationInfo;
 	std::optional<DepthStencilInfo>  depthStencilInfo;
@@ -117,7 +119,8 @@ struct MeshPipelineCreateInfo
 
 struct ComputePipelineCreateInfo
 {
-	obj<Shader> computeShader;
+	obj<Shader>         computeShader;
+	obj<PipelineLayout> pipelineLayout; // optional
 };
 
 class Pipeline : protected CoreObject

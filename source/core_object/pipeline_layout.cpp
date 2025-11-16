@@ -46,8 +46,11 @@ static PipelineBindPoint get_pipeline_bind_point(ShaderStageFlags stage_flags)
 	return {};
 }
 
-static void create_resource_layout(PipelineLayoutImpl& impl, const ReflectionRootNode* root_node)
-{
+static void fill_descriptor_set_layouts(
+	std::vector<obj<DescriptorSetLayout>>& set_layouts,
+	obj<Device>&                           device,
+	const ReflectionRootNode*              root_node
+) {
 	DescriptorSetLayoutCreateInfo layout_info;
 
 	uint32_t set_count = root_node->getSetCount();
@@ -82,15 +85,17 @@ static void create_resource_layout(PipelineLayoutImpl& impl, const ReflectionRoo
 			}
 		}
 
-		auto new_layout = DescriptorSetLayout::create(impl.device, layout_info);
-		impl.descriptorSetLayouts.push_back(std::move(new_layout));
+		auto new_layout = DescriptorSetLayout::create(device, layout_info);
+		set_layouts.push_back(std::move(new_layout));
 	}
 }
 
-static void create_pc_info(PipelineLayoutImpl& impl, const ReflectionRootNode* root_node)
-{
+static void fill_push_constant_ranges(
+	std::vector<PushConstantRange>& pc_ranges,
+	const ReflectionRootNode*       root_node
+) {
 	for (const auto* pc_node : root_node->enumeratePushConstant())
-		impl.pushConstantRanges.emplace_back(pc_node->pushConstantRange);
+		pc_ranges.emplace_back(pc_node->pushConstantRange);
 }
 
 static void create_pipeline_layout(const DeviceImpl & device_impl, PipelineLayoutImpl& impl)
@@ -122,51 +127,51 @@ static bool check_layout_device(ref<Device> device, array_view<obj<DescriptorSet
 	return true;
 }
 
-static hash_t hash_pipeline_layout_with_shaders(const array_view<obj<Shader>>& shaders)
+static bool check_shader_device(ref<Device> device, array_view<obj<Shader>> shaders)
+{
+	if (shaders.empty()) return false;
+	for (const auto shader : shaders)
+		if (!shader || CoreObject::getImpl(shader).device != device)
+			return false;
+
+	return true;
+}
+
+static hash_t hash_shaders(array_view<obj<Shader>> shaders)
 {
 	hash_t seed = 0;
 
 	hash_combine(seed, shaders.size());
 	for (const auto& shader : shaders)
-		hash_combine(seed, shader->hash());
+		hash_unordered(seed, shader->hash());
 
 	return seed;
 }
 
-static hash_t hash_pipeline_layout(const PipelineLayoutCreateInfo& info)
+static hash_t hash_push_constant_range(const PushConstantRange& range)
 {
 	hash_t seed = 0;
 
-	hash_combine(seed, info.descriptorSetLayouts.size());
-	for (const auto& layout : info.descriptorSetLayouts)
-		hash_combine(seed, layout->hash());
-		
-	hash_combine(seed, info.pushConstantRanges.size());
-	for (const auto& range : info.pushConstantRanges) {
-		hash_combine(seed, range.offset);
-		hash_combine(seed, range.size);
-		hash_combine(seed, static_cast<uint32_t>(range.stageFlags));
-	}
-
-	hash_combine(seed, info.pipelineBindPoint);
+	hash_combine(seed, range.offset);
+	hash_combine(seed, range.size);
+	hash_combine(seed, static_cast<uint32_t>(range.stageFlags));
 
 	return seed;
 }
 
-static hash_t hash_pipeline_layout(const PipelineLayoutImpl& impl)
-{
+static hash_t hash_pipeline_layout(
+	array_view<obj<DescriptorSetLayout>> set_layouts,
+	array_view<PushConstantRange>        pc_ranges
+) {
 	hash_t seed = 0;
 
-	hash_combine(seed, impl.descriptorSetLayouts.size());
-	for (const auto& layout : impl.descriptorSetLayouts)
-		hash_combine(seed, layout->hash());
-		
-	hash_combine(seed, impl.pushConstantRanges.size());
-	for (const auto& range : impl.pushConstantRanges) {
-		hash_combine(seed, range.offset);
-		hash_combine(seed, range.size);
-		hash_combine(seed, static_cast<uint32_t>(range.stageFlags));
-	}
+	hash_combine(seed, set_layouts.size());
+	for (const auto& layout : set_layouts)
+		hash_unordered(seed, layout->hash());
+
+	hash_combine(seed, pc_ranges.size());
+	for (const auto& range : pc_ranges)
+		hash_unordered(seed, hash_push_constant_range(range));
 
 	return seed;
 }
@@ -183,50 +188,47 @@ vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout) 
 
 obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<obj<Shader>> shaders)
 {
-	VERA_ASSERT_MSG(device, "device is null");
+	if (!device)
+		throw Exception("device is null");
+	if (shaders.empty())
+		throw Exception("shaders array is empty");
+	if (!check_shader_device(device, shaders))
+		throw Exception("shader device mismatch");
 
-	auto&  device_impl = getImpl(device);
-	hash_t hash_value  = hash_pipeline_layout_with_shaders(shaders);
+	auto& device_impl = getImpl(device);
+	auto  hash_value  = hash_shaders(shaders);
 
 	if (auto it = device_impl.pipelineLayoutCacheMapWithShader.find(hash_value);
 		it != device_impl.pipelineLayoutCacheMapWithShader.end())
 		return unsafe_obj_cast<PipelineLayout>(it->second);
 
-	auto  obj  = createNewCoreObject<PipelineLayout>();
+	auto  obj  = create(std::move(device), ShaderReflection::create(shaders));
 	auto& impl = getImpl(obj);
 
-	impl.device            = std::move(device);
-	impl.shaderHashValue   = hash_value;
-
-	for (const auto& shader : shaders)
-		impl.shaders.push_back(shader);
-
-	impl.shaderReflection = ShaderReflection::create(array_view{
-		reinterpret_cast<const_ref<Shader>*>(impl.shaders.data()),
-		impl.shaders.size()
-	});
-
-	auto* root_node = get_reflection_root_node(impl.shaderReflection);
-
-	create_resource_layout(impl, root_node);
-	create_pc_info(impl, root_node);
-	create_pipeline_layout(device_impl, impl);
-
-	impl.hashValue = hash_pipeline_layout(impl);
-
-	device_impl.registerPipelineLayout(impl.hashValue, obj);
-	device_impl.registerPipelineLayoutWithShaders(impl.shaderHashValue, obj);
+	impl.hashValueWithShader = hash_value;
+	device_impl.registerPipelineLayoutWithShaders(hash_value, obj);
 
 	return obj;
 }
 
-obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLayoutCreateInfo& info)
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, obj<ShaderReflection> shader_reflection)
 {
-	VERA_ASSERT_MSG(device, "device is null");
-	VERA_ASSERT_MSG(check_layout_device(device, info.descriptorSetLayouts), "layout device mismatch");
+	if (!device)
+		throw Exception("device is null");
+	if (!shader_reflection)
+		throw Exception("shader reflection is null");
+
+	auto& refl_impl = getImpl(shader_reflection);
+	auto* root_node = refl_impl.requestMinimalReflectionRootNode();
+
+	std::vector<obj<DescriptorSetLayout>> set_layouts;
+	std::vector<PushConstantRange>        pc_ranges;
+
+	fill_descriptor_set_layouts(set_layouts, device, root_node);
+	fill_push_constant_ranges(pc_ranges, root_node);
 
 	auto&  device_impl = getImpl(device);
-	hash_t hash_value  = hash_pipeline_layout(info);
+	hash_t hash_value  = hash_pipeline_layout(set_layouts, pc_ranges);
 
 	if (auto it = device_impl.pipelineLayoutCacheMap.find(hash_value);
 		it != device_impl.pipelineLayoutCacheMap.end())
@@ -235,15 +237,51 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLay
 	auto  obj  = createNewCoreObject<PipelineLayout>();
 	auto& impl = getImpl(obj);
 
-	impl.descriptorSetLayouts.assign(info.descriptorSetLayouts.begin(), info.descriptorSetLayouts.end());
-	impl.pushConstantRanges.assign(info.pushConstantRanges.begin(), info.pushConstantRanges.end());
-	
-	// TODO: fill reflection datas
+	impl.descriptorSetLayouts = std::move(set_layouts);
+	impl.pushConstantRanges   = std::move(pc_ranges);
+
+	impl.device           = std::move(device);
+	impl.shaderReflection = std::move(shader_reflection);
+	impl.hashValue        = hash_value;
+
+	create_pipeline_layout(device_impl, impl);
+
+	device_impl.registerPipelineLayout(impl.hashValue, obj);
+
+	return obj;
+}
+
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLayoutCreateInfo& info)
+{
+	return create(device, info.descriptorSetLayouts, info.pushConstantRanges);
+}
+
+obj<PipelineLayout> PipelineLayout::create(
+	obj<Device>                          device,
+	array_view<obj<DescriptorSetLayout>> set_layouts,
+	array_view<PushConstantRange>        pc_ranges)
+{
+	if (!device)
+		throw Exception("device is null");
+	if (!check_layout_device(device, set_layouts))
+		throw Exception("layout device mismatch");
+
+	auto&  device_impl = getImpl(device);
+	hash_t hash_value  = hash_pipeline_layout(set_layouts, pc_ranges);
+
+	if (auto it = device_impl.pipelineLayoutCacheMap.find(hash_value);
+		it != device_impl.pipelineLayoutCacheMap.end())
+		return unsafe_obj_cast<PipelineLayout>(it->second);
+
+	auto  obj  = createNewCoreObject<PipelineLayout>();
+	auto& impl = getImpl(obj);
+
+	impl.descriptorSetLayouts.assign(set_layouts.begin(), set_layouts.end());
+	impl.pushConstantRanges.assign(pc_ranges.begin(), pc_ranges.end());
 
 	impl.device            = std::move(device);
 	impl.shaderReflection  = {};
 	impl.hashValue         = hash_value;
-	impl.shaderHashValue   = 0;
 
 	create_pipeline_layout(device_impl, impl);
 	
@@ -258,7 +296,7 @@ PipelineLayout::~PipelineLayout()
 	auto& device_impl = getImpl(impl.device);
 
 	device_impl.unregisterPipelineLayout(impl.hashValue);
-	device_impl.unregisterPipelineLayoutWithShaders(impl.shaderHashValue);
+	device_impl.unregisterPipelineLayoutWithShaders(impl.hashValueWithShader);
 	device_impl.device.destroy(impl.pipelineLayout);
 
 	destroyObjectImpl(this);
@@ -279,8 +317,7 @@ obj<ShaderReflection> PipelineLayout::getShaderReflection() VERA_NOEXCEPT
 	auto& impl = getImpl(this);
 
 	if (!impl.shaderReflection) {
-		if (impl.shaders.empty())
-			throw Exception("pipeline layout has no shaders");
+		VERA_NOT_IMPLEMENTED;
 	}
 
 	return impl.shaderReflection;

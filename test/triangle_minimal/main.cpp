@@ -25,7 +25,7 @@ int main()
 
 	auto begin = std::chrono::high_resolution_clock::now();
 
-	auto reflection = vr::ShaderReflection::create({ vert_shader, geom_shader, frag_shader });
+	// auto reflection = vr::ShaderReflection::create({ vert_shader, geom_shader, frag_shader });
 
 	auto end = std::chrono::high_resolution_clock::now();
 
@@ -39,7 +39,7 @@ int main()
 		.vertexCount    = 3
 	};
 
-	 auto pass = vr::GraphicsPass::create(device, pass_info);
+	auto pass = vr::GraphicsPass::create(device, pass_info);
 
 	while (!window.needClose()) {
 		window.handleEvent();

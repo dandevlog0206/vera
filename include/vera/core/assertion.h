@@ -20,6 +20,9 @@
 #   define VERA_ERROR_MSG(msg) (void)(0)
 #endif
 
+#define VERA_NOT_IMPLEMENTED \
+	vr::priv::__error_impl("not implemented yet", __FILE__, __LINE__)
+
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
 

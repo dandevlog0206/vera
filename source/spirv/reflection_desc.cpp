@@ -3,6 +3,7 @@
 #include "../../include/vera/core/exception.h"
 #include "../../include/vera/core/logger.h"
 #include "../../include/vera/util/static_vector.h"
+#include "spirv_parser.h"
 #include <spirv_reflect.h>
 
 #define MAX_SHADER_STAGE_COUNT 16
@@ -743,7 +744,7 @@ static const ReflectionDescriptorNode* parse_descriptor_binding(
 	return desc_node->as<ReflectionDescriptorNode>();
 }
 
-static const ReflectionRootNode* parse_impl(
+static ReflectionRootNode* parse_impl(
 	ReflectionContext&            ctx,
 	const SpvReflectShaderModule& module
 ) {
@@ -776,12 +777,16 @@ static const ReflectionRootNode* parse_impl(
 	auto* root_node = construct_node<ReflectionRootNode>(ctx.memory);
 	root_node->type              = ReflectionType::Root;
 	root_node->stageFlags        = to_shader_stage(module.shader_stage);
+	root_node->targetFlags       = ReflectionTargetFlagBits::Shader;
+	root_node->parseMode         = ReflectionParseMode::Full;
 	root_node->entryPoints       = array_view(entry_points, module.entry_point_count);
-	root_node->minSet            = UINT32_MAX;
-	root_node->maxSet            = 0;
 	root_node->descriptorCount   = desc_node_count;
 	root_node->pushConstantCount = pc_node_count;
-	root_node->targetFlags       = ReflectionTargetFlagBits::Shader;
+	root_node->minSet            = UINT32_MAX;
+	root_node->maxSet            = 0;
+	root_node->localSizeX        = module.entry_points[0].local_size.x;
+	root_node->localSizeY        = module.entry_points[0].local_size.y;
+	root_node->localSizeZ        = module.entry_points[0].local_size.z;
 
 	for (const auto& set : array_view(module.descriptor_sets, module.descriptor_set_count)) {
 		const auto* last_binding = set.bindings[set.binding_count - 1];
@@ -1411,12 +1416,12 @@ static const ReflectionPushConstantNode* merge_push_constant_node(
 	return new_pc;
 }
 
-static const ReflectionRootNode* merge_impl(
-	ReflectionContext&                   ctx,
-	PerStageRootNodeArray&               root_nodes,
-	PerStageDescriptorNodeIteratorArray& desc_begins,
-	PerStageDescriptorNodeIteratorArray& desc_ends,
-	PerStagePushConstantNodeArray&       pc_nodes
+static ReflectionRootNode* merge_impl(
+	ReflectionContext&                    ctx,
+	array_view<const ReflectionRootNode*> root_nodes,
+	PerStageDescriptorNodeIteratorArray&  desc_begins,
+	PerStageDescriptorNodeIteratorArray&  desc_ends,
+	PerStagePushConstantNodeArray&        pc_nodes
 ) {
 	uint32_t entry_point_count = 0;
 	uint32_t entry_point_idx   = 0;
@@ -1636,17 +1641,11 @@ array_view<uint32_t> ReflectionDesc::stripReflectionInstructions(const uint32_t*
 	//throw Exception("failed to strip reflection instructions from SPIR-V code");
 }
 
-ReflectionDesc::ReflectionDesc() :
-	m_memory(INITIAL_MONOTONIC_CHUNK_SIZE),
-	m_root_node(nullptr) {}
-
-ReflectionDesc::~ReflectionDesc()
-{
-	m_memory.release();
-}
-
-void ReflectionDesc::parse(const uint32_t* spirv_code, size_t size_in_byte)
-{
+void ReflectionDesc::parse(
+	const uint32_t*           spirv_code,
+	const size_t              size_in_byte,
+	const ReflectionParseMode mode
+) {
 	spv_reflect::ShaderModule shader_module(size_in_byte, spirv_code);
 
 	if (shader_module.GetResult() != SpvReflectResult::SPV_REFLECT_RESULT_SUCCESS)
@@ -1662,24 +1661,24 @@ void ReflectionDesc::parse(const uint32_t* spirv_code, size_t size_in_byte)
 	};
 
 	m_root_node = parse_impl(ctx, shader_module.GetShaderModule());
+
+	m_root_node->parseMode = ReflectionParseMode::Full;
 }
 
-void ReflectionDesc::merge(array_view<const ReflectionDesc*> reflections)
+void ReflectionDesc::merge(array_view<const ReflectionRootNode*> root_nodes)
 {
-	VERA_ASSERT_MSG(reflections.size() <= MAX_SHADER_STAGE_COUNT,
+	VERA_ASSERT_MSG(root_nodes.size() <= MAX_SHADER_STAGE_COUNT,
 		"exceeded maximum shader stage count for merging reflections");
 
-	PerStageRootNodeArray               root_nodes;
 	PerStageDescriptorNodeIteratorArray desc_begins;
 	PerStageDescriptorNodeIteratorArray desc_ends;
 	PerStagePushConstantNodeArray       pcs;
 	ShaderStageFlags                    stage_flags;
 
-	for (const auto* reflection : reflections) {
-		if (!reflection || reflection->empty()) continue;
+	for (const auto* root_node : root_nodes) {
+		VERA_ASSERT(root_node);
 
-		const auto* root_node = reflection->getRootNode();
-		const auto  target    = root_node->getTargetFlags();
+		const auto target = root_node->getTargetFlags();
 
 		if (target & (ReflectionTargetFlagBits::DescriptorSetLayout &
 			  ReflectionTargetFlagBits::Shader))
@@ -1698,8 +1697,6 @@ void ReflectionDesc::merge(array_view<const ReflectionDesc*> reflections)
 
 		if (const auto* pc_node = root_node->findPushConstant())
 			pcs.push_back(pc_node);
-
-		root_nodes.push_back(root_node);
 	}
 
 	std::pmr::monotonic_buffer_resource temp_memory(VERA_KIB(1));
@@ -1722,7 +1719,8 @@ const ReflectionRootNode* ReflectionDesc::getRootNode() const VERA_NOEXCEPT
 void ReflectionDesc::clear() VERA_NOEXCEPT
 {
 	m_memory.release();
-	m_root_node = nullptr;
+	m_root_node  = nullptr;
+	m_spirv_hash = 0;
 }
 
 bool ReflectionDesc::empty() const VERA_NOEXCEPT
