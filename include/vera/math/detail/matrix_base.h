@@ -1,26 +1,25 @@
 #pragma once
 
-#include "vector_base.h"
-#include "config.h"
+#include "vector2.h"
+#include "vector3.h"
+#include "vector4.h"
 
 VERA_NAMESPACE_BEGIN
 
-#ifdef VERA_MATRIX_GL_LAYOUT
-
-template <MathDimType Col, MathDimType Row, class T, MathQualifier Q>
-class matrix_base
+enum MathMatrixOrder
 {
-	static_assert("unsupported matrix type");
+	row_major,
+	col_major
 };
 
-#else
+// Helper: dependent false to delay static_assert until instantiation
+template <typename>
+inline constexpr bool always_false_v = false;
 
-template <MathDimType Row, MathDimType Col, class T, MathQualifier Q>
+template <MathDimType MajorDim, MathDimType MinorDim, MathMatrixOrder Major, class T, MathQualifier Q>
 class matrix_base
 {
-	static_assert("unsupported matrix type");
+	static_assert(always_false_v<T>, "unsupported matrix type");
 };
-
-#endif
 
 VERA_NAMESPACE_END

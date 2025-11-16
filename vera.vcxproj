@@ -191,7 +191,6 @@
     <ClInclude Include="include\vera\pass\pass_variable.h" />
     <ClInclude Include="include\vera\typography\font.h" />
     <ClInclude Include="include\vera\math\constant.h" />
-    <ClInclude Include="include\vera\math\detail\config.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x2.h" />
     <ClInclude Include="include\vera\math\detail\matrix2x3.h" />
     <ClInclude Include="include\vera\math\detail\matrix3x2.h" />

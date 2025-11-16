@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../../core/coredefs.h"
-#include "config.h"
 #include <cstdint>
 
 #define VEC2_SWIZZLE(v, x, y) decltype(v)::vec2_type((v).x, (v).y)
