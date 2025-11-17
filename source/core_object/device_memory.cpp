@@ -12,12 +12,12 @@ VERA_NAMESPACE_BEGIN
 
 const vk::DeviceMemory& get_vk_device_memory(const_ref<DeviceMemory> device_memory) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(device_memory).memory;
+	return CoreObject::getImpl(device_memory).vkMemory;
 }
 
 vk::DeviceMemory& get_vk_device_memory(ref<DeviceMemory> device_memory) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(device_memory).memory;
+	return CoreObject::getImpl(device_memory).vkMemory;
 }
 
 obj<DeviceMemory> DeviceMemory::create(obj<Device> device, const DeviceMemoryCreateInfo& info)
@@ -33,7 +33,7 @@ obj<DeviceMemory> DeviceMemory::create(obj<Device> device, const DeviceMemoryCre
 	alloc_info.memoryTypeIndex = type_idx;
 
 	impl.device        = std::move(device);
-	impl.memory        = device_impl.device.allocateMemory(alloc_info);
+	impl.vkMemory      = device_impl.vkDevice.allocateMemory(alloc_info);
 	impl.propertyFlags = info.propertyFlags;
 	impl.allocated     = info.size;
 	impl.typeIndex     = alloc_info.memoryTypeIndex;
@@ -47,7 +47,7 @@ DeviceMemory::~DeviceMemory()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
-	device_impl.device.freeMemory(impl.memory);
+	device_impl.vkDevice.freeMemory(impl.vkMemory);
 
 	destroyObjectImpl(this);
 }
@@ -59,7 +59,7 @@ void DeviceMemory::resize(size_t new_size, bool keep_contents)
 
 	// TODO: implement DeviceMemory::resize() keep contents
 
-	vk_device.free(impl.memory);
+	vk_device.free(impl.vkMemory);
 	impl.allocated = 0;
 	impl.mapPtr    = nullptr;
 
@@ -67,7 +67,7 @@ void DeviceMemory::resize(size_t new_size, bool keep_contents)
 	alloc_info.allocationSize  = new_size;
 	alloc_info.memoryTypeIndex = impl.typeIndex;
 
-	impl.memory    = vk_device.allocateMemory(alloc_info);
+	impl.vkMemory  = vk_device.allocateMemory(alloc_info);
 	impl.allocated = new_size;
 
 	// Memory lacking will be captured by validation layer
@@ -75,11 +75,11 @@ void DeviceMemory::resize(size_t new_size, bool keep_contents)
 		switch (binding.resourceType) {
 		case MemoryResourceType::Buffer: {
 			auto& buffer_impl = getImpl(reinterpret_cast<Buffer*>(binding.resourcePtr));
-			vk_device.bindBufferMemory(buffer_impl.buffer, impl.memory, binding.offset);
+			vk_device.bindBufferMemory(buffer_impl.vkBuffer, impl.vkMemory, binding.offset);
 		} break;
 		case MemoryResourceType::Texture: {
 			auto& texture_impl = getImpl(reinterpret_cast<Texture*>(binding.resourcePtr));
-			vk_device.bindImageMemory(texture_impl.image, impl.memory, binding.offset);
+			vk_device.bindImageMemory(texture_impl.vkImage, impl.vkMemory, binding.offset);
 		} break;
 		default:
 			throw Exception("invalid memory resource type");
@@ -93,7 +93,7 @@ void DeviceMemory::bindBuffer(obj<Buffer> buffer, size_t offset)
 	auto& buffer_impl = getImpl(buffer);
 	auto  vk_device   = get_vk_device(impl.device);
 
-	vk_device.bindBufferMemory(buffer_impl.buffer, impl.memory, offset);
+	vk_device.bindBufferMemory(buffer_impl.vkBuffer, impl.vkMemory, offset);
 
 	for (auto& binding : impl.resourceBind) {
 		if (binding.resourcePtr == buffer.get()) {
@@ -115,7 +115,7 @@ void DeviceMemory::bindTexture(obj<Texture> texture, size_t offset)
 	auto& texture_impl = getImpl(texture);
 	auto  vk_device    = get_vk_device(impl.device);
 
-	vk_device.bindImageMemory(texture_impl.image, impl.memory, offset);
+	vk_device.bindImageMemory(texture_impl.vkImage, impl.vkMemory, offset);
 
 	for (auto& binding : impl.resourceBind) {
 		if (binding.resourcePtr == texture.get()) {
@@ -143,7 +143,7 @@ void* DeviceMemory::map()
 
 	auto vk_device = get_vk_device(impl.device);
 
-	return impl.mapPtr = vk_device.mapMemory(impl.memory, 0, VK_WHOLE_SIZE);
+	return impl.mapPtr = vk_device.mapMemory(impl.vkMemory, 0, VK_WHOLE_SIZE);
 }
 
 void DeviceMemory::unmap()
@@ -154,7 +154,7 @@ void DeviceMemory::unmap()
 
 	auto vk_device = get_vk_device(impl.device);
 
-	vk_device.unmapMemory(impl.memory);
+	vk_device.unmapMemory(impl.vkMemory);
 	impl.mapPtr = nullptr;
 }
 
@@ -167,7 +167,7 @@ void DeviceMemory::flush()
 	auto vk_device = get_vk_device(impl.device);
 
 	vk::MappedMemoryRange range;
-	range.memory = impl.memory;
+	range.memory = impl.vkMemory;
 	range.offset = 0;
 	range.size   = VK_WHOLE_SIZE;
 
@@ -185,7 +185,7 @@ void DeviceMemory::upload(const void* data, size_t size, size_t offset)
 	auto  vk_device = get_vk_device(impl.device);
 	
 	vk::MappedMemoryRange range;
-	range.memory = impl.memory;
+	range.memory = impl.vkMemory;
 	range.offset = offset;
 	range.size   = size;
 

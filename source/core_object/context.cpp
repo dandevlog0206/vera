@@ -53,12 +53,12 @@ static VKAPI_ATTR VkBool32 vk_debug_callback(
 
 const vk::Instance& get_vk_instance(const_ref<Context> context) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(context).instance;
+	return CoreObject::getImpl(context).vkInstance;
 }
 
 vk::Instance& get_vk_instance(ref<Context> context) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(context).instance;
+	return CoreObject::getImpl(context).vkInstance;
 }
 
 std::vector<InstanceLayerInfo> Context::enumerateInstanceLayers()
@@ -128,9 +128,9 @@ obj<Context> Context::create(const ContextCreateInfo& info)
 	instance_info.enabledExtensionCount   = static_cast<uint32_t>(instance_extensions.size());
 	instance_info.ppEnabledExtensionNames = instance_extensions.data();
 
-	impl.instance = vk::createInstance(instance_info);
+	impl.vkInstance = vk::createInstance(instance_info);
 
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(impl.instance);
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(impl.vkInstance);
 
 	if (info.enableDebugUtils) {
 		vk::DebugUtilsMessengerCreateInfoEXT debug_info;
@@ -146,7 +146,7 @@ obj<Context> Context::create(const ContextCreateInfo& info)
 		debug_info.pfnUserCallback = vk_debug_callback;
 		debug_info.pUserData       = &impl;
 
-		impl.debugUtilsMessenger      = impl.instance.createDebugUtilsMessengerEXT(debug_info);
+		impl.debugUtilsMessenger      = impl.vkInstance.createDebugUtilsMessengerEXT(debug_info);
 		impl.debugUtilsMessengerLevel = info.debugUtilsMessengerLevel;
 	}
 
@@ -159,8 +159,8 @@ Context::~Context()
 {
 	auto& impl = getImpl(this);
 
-	impl.instance.destroy(impl.debugUtilsMessenger);
-	impl.instance.destroy();
+	impl.vkInstance.destroy(impl.debugUtilsMessenger);
+	impl.vkInstance.destroy();
 
 	destroyObjectImpl(this);
 }
@@ -168,7 +168,7 @@ Context::~Context()
 uint32_t Context::findDeviceByType(DeviceType type) const
 {
 	auto& impl             = getImpl(this);
-	auto  physical_devices = impl.instance.enumeratePhysicalDevices();
+	auto  physical_devices = impl.vkInstance.enumeratePhysicalDevices();
 	auto  required_type    = vk::PhysicalDeviceType::eDiscreteGpu;
 
 	switch (type) {

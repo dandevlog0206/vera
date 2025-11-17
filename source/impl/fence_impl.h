@@ -9,7 +9,7 @@ class FenceImpl
 public:
 	obj<Device> device = {};
 
-	vk::Fence   fence  = {};
+	vk::Fence   vkFence  = {};
 };
 
 VERA_NAMESPACE_END

@@ -67,7 +67,7 @@ class ShaderReflection : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ShaderReflection)
 public:
-	static VERA_NODISCARD obj<ShaderReflection> create(array_view<obj<Shader>> shaders);
+	static VERA_NODISCARD obj<ShaderReflection> create(ref<Shader> shader);
 	~ShaderReflection() VERA_NOEXCEPT;
 
 	VERA_NODISCARD ReflectionTargetFlags getTargetFlags() const VERA_NOEXCEPT;

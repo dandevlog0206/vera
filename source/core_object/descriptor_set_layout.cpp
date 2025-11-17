@@ -11,7 +11,7 @@ VERA_NAMESPACE_BEGIN
 
 static uint32_t get_max_resource_count(const DeviceImpl& impl, DescriptorType resource_type)
 {
-	const auto& indexing_props = impl.descriptorIndexingProperties;
+	const auto& indexing_props = impl.vkDescriptorIndexingProperties;
 
 	switch (resource_type) {
 	case DescriptorType::Sampler:
@@ -76,12 +76,12 @@ static hash_t hash_descriptor_set_layout(const DescriptorSetLayoutCreateInfo& in
 
 const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(set_layout).descriptorSetLayout;
+	return CoreObject::getImpl(set_layout).vkDescriptorSetLayout;
 }
 
 vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(set_layout).descriptorSetLayout;
+	return CoreObject::getImpl(set_layout).vkDescriptorSetLayout;
 }
 
 obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const DescriptorSetLayoutCreateInfo& info)
@@ -92,8 +92,8 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 	auto&  device_impl = getImpl(device);
 	hash_t hash_value  = hash_descriptor_set_layout(info);
 
-	if (auto it = device_impl.descriptorSetLayoutCacheMap.find(hash_value);
-		it != device_impl.descriptorSetLayoutCacheMap.end()) {
+	if (auto it = device_impl.descriptorSetLayoutCache.find(hash_value);
+		it != device_impl.descriptorSetLayoutCache.end()) {
 		return unsafe_obj_cast<DescriptorSetLayout>(it->second);
 	}
 
@@ -138,11 +138,11 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 	desc_info.pBindings    = bindings.data();
 	desc_info.pNext        = &binding_flags_info;
 	
-	impl.device              = std::move(device);
-	impl.descriptorSetLayout = device_impl.device.createDescriptorSetLayout(desc_info);
-	impl.hashValue           = hash_value;
+	impl.device                = std::move(device);
+	impl.vkDescriptorSetLayout = device_impl.vkDevice.createDescriptorSetLayout(desc_info);
+	impl.hashValue             = hash_value;
 	
-	device_impl.descriptorSetLayoutCacheMap.insert({ hash_value, obj });
+	device_impl.registerDescriptorSetLayout(hash_value, obj);
 	
 	return obj;
 }
@@ -152,8 +152,8 @@ DescriptorSetLayout::~DescriptorSetLayout()
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 	
-	device_impl.descriptorSetLayoutCacheMap.erase(impl.hashValue);
-	device_impl.device.destroy(impl.descriptorSetLayout);
+	device_impl.unregisterDescriptorSetLayout(impl.hashValue);
+	device_impl.vkDevice.destroy(impl.vkDescriptorSetLayout);
 
 	destroyObjectImpl(this);
 }

@@ -312,7 +312,7 @@ void RenderContext::submit()
 
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount   = 1;
-	submit_info.pCommandBuffers      = &cmd_impl.commandBuffer;
+	submit_info.pCommandBuffers      = &cmd_impl.vkCommandBuffer;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &get_vk_semaphore(cmd_impl.semaphore);
 
@@ -334,7 +334,7 @@ void RenderContext::submit()
 		submit_info.pWaitDstStageMask  = stage_masks.data();
 	}
 
-	device_impl.graphicsQueue.submit(submit_info, get_vk_fence(cmd_impl.fence));
+	device_impl.vkGraphicsQueue.submit(submit_info, get_vk_fence(cmd_impl.fence));
 
 	render_context_next_frame(impl);
 }

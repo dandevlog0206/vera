@@ -11,13 +11,13 @@ public:
 	using LayoutBindings = std::vector<DescriptorSetLayoutBinding>;
 	using BindingMap     = std::unordered_map<uint32_t, DescriptorSetLayoutBinding*>;
 
-	obj<Device>              device              = {};
+	obj<Device>              device                = {};
 
-	vk::DescriptorSetLayout  descriptorSetLayout = {};
+	vk::DescriptorSetLayout  vkDescriptorSetLayout = {};
 
-	hash_t                   hashValue           = {};
-	LayoutBindings           bindings            = {};
-	BindingMap               bindingMap          = {};
+	hash_t                   hashValue             = {};
+	LayoutBindings           bindings              = {};
+	BindingMap               bindingMap            = {};
 };
 
 VERA_NAMESPACE_END

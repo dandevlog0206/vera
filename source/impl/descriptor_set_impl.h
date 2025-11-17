@@ -14,7 +14,7 @@ public:
 	obj<DescriptorPool>      descriptorPool          = {};
 	obj<DescriptorSetLayout> descriptorSetLayout     = {};
 
-	vk::DescriptorSet        descriptorSet           = {};
+	vk::DescriptorSet        vkDescriptorSet         = {};
 
 	BindingStateMap          bindingStates           = {};
 	uint32_t                 variableDescriptorCount = {};

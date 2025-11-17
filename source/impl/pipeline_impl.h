@@ -15,7 +15,7 @@ public:
 	obj<Device>              device            = {};
 	obj<PipelineLayout>      pipelineLayout    = {};
 
-	vk::Pipeline             pipeline          = {};
+	vk::Pipeline             vkPipeline        = {};
 
 	std::vector<shader_pair> shaders           = {};
 	PipelineBindPoint        pipelineBindPoint = {};

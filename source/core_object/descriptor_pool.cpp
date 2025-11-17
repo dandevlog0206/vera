@@ -18,14 +18,14 @@ static void invalidate_all_descriptor_sets(DescriptorPoolImpl& impl, bool destro
 			set_impl.device                  = nullptr;
 			set_impl.descriptorPool          = nullptr;
 			set_impl.descriptorSetLayout     = nullptr;
-			set_impl.descriptorSet           = nullptr;
+			set_impl.vkDescriptorSet         = nullptr;
 			set_impl.bindingStates.clear();
 			set_impl.variableDescriptorCount = 0;
 		}
 	} else {
 		for (auto& [hash, set] : impl.allocatedSets) {
 			auto& set_impl = CoreObject::getImpl(set);
-			set_impl.descriptorSet = nullptr;
+			set_impl.vkDescriptorSet = nullptr;
 			set_impl.bindingStates.clear();
 		}
 	}
@@ -35,12 +35,12 @@ static void invalidate_all_descriptor_sets(DescriptorPoolImpl& impl, bool destro
 
 const vk::DescriptorPool& get_vk_descriptor_pool(const_ref<DescriptorPool> descriptor_pool) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(descriptor_pool).descriptorPool;
+	return CoreObject::getImpl(descriptor_pool).vkDescriptorPool;
 }
 
 vk::DescriptorPool& get_vk_descriptor_pool(ref<DescriptorPool> descriptor_pool) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(descriptor_pool).descriptorPool;
+	return CoreObject::getImpl(descriptor_pool).vkDescriptorPool;
 }
 
 obj<DescriptorPool> DescriptorPool::create(obj<Device> device, const DescriptorPoolCreateInfo& info)
@@ -89,9 +89,9 @@ obj<DescriptorPool> DescriptorPool::create(obj<Device> device, const DescriptorP
 				pool_info.maxSets += size.size;
 	}
 	
-	impl.device         = std::move(device);
-	impl.descriptorPool = vk_device.createDescriptorPool(pool_info);
-	impl.flags          = info.flags;
+	impl.device           = std::move(device);
+	impl.vkDescriptorPool = vk_device.createDescriptorPool(pool_info);
+	impl.flags            = info.flags;
 
 	return obj;
 }
@@ -104,7 +104,7 @@ DescriptorPool::~DescriptorPool()
 	invalidate_all_descriptor_sets(impl, true);
 	impl.poolMap.clear();
 
-	vk_device.destroy(impl.descriptorPool);
+	vk_device.destroy(impl.vkDescriptorPool);
 
 	destroyObjectImpl(this);
 }
@@ -125,11 +125,11 @@ obj<DescriptorSet> DescriptorPool::allocate(obj<DescriptorSetLayout> layout) {
 	auto  vk_device = get_vk_device(impl.device);
 
 	vk::DescriptorSetAllocateInfo alloc_info;
-	alloc_info.descriptorPool     = impl.descriptorPool;
+	alloc_info.descriptorPool     = impl.vkDescriptorPool;
 	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts        = &layout_impl.descriptorSetLayout;
+	alloc_info.pSetLayouts        = &layout_impl.vkDescriptorSetLayout;
 
-	if (vk_device.allocateDescriptorSets(&alloc_info, &set_impl.descriptorSet) != vk::Result::eSuccess)
+	if (vk_device.allocateDescriptorSets(&alloc_info, &set_impl.vkDescriptorSet) != vk::Result::eSuccess)
 		throw Exception("failed to allocate descriptor set");
 
 	set_impl.device                  = impl.device;
@@ -139,7 +139,7 @@ obj<DescriptorSet> DescriptorPool::allocate(obj<DescriptorSetLayout> layout) {
 	set_impl.variableDescriptorCount = 0;
 
 	hash_t seed = 0;
-	hash_combine(seed, static_cast<VkDescriptorSet>(set_impl.descriptorSet));
+	hash_combine(seed, static_cast<VkDescriptorSet>(set_impl.vkDescriptorSet));
 
 	impl.allocatedSets.insert({ seed, obj });
 
@@ -167,12 +167,12 @@ obj<DescriptorSet> DescriptorPool::allocate(obj<DescriptorSetLayout> layout, uin
 	count_info.pDescriptorCounts  = &variable_descriptor_count;
 
 	vk::DescriptorSetAllocateInfo alloc_info;
-	alloc_info.descriptorPool     = impl.descriptorPool;
+	alloc_info.descriptorPool     = impl.vkDescriptorPool;
 	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts        = &layout_impl.descriptorSetLayout;
+	alloc_info.pSetLayouts        = &layout_impl.vkDescriptorSetLayout;
 	alloc_info.pNext              = &count_info;
 
-	if (vk_device.allocateDescriptorSets(&alloc_info, &set_impl.descriptorSet) != vk::Result::eSuccess)
+	if (vk_device.allocateDescriptorSets(&alloc_info, &set_impl.vkDescriptorSet) != vk::Result::eSuccess)
 		throw Exception("failed to allocate descriptor set");
 
 	set_impl.device                  = impl.device;
@@ -182,7 +182,7 @@ obj<DescriptorSet> DescriptorPool::allocate(obj<DescriptorSetLayout> layout, uin
 	set_impl.variableDescriptorCount = variable_descriptor_count;
 
 	hash_t seed = 0;
-	hash_combine(seed, static_cast<VkDescriptorSet>(set_impl.descriptorSet));
+	hash_combine(seed, static_cast<VkDescriptorSet>(set_impl.vkDescriptorSet));
 
 	impl.allocatedSets.insert({ seed, obj });
 
@@ -197,7 +197,7 @@ void DescriptorPool::reset()
 	invalidate_all_descriptor_sets(impl);
 	impl.poolMap.clear();
 
-	vk_device.resetDescriptorPool(impl.descriptorPool);
+	vk_device.resetDescriptorPool(impl.vkDescriptorPool);
 }
 
 VERA_NAMESPACE_END

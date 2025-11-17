@@ -28,7 +28,7 @@ static bool wait_semaphores(
 	static_vector<vk::Semaphore, 128> vk_semaphores;
 
 	for (auto semaphore : semaphores)
-		vk_semaphores.push_back(CoreObject::getImpl(semaphore).semaphore);
+		vk_semaphores.push_back(CoreObject::getImpl(semaphore).vkSemaphore);
 
 	vk::SemaphoreWaitInfo wait_info;
 	wait_info.flags          = wait_all ? vk::SemaphoreWaitFlagBits{} : vk::SemaphoreWaitFlagBits::eAny;
@@ -56,7 +56,7 @@ static bool wait_timeline_semaphores(
 	static_vector<uint64_t, 128> wait_values;
 
 	for (auto semaphore : semaphores)
-		vk_semaphores.push_back(CoreObject::getImpl(semaphore).semaphore);
+		vk_semaphores.push_back(CoreObject::getImpl(semaphore).vkSemaphore);
 
 	wait_values.resize(semaphores.size(), value);
 
@@ -78,12 +78,12 @@ static bool wait_timeline_semaphores(
 
 const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(semaphore).semaphore;
+	return CoreObject::getImpl(semaphore).vkSemaphore;
 }
 
 vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(semaphore).semaphore;
+	return CoreObject::getImpl(semaphore).vkSemaphore;
 }
 
 bool Semaphore::waitAll(std::span<obj<Semaphore>> semaphores, uint64_t timeout)
@@ -116,8 +116,8 @@ obj<Semaphore> Semaphore::create(obj<Device> device)
 	auto& impl      = getImpl(obj);
 	auto  vk_device = get_vk_device(device);
 
-	impl.device        = std::move(device);
-	impl.semaphore     = vk_device.createSemaphore({});
+	impl.device      = std::move(device);
+	impl.vkSemaphore = vk_device.createSemaphore({});
 
 	return obj;
 }
@@ -127,7 +127,7 @@ Semaphore::~Semaphore()
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	vk_device.destroy(impl.semaphore);
+	vk_device.destroy(impl.vkSemaphore);
 
 	destroyObjectImpl(this);
 }
@@ -144,7 +144,7 @@ bool Semaphore::wait(uint64_t timeout) const
 
 	vk::SemaphoreWaitInfo wait_info;
 	wait_info.semaphoreCount = 1;
-	wait_info.pSemaphores    = &impl.semaphore;
+	wait_info.pSemaphores    = &impl.vkSemaphore;
 
 	auto result = vk_device.waitSemaphores(wait_info, timeout);
 
@@ -193,8 +193,8 @@ obj<TimelineSemaphore> TimelineSemaphore::create(obj<Device> device, uint64_t in
 	vk::SemaphoreCreateInfo semaphore_info;
 	semaphore_info.pNext = &semaphore_type_info;
 
-	impl.device        = std::move(device);
-	impl.semaphore     = vk_device.createSemaphore(semaphore_info);
+	impl.device      = std::move(device);
+	impl.vkSemaphore = vk_device.createSemaphore(semaphore_info);
 	
 	return obj;
 }
@@ -203,7 +203,7 @@ TimelineSemaphore::~TimelineSemaphore()
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
-	vk_device.destroy(impl.semaphore);
+	vk_device.destroy(impl.vkSemaphore);
 	destroyObjectImpl(this);
 }
 
@@ -214,7 +214,7 @@ bool TimelineSemaphore::wait(uint64_t value, uint64_t timeout) const
 
 	vk::SemaphoreWaitInfo wait_info;
 	wait_info.semaphoreCount = 1;
-	wait_info.pSemaphores    = &impl.semaphore;
+	wait_info.pSemaphores    = &impl.vkSemaphore;
 	wait_info.pValues        = &value;
 
 	auto result = vk_device.waitSemaphores(wait_info, timeout);
@@ -233,7 +233,7 @@ void TimelineSemaphore::signal(uint64_t value)
 	auto  vk_device = get_vk_device(impl.device);
 
 	vk::SemaphoreSignalInfo signal_info;
-	signal_info.semaphore = impl.semaphore;
+	signal_info.semaphore = impl.vkSemaphore;
 	signal_info.value     = value;
 
 	vk_device.signalSemaphore(signal_info);
@@ -244,7 +244,7 @@ uint64_t TimelineSemaphore::value() const
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	return vk_device.getSemaphoreCounterValue(impl.semaphore);
+	return vk_device.getSemaphoreCounterValue(impl.vkSemaphore);
 }
 
 VERA_NAMESPACE_END

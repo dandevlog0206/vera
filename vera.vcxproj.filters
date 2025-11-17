@@ -498,16 +498,7 @@
     <ClInclude Include="include\vera\util\flat_hash_map_view.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\spirv\reflection_desc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\vera\util\bool32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\vera\core\shader_layout.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\impl\shader_layout_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\renderdoc.h">
@@ -578,9 +569,6 @@
     <ClCompile Include="source\colormap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core_object\texture_view.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\graphics\image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -603,9 +591,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\graphics\transform3d.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\core_object\buffer_view.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\util\arcball.cpp">
@@ -669,12 +654,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\shader_reflection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\spirv\reflection_desc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\core_object\shader_layout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

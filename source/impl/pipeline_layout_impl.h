@@ -12,7 +12,7 @@ public:
 	obj<Device>                           device               = {};
 	obj<ShaderReflection>                 shaderReflection     = {};
 
-	vk::PipelineLayout                    pipelineLayout       = {};
+	vk::PipelineLayout                    vkPipelineLayout     = {};
 
 	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts = {};
 	std::vector<PushConstantRange>        pushConstantRanges   = {};

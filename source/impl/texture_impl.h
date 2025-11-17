@@ -15,7 +15,7 @@ public:
 	obj<TextureView>     textureView   = {};
 	ref<FrameBuffer>     frameBuffer   = {};
 
-	vk::Image            image         = {};
+	vk::Image            vkImage       = {};
 
 	Format               textureFormat = {};
 	TextureUsageFlags    textureUsage  = {};
@@ -33,7 +33,7 @@ public:
 	obj<Device>        device         = {};
 	obj<Texture>       texture        = {};
 
-	vk::ImageView      imageView      = {};
+	vk::ImageView      vkImageView    = {};
 
 	uint32_t           width          = {};
 	uint32_t           height         = {};

@@ -25,7 +25,7 @@ class DeviceMemoryImpl
 public:
 	obj<Device>                     device        = {};
 
-	vk::DeviceMemory                memory        = {};
+	vk::DeviceMemory                vkMemory        = {};
 
 	MemoryPropertyFlags             propertyFlags = {};
 	std::vector<MemoryResourceBind> resourceBind  = {};

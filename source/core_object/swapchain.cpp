@@ -88,7 +88,7 @@ static void set_framebuffer_color_image(ref<FrameBuffer> framebuffer, vk::Image 
 	auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
 	auto& texture_impl     = CoreObject::getImpl(framebuffer_impl.colorAttachment);
 
-	texture_impl.image = vk_image;
+	texture_impl.vkImage = vk_image;
 }
 
 static void prepare_framebuffer(DeviceImpl& device_impl, SwapchainImpl& impl)
@@ -96,8 +96,8 @@ static void prepare_framebuffer(DeviceImpl& device_impl, SwapchainImpl& impl)
 	uint32_t  swapchain_image_count = impl.imageCount;
 	vk::Image swapchain_images[MAX_SWAPCHAIN_IMAGE_COUNT];
 
-	auto result = device_impl.device.getSwapchainImagesKHR(
-		impl.swapchain, &swapchain_image_count, swapchain_images);
+	auto result = device_impl.vkDevice.getSwapchainImagesKHR(
+		impl.vkSwapchain, &swapchain_image_count, swapchain_images);
 	
 	VERA_ASSERT(result == vk::Result::eSuccess && swapchain_image_count < MAX_SWAPCHAIN_IMAGE_COUNT);
 
@@ -111,7 +111,7 @@ static void prepare_framebuffer(DeviceImpl& device_impl, SwapchainImpl& impl)
 		auto& texture_impl     = CoreObject::getImpl(framebuffer_impl.colorAttachment);
 
 		texture_impl.textureView = {};
-		texture_impl.image       = swapchain_images[i];
+		texture_impl.vkImage     = swapchain_images[i];
 		texture_impl.width       = impl.width;
 		texture_impl.height      = impl.height;
 
@@ -129,12 +129,12 @@ static void prepare_framebuffer(DeviceImpl& device_impl, SwapchainImpl& impl)
 		auto& framebuffer_impl = CoreObject::getImpl(framebuffer);
 		auto& texture_impl     = CoreObject::getImpl(texture);
 
-		texture_impl.frameBuffer = framebuffer;
-		texture_impl.image       = swapchain_images[i];
-		texture_impl.textureUsage  = SWAPCHAIN_IMAGE_USAGE | TextureUsageFlagBits::FrameBuffer;
-		texture_impl.width       = impl.width;
-		texture_impl.height      = impl.height;
-		texture_impl.depth       = 1;
+		texture_impl.frameBuffer  = framebuffer;
+		texture_impl.vkImage      = swapchain_images[i];
+		texture_impl.textureUsage = SWAPCHAIN_IMAGE_USAGE | TextureUsageFlagBits::FrameBuffer;
+		texture_impl.width        = impl.width;
+		texture_impl.height       = impl.height;
+		texture_impl.depth        = 1;
 
 		// create image view
 		texture->getTextureView();
@@ -151,23 +151,23 @@ static void prepare_framebuffer(DeviceImpl& device_impl, SwapchainImpl& impl)
 
 static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 {
-	auto old_swapchain = impl.swapchain;
-	auto capabilities  = device_impl.physicalDevice.getSurfaceCapabilitiesKHR(impl.surface);
+	auto old_swapchain = impl.vkSwapchain;
+	auto capabilities  = device_impl.vkPhysicalDevice.getSurfaceCapabilitiesKHR(impl.vkSurface);
 
 	if (capabilities.maxImageCount == 0 || capabilities.maxImageCount < impl.imageCount)
 		throw Exception("too many swapchain image count");
-	if (!check_swapchain_present_mode(device_impl.physicalDevice, impl.surface, impl.presentMode))
+	if (!check_swapchain_present_mode(device_impl.vkPhysicalDevice, impl.vkSurface, impl.presentMode))
 		throw Exception("unsupported present mode");
 
 	impl.width  = capabilities.currentExtent.width;
 	impl.height = capabilities.currentExtent.height;
 
-	device_impl.device.waitIdle();
+	device_impl.vkDevice.waitIdle();
 
 	prepare_swapchain_sync(impl);
 
 	vk::SwapchainCreateInfoKHR swapchain_info;
-	swapchain_info.surface          = impl.surface;
+	swapchain_info.surface          = impl.vkSurface;
 	swapchain_info.minImageCount    = impl.imageCount;
 	swapchain_info.imageFormat      = to_vk_format(impl.imageFormat);
 	swapchain_info.imageColorSpace  = SWAPCHAIN_COLOR_SPACE;
@@ -181,13 +181,13 @@ static void recreate_swapchain(DeviceImpl& device_impl, SwapchainImpl& impl)
 	swapchain_info.clipped          = false;
 	swapchain_info.oldSwapchain     = old_swapchain;
 
-	impl.swapchain          = device_impl.device.createSwapchainKHR(swapchain_info);
+	impl.vkSwapchain        = device_impl.vkDevice.createSwapchainKHR(swapchain_info);
 	impl.acquiredImageIndex = -1;
 	impl.syncIndex          = 0;
 
 	prepare_framebuffer(device_impl, impl);
 	
-	device_impl.device.destroy(old_swapchain);
+	device_impl.vkDevice.destroy(old_swapchain);
 }
 
 obj<Swapchain> Swapchain::create(obj<Device> device, os::Window& window, const SwapchainCreateInfo& info)
@@ -207,18 +207,18 @@ obj<Swapchain> Swapchain::create(obj<Device> device, os::Window& window, const S
 	if (!glfwVulkanSupported())
 		throw Exception("Vulkan is not supported by glfw");
 	if (!glfwGetPhysicalDevicePresentationSupport(
-	 	get_vk_instance(device_impl.context), device_impl.physicalDevice, device_impl.graphicsQueueFamilyIndex))
+	 	get_vk_instance(device_impl.context), device_impl.vkPhysicalDevice, device_impl.graphicsQueueFamilyIndex))
 	 	throw Exception("Presentation is not supported by current physical device");
 	if (glfwCreateWindowSurface(vk_instance, window_impl.window, nullptr, &surface) != VK_SUCCESS)
 		throw Exception(get_glfw_error());
-	if (!check_swapchain_format(device_impl.physicalDevice, surface, format))
+	if (!check_swapchain_format(device_impl.vkPhysicalDevice, surface, format))
 		throw Exception("unsupported swapchain format");
 
 	window_impl.swapchain = obj;
 
 	impl.window             = &window;
 	impl.device             = std::move(device);
-	impl.surface            = surface;
+	impl.vkSurface          = surface;
 	impl.imageFormat        = format;
 	impl.presentMode        = info.presentMode;
 	impl.imageCount         = info.imageCount;
@@ -240,7 +240,7 @@ Swapchain::~Swapchain()
 	for (auto& framebuffer : impl.framebuffers)
 		set_framebuffer_color_image(framebuffer, nullptr);
 
-	device_impl.device.destroy(impl.swapchain);
+	device_impl.vkDevice.destroy(impl.vkSwapchain);
 
 	destroyObjectImpl(this);
 }
@@ -263,8 +263,8 @@ ref<FrameBuffer> Swapchain::acquireNextImage()
 	}
 
 	while (trial++ < 10) {
-		auto result = device_impl.device.acquireNextImageKHR(
-			impl.swapchain,
+		auto result = device_impl.vkDevice.acquireNextImageKHR(
+			impl.vkSwapchain,
 			UINT64_MAX,
 			get_vk_semaphore(sync.waitSemaphore));
 
@@ -311,7 +311,7 @@ void Swapchain::present()
 	auto render_complete_semaphore = cmd_sync.getCompleteSemaphore();
 
 	if (!render_complete_semaphore) {
-		device_impl.device.waitIdle();
+		device_impl.vkDevice.waitIdle();
 		throw Exception("cannot find frame for current swapchain image");
 	}
 
@@ -319,10 +319,10 @@ void Swapchain::present()
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores    = &get_vk_semaphore(render_complete_semaphore);
 	present_info.swapchainCount     = 1;
-	present_info.pSwapchains        = &impl.swapchain;
+	present_info.pSwapchains        = &impl.vkSwapchain;
 	present_info.pImageIndices      = reinterpret_cast<uint32_t*>(&impl.acquiredImageIndex);
 
-	auto result = device_impl.graphicsQueue.presentKHR(&present_info);
+	auto result = device_impl.vkGraphicsQueue.presentKHR(&present_info);
 
 	impl.syncIndex = (impl.syncIndex + 1) % impl.imageCount;
 }

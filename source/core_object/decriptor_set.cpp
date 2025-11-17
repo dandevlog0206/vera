@@ -79,12 +79,12 @@ static void store_binding_state(DescriptorSetImpl& impl, uint32_t binding, obj<O
 
 const vk::DescriptorSet& get_vk_descriptor_set(const_ref<DescriptorSet> descriptor_set) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(descriptor_set).descriptorSet;
+	return CoreObject::getImpl(descriptor_set).vkDescriptorSet;
 }
 
 vk::DescriptorSet& get_vk_descriptor_set(ref<DescriptorSet> descriptor_set) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(descriptor_set).descriptorSet;
+	return CoreObject::getImpl(descriptor_set).vkDescriptorSet;
 }
 
 DescriptorSet::~DescriptorSet()
@@ -93,13 +93,13 @@ DescriptorSet::~DescriptorSet()
 	auto& pool_impl = getImpl(impl.descriptorPool);
 
 	hash_t seed = 0;
-	hash_combine(seed, static_cast<VkDescriptorSet>(impl.descriptorSet));
+	hash_combine(seed, static_cast<VkDescriptorSet>(impl.vkDescriptorSet));
 
 	pool_impl.allocatedSets.erase(seed);
 
 	if (pool_impl.flags.has(DescriptorPoolCreateFlagBits::FreeDescriptorSet)) {
 		auto vk_device = get_vk_device(impl.device);
-		vk_device.freeDescriptorSets(pool_impl.descriptorPool, 1, &impl.descriptorSet);
+		vk_device.freeDescriptorSets(pool_impl.descriptorPool, 1, &impl.vkDescriptorSet);
 	}
 
 	destroyObjectImpl(this);
@@ -119,7 +119,7 @@ void DescriptorSet::write(uint32_t binding, const DescriptorSamplerInfo& info, u
 	store_binding_state(impl, binding, info.sampler, array_element);
 	
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = vk::DescriptorType::eSampler;
@@ -150,7 +150,7 @@ void DescriptorSet::write(uint32_t binding, array_view<DescriptorSamplerInfo> in
 	image_infos.reserve(infos.size());
 
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = vk::DescriptorType::eSampler;
@@ -186,7 +186,7 @@ void DescriptorSet::write(
 	store_binding_state(impl, binding, info.textureView, array_element);
 	
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = vk::DescriptorType::eCombinedImageSampler;
@@ -220,7 +220,7 @@ void DescriptorSet::write(
 	image_infos.reserve(infos.size());
 
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = vk::DescriptorType::eCombinedImageSampler;
@@ -259,7 +259,7 @@ void DescriptorSet::write(
 	store_binding_state(impl, binding, info.textureView, array_element);
 	
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = to_vk_descriptor_type(desc_type);
@@ -295,7 +295,7 @@ void DescriptorSet::write(
 	image_infos.reserve(infos.size());
 
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = to_vk_descriptor_type(desc_type);
@@ -328,7 +328,7 @@ void DescriptorSet::write(
 	store_binding_state(impl, binding, info.bufferView, array_element);
 	
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet           = impl.descriptorSet;
+	write_info.dstSet           = impl.vkDescriptorSet;
 	write_info.dstBinding       = binding;
 	write_info.dstArrayElement  = array_element;
 	write_info.descriptorType   = to_vk_descriptor_type(desc_type);
@@ -363,7 +363,7 @@ void DescriptorSet::write(
 	buffer_views.reserve(infos.size());
 
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet           = impl.descriptorSet;
+	write_info.dstSet           = impl.vkDescriptorSet;
 	write_info.dstBinding       = binding;
 	write_info.dstArrayElement  = array_element;
 	write_info.descriptorType   = to_vk_descriptor_type(desc_type);
@@ -401,7 +401,7 @@ void DescriptorSet::write(
 	store_binding_state(impl, binding, info.buffer, array_element);
 	
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = to_vk_descriptor_type(desc_type);
@@ -438,7 +438,7 @@ void DescriptorSet::write(
 	buffer_infos.reserve(infos.size());
 
 	vk::WriteDescriptorSet write_info;
-	write_info.dstSet          = impl.descriptorSet;
+	write_info.dstSet          = impl.vkDescriptorSet;
 	write_info.dstBinding      = binding;
 	write_info.dstArrayElement = array_element;
 	write_info.descriptorType  = to_vk_descriptor_type(desc_type);
@@ -634,7 +634,7 @@ obj<DescriptorSetLayout> DescriptorSet::getDescriptorSetLayout() VERA_NOEXCEPT
 
 bool DescriptorSet::isValid() const VERA_NOEXCEPT
 {
-	return static_cast<bool>(getImpl(this).descriptorSet);
+	return static_cast<bool>(getImpl(this).vkDescriptorSet);
 }
 
 VERA_NAMESPACE_END

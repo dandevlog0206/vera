@@ -10,7 +10,7 @@ public:
 	obj<Device>       device    = {};
 	obj<DeviceMemory> memory    = {};
 
-	vk::Buffer        buffer    = {};
+	vk::Buffer        vkBuffer  = {};
 
 	size_t            size      = {};
 	BufferUsageFlags  usage     = {};
@@ -19,14 +19,14 @@ public:
 
 struct BufferViewImpl
 {
-	obj<Device>    device     = {};
-	obj<Buffer>    buffer     = {};
+	obj<Device>    device       = {};
+	obj<Buffer>    buffer       = {};
 
-	vk::BufferView bufferView = {};
+	vk::BufferView vkBufferView = {};
 
-	Format         format     = {};
-	size_t         offset     = {};
-	size_t         size       = {};
+	Format         format       = {};
+	size_t         offset       = {};
+	size_t         size         = {};
 };
 
 VERA_NAMESPACE_END

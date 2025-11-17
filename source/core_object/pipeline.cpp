@@ -129,7 +129,7 @@ static void add_shader_stage(
 	auto* root_node   = refl_impl.requestMinimalReflectionRootNode();
 
 	shader_info.stage               = to_vk_shader_stage_flag_bits(stage);
-	shader_info.module              = shader_impl.shaderModule;
+	shader_info.module              = shader_impl.vkShaderModule;
 	shader_info.pName               = root_node->getEntryPointName(stage);
 	shader_info.pSpecializationInfo = nullptr;
 
@@ -459,12 +459,12 @@ static hash_t hash_pipeline_info(const ComputePipelineCreateInfo& info)
 
 const vk::Pipeline& get_vk_pipeline(const_ref<Pipeline> pipeline) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(pipeline).pipeline;
+	return CoreObject::getImpl(pipeline).vkPipeline;
 }
 
 vk::Pipeline& get_vk_pipeline(ref<Pipeline> pipeline) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(pipeline).pipeline;
+	return CoreObject::getImpl(pipeline).vkPipeline;
 }
 
 obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateInfo& info)
@@ -477,8 +477,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	auto&  device_impl = getImpl(device);
 	hash_t hash_value  = hash_pipeline_info(info);
 
-	if (auto it = device_impl.pipelineCacheMap.find(hash_value);
-		it != device_impl.pipelineCacheMap.end()) {
+	if (auto it = device_impl.pipelineCache.find(hash_value);
+		it != device_impl.pipelineCache.end()) {
 		return obj<Pipeline>(it->second.get());
 	}
 
@@ -630,14 +630,14 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	pipeline_info.basePipelineIndex   = 0;
 	pipeline_info.pNext               = &rendering_info;
 
-	auto result = device_impl.device.createGraphicsPipeline(device_impl.pipelineCache, pipeline_info);
+	auto result = device_impl.vkDevice.createGraphicsPipeline(device_impl.vkPipelineCache, pipeline_info);
 
 	if (result.result != vk::Result::eSuccess)
 		throw Exception("failed to create graphics pipeline");
 
 	impl.device            = std::move(device);
 	impl.pipelineLayout    = std::move(pipeline_layout);
-	impl.pipeline          = result.value;
+	impl.vkPipeline        = result.value;
 	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
 	impl.hashValue         = hash_value;
 
@@ -656,8 +656,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_pipeline_info(info);
 
-	if (auto it = device_impl.pipelineCacheMap.find(hash_value);
-		it != device_impl.pipelineCacheMap.end()) {
+	if (auto it = device_impl.pipelineCache.find(hash_value);
+		it != device_impl.pipelineCache.end()) {
 		return obj<Pipeline>(it->second.get());
 	}
 
@@ -747,14 +747,14 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	pipeline_info.basePipelineIndex   = 0;
 	pipeline_info.pNext               = &rendering_info;
 
-	auto result = device_impl.device.createGraphicsPipeline(device_impl.pipelineCache, pipeline_info);
+	auto result = device_impl.vkDevice.createGraphicsPipeline(device_impl.vkPipelineCache, pipeline_info);
 
 	if (result.result != vk::Result::eSuccess)
 		throw Exception("failed to create graphics pipeline");
 
 	impl.device            = std::move(device);
 	impl.pipelineLayout    = std::move(pipeline_layout);
-	impl.pipeline          = result.value;
+	impl.vkPipeline        = result.value;
 	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
 	impl.hashValue         = hash_value;
 
@@ -771,8 +771,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_pipeline_info(info);
 
-	if (auto it = device_impl.pipelineCacheMap.find(hash_value);
-		it != device_impl.pipelineCacheMap.end()) {
+	if (auto it = device_impl.pipelineCache.find(hash_value);
+		it != device_impl.pipelineCache.end()) {
 		return obj<Pipeline>(it->second.get());
 	}
 
@@ -788,18 +788,18 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 
 	vk::ComputePipelineCreateInfo pipeline_info;
 	pipeline_info.stage.stage  = vk::ShaderStageFlagBits::eCompute;
-	pipeline_info.stage.module = shader_impl.shaderModule;
+	pipeline_info.stage.module = shader_impl.vkShaderModule;
 	pipeline_info.stage.pName  = "main"; //root_node->getEntryPointName(ShaderStageFlagBits::Compute);
 	pipeline_info.layout       = get_vk_pipeline_layout(pipeline_layout);
 
-	auto result = device_impl.device.createComputePipeline(device_impl.pipelineCache, pipeline_info);
+	auto result = device_impl.vkDevice.createComputePipeline(device_impl.vkPipelineCache, pipeline_info);
 
 	if (result.result != vk::Result::eSuccess)
 		throw Exception("failed to create compute pipeline");
 
 	impl.device            = std::move(device);
 	impl.pipelineLayout    = std::move(pipeline_layout);
-	impl.pipeline          = result.value;
+	impl.vkPipeline        = result.value;
 	impl.shaders           = { std::make_pair(ShaderStageFlagBits::Compute, info.computeShader) };
 	impl.pipelineBindPoint = PipelineBindPoint::Compute;
 	impl.hashValue         = hash_value;
@@ -815,7 +815,7 @@ Pipeline::~Pipeline()
 	auto& device_impl = getImpl(impl.device);
 
 	device_impl.unregisterPipeline(impl.hashValue);
-	device_impl.device.destroy(impl.pipeline);
+	device_impl.vkDevice.destroy(impl.vkPipeline);
 
 	destroyObjectImpl(this);
 }

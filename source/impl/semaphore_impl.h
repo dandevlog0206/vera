@@ -7,17 +7,17 @@ VERA_NAMESPACE_BEGIN
 class SemaphoreImpl
 {
 public:
-	obj<Device>   device        = {};
+	obj<Device>   device      = {};
 
-	vk::Semaphore semaphore     = {};
+	vk::Semaphore vkSemaphore = {};
 };
 
 class TimelineSemaphoreImpl
 {
 public:
-	obj<Device>   device        = {};
+	obj<Device>   device      = {};
 
-	vk::Semaphore semaphore     = {};
+	vk::Semaphore vkSemaphore = {};
 };
 
 VERA_NAMESPACE_END

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "device.h"
-#include "shader_layout.h"
 #include <string_view>
 
 VERA_NAMESPACE_BEGIN
@@ -18,7 +17,6 @@ public:
 	~Shader();
 
 	VERA_NODISCARD obj<Device> getDevice() const VERA_NOEXCEPT;
-	VERA_NODISCARD obj<ShaderLayout> getShaderLayout() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD size_t hash() const;
 };

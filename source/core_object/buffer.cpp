@@ -1,6 +1,7 @@
 #include "../../include/vera/core/buffer.h"
-#include "../impl/buffer_impl.h"
+#include "../../include/vera/core/buffer_view.h"
 #include "../impl/device_impl.h"
+#include "../impl/buffer_impl.h"
 #include "../impl/device_memory_impl.h"
 
 #include "../../include/vera/core/device.h"
@@ -39,14 +40,14 @@ static void allocate_device_memory(
 	MemoryPropertyFlags flags
 ) {
 	auto& device_impl = CoreObject::getImpl(device);
-	auto  req         = device_impl.device.getBufferMemoryRequirements(buffer);
+	auto  req         = device_impl.vkDevice.getBufferMemoryRequirements(buffer);
 
 	vk::MemoryAllocateInfo info;
 	info.allocationSize  = req.size;
 	info.memoryTypeIndex = device_impl.findMemoryTypeIndex(flags, req.memoryTypeBits);
 
 	impl.device        = std::move(device);
-	impl.memory        = device_impl.device.allocateMemory(info);
+	impl.vkMemory      = device_impl.vkDevice.allocateMemory(info);
 	impl.propertyFlags = flags;
 	impl.allocated     = info.allocationSize;
 	impl.typeIndex     = info.memoryTypeIndex;
@@ -55,12 +56,12 @@ static void allocate_device_memory(
 
 const vk::Buffer& get_vk_buffer(const_ref<Buffer> buffer) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(buffer).buffer;
+	return CoreObject::getImpl(buffer).vkBuffer;
 }
 
 vk::Buffer& get_vk_buffer(ref<Buffer> buffer) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(buffer).buffer;
+	return CoreObject::getImpl(buffer).vkBuffer;
 }
 
 obj<Buffer> Buffer::createVertex(obj<Device> device, size_t size)
@@ -200,13 +201,13 @@ obj<Buffer> Buffer::create(obj<Device> device, const BufferCreateInfo& info)
 	buffer_info.usage       = to_vk_buffer_usage_flags(info.usage);
 	buffer_info.sharingMode = vk::SharingMode::eExclusive;
 
-	impl.device = device;
-	impl.memory = std::move(memory_obj);
-	impl.buffer = device_impl.device.createBuffer(buffer_info);
-	impl.size   = info.size;
-	impl.usage  = info.usage;
+	impl.device   = device;
+	impl.memory   = std::move(memory_obj);
+	impl.vkBuffer = device_impl.vkDevice.createBuffer(buffer_info);
+	impl.size     = info.size;
+	impl.usage    = info.usage;
 
-	allocate_device_memory(memory_impl, std::move(device), impl.buffer, info.propetyFlags);
+	allocate_device_memory(memory_impl, std::move(device), impl.vkBuffer, info.propetyFlags);
 
 	auto& binding = memory_impl.resourceBind.emplace_back();
 	binding.resourceType = MemoryResourceType::Buffer;
@@ -214,7 +215,7 @@ obj<Buffer> Buffer::create(obj<Device> device, const BufferCreateInfo& info)
 	binding.offset       = 0;
 	binding.resourcePtr  = obj.get();
 
-	device_impl.device.bindBufferMemory(impl.buffer, memory_impl.memory, 0);
+	device_impl.vkDevice.bindBufferMemory(impl.vkBuffer, memory_impl.vkMemory, 0);
 
 	return obj;
 }
@@ -231,11 +232,11 @@ obj<Buffer> Buffer::create(obj<DeviceMemory> memory, size_t offset, const Buffer
 	buffer_info.usage       = to_vk_buffer_usage_flags(info.usage);
 	buffer_info.sharingMode = vk::SharingMode::eExclusive;
 
-	impl.device = memory_impl.device;
-	impl.memory = std::move(memory);
-	impl.buffer = device_impl.device.createBuffer(buffer_info);
-	impl.size   = info.size;
-	impl.usage  = info.usage;
+	impl.device   = memory_impl.device;
+	impl.memory   = std::move(memory);
+	impl.vkBuffer = device_impl.vkDevice.createBuffer(buffer_info);
+	impl.size     = info.size;
+	impl.usage    = info.usage;
 
 	auto& binding = memory_impl.resourceBind.emplace_back();
 	binding.resourceType = MemoryResourceType::Buffer;
@@ -243,7 +244,7 @@ obj<Buffer> Buffer::create(obj<DeviceMemory> memory, size_t offset, const Buffer
 	binding.offset       = offset;
 	binding.resourcePtr  = obj.get();
 
-	device_impl.device.bindBufferMemory(impl.buffer, memory_impl.memory, offset);
+	device_impl.vkDevice.bindBufferMemory(impl.vkBuffer, memory_impl.vkMemory, offset);
 
 	return obj;
 }
@@ -259,7 +260,7 @@ Buffer::~Buffer()
 	std::swap(memory_impl.resourceBind[idx], memory_impl.resourceBind.back());
 	memory_impl.resourceBind.pop_back();
 	
-	vk_device.destroy(impl.buffer);
+	vk_device.destroy(impl.vkBuffer);
 
 	destroyObjectImpl(this);
 }
@@ -280,11 +281,11 @@ void Buffer::resize(size_t new_size)
 	buffer_info.usage       = to_vk_buffer_usage_flags(impl.usage);
 	buffer_info.sharingMode = vk::SharingMode::eExclusive;
 
-	vk_device.destroy(impl.buffer);
-	impl.buffer = vk_device.createBuffer(buffer_info);
-	impl.size   = new_size;
+	vk_device.destroy(impl.vkBuffer);
+	impl.vkBuffer = vk_device.createBuffer(buffer_info);
+	impl.size     = new_size;
 
-	auto req = vk_device.getBufferMemoryRequirements(impl.buffer);
+	auto req = vk_device.getBufferMemoryRequirements(impl.vkBuffer);
 
 	if (memory_impl.allocated < binding.offset + new_size)
 		impl.memory->resize(binding.offset + req.size);
@@ -305,6 +306,74 @@ BufferUsageFlags Buffer::getUsageFlags() const
 size_t Buffer::size() const
 {
 	return getImpl(this).size;
+}
+
+const vk::BufferView& get_vk_buffer_view(const_ref<BufferView> buffer_view) VERA_NOEXCEPT
+{
+	return CoreObject::getImpl(buffer_view).vkBufferView;
+}
+
+vk::BufferView& get_vk_buffer_view(ref<BufferView> buffer_view) VERA_NOEXCEPT
+{
+	return CoreObject::getImpl(buffer_view).vkBufferView;
+}
+
+obj<BufferView> BufferView::create(obj<Buffer> buffer, const BufferViewCreateInfo& info)
+{
+	auto obj          = createNewCoreObject<BufferView>();
+	auto& impl        = getImpl(obj);
+	auto& buffer_impl = getImpl(buffer);
+	auto  vk_device   = get_vk_device(buffer_impl.device);
+
+	vk::BufferViewCreateInfo view_info;
+	view_info.buffer = buffer_impl.vkBuffer;
+	view_info.format = to_vk_format(info.format);
+	view_info.offset = info.offset;
+	view_info.range  = info.size;
+
+	impl.device       = buffer_impl.device;
+	impl.buffer       = std::move(buffer);
+	impl.vkBufferView = vk_device.createBufferView(view_info);
+	impl.format       = info.format;
+	impl.offset       = info.offset;
+	impl.size         = info.size;
+
+	return obj;
+}
+
+BufferView::~BufferView()
+{
+	auto& impl      = getImpl(this);
+	auto  vk_device = get_vk_device(impl.device);
+
+	vk_device.destroy(impl.vkBufferView);
+
+	destroyObjectImpl(this);
+}
+
+obj<Device> BufferView::getDevice()
+{
+	return getImpl(this).device;
+}
+
+obj<Buffer> BufferView::getBuffer()
+{
+	return getImpl(this).buffer;
+}
+
+Format BufferView::getFormat() const
+{
+	return getImpl(this).format;
+}
+
+size_t BufferView::size()
+{
+	return getImpl(this).size;
+}
+
+size_t BufferView::offset()
+{
+	return getImpl(this).offset;
 }
 
 VERA_NAMESPACE_END

@@ -18,8 +18,8 @@ public:
 	os::Window*                   window             = {};
 	obj<Device>                   device             = {};
 
-	vk::SwapchainKHR              swapchain          = {};
-	vk::SurfaceKHR                surface            = {};
+	vk::SwapchainKHR              vkSwapchain        = {};
+	vk::SurfaceKHR                vkSurface          = {};
 
 	std::vector<obj<FrameBuffer>> framebuffers       = {};
 	std::vector<SwapchainSync>    syncs              = {};

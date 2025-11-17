@@ -24,8 +24,8 @@ public:
 	obj<Semaphore>      semaphore             = {};
 	obj<Fence>          fence                 = {};
 
-	vk::CommandPool     commandPool           = {};
-	vk::CommandBuffer   commandBuffer         = {};
+	vk::CommandPool     vkCommandPool         = {};
+	vk::CommandBuffer   vkCommandBuffer       = {};
 
 	uint64_t            submitID              = {};
 	SubmitQueueType     submitQueueType       = {};

@@ -8,7 +8,7 @@ VERA_NAMESPACE_BEGIN
 class ContextImpl
 {
 public:
-	vk::Instance               instance                 = {};
+	vk::Instance               vkInstance               = {};
 
 	std::string                applicationName          = {};
 	Version                    applicationVersion       = {};

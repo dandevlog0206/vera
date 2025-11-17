@@ -12,13 +12,13 @@ public:
 	using DescriptorSetPool    = std::vector<obj<DescriptorSet>>;
 	using DescriptorSetPoolMap = std::unordered_map<hash_t, DescriptorSetPool>;
 
-	obj<Device>               device         = {};
+	obj<Device>               device           = {};
 
-	vk::DescriptorPool        descriptorPool = {};
+	vk::DescriptorPool        vkDescriptorPool = {};
 
-	AllocatedMap              allocatedSets  = {};
-	DescriptorSetPoolMap      poolMap        = {};
-	DescriptorPoolCreateFlags flags          = {};
+	AllocatedMap              allocatedSets    = {};
+	DescriptorSetPoolMap      poolMap          = {};
+	DescriptorPoolCreateFlags flags            = {};
 };
 
 VERA_NAMESPACE_END

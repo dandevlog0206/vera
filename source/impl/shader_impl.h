@@ -11,14 +11,13 @@ class ShaderImpl
 public:
 	using ShaderParseInfoUnique = std::unique_ptr<ShaderParserInfo>;
 
-	obj<Device>                   device           = {};
-	mutable obj<ShaderLayout>     shaderLayout     = {};
-	mutable obj<ShaderReflection> shaderReflection = {};
+	obj<Device>           device           = {};
+	ref<ShaderReflection> shaderReflection = {};
 
-	vk::ShaderModule              shaderModule     = {};
+	vk::ShaderModule      vkShaderModule   = {};
 
-	mutable ShaderParseInfoUnique parserInfo       = {};
-	size_t                        hashValue        = {};
+	std::vector<uint32_t> spirvCode        = {};
+	size_t                hashValue        = {};
 };
 
 VERA_NAMESPACE_END

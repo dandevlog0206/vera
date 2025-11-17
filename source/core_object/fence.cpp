@@ -21,7 +21,7 @@ static bool wait_fences(vk::Device vk_device, std::span<obj<Fence>> fences, bool
 
 	s_fences.reserve(fences.size());
 	for (auto fence : fences)
-		s_fences.push_back(CoreObject::getImpl(fence.get()).fence);
+		s_fences.push_back(CoreObject::getImpl(fence.get()).vkFence);
 
 	auto result = vk_device.waitForFences(s_fences, wait_all, timeout);
 
@@ -35,12 +35,12 @@ static bool wait_fences(vk::Device vk_device, std::span<obj<Fence>> fences, bool
 
 const vk::Fence& get_vk_fence(const_ref<Fence> fence) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(fence).fence;
+	return CoreObject::getImpl(fence).vkFence;
 }
 
 vk::Fence& get_vk_fence(ref<Fence> fence) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(fence).fence;
+	return CoreObject::getImpl(fence).vkFence;
 }
 
 bool Fence::waitAll(std::span<obj<Fence>> fences, uint64_t timeout)
@@ -78,8 +78,8 @@ obj<Fence> Fence::create(obj<Device> device, bool signaled)
 	if (signaled)
 		fence_info.flags = vk::FenceCreateFlagBits::eSignaled;
 
-	impl.device = std::move(device);
-	impl.fence  = vk_device.createFence(fence_info);
+	impl.device  = std::move(device);
+	impl.vkFence = vk_device.createFence(fence_info);
 
 	return obj;
 }
@@ -89,7 +89,7 @@ Fence::~Fence()
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	vk_device.destroy(impl.fence);
+	vk_device.destroy(impl.vkFence);
 
 	destroyObjectImpl(this);
 }
@@ -104,7 +104,7 @@ bool Fence::signaled() const
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	auto result = vk_device.getFenceStatus(impl.fence);
+	auto result = vk_device.getFenceStatus(impl.vkFence);
 
 	if (result == vk::Result::eSuccess)
 		return true;
@@ -119,7 +119,7 @@ void Fence::reset()
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	vk_device.resetFences(impl.fence);
+	vk_device.resetFences(impl.vkFence);
 }
 
 bool Fence::wait(uint64_t timeout) const
@@ -127,7 +127,7 @@ bool Fence::wait(uint64_t timeout) const
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	auto result = vk_device.waitForFences(impl.fence, true, timeout);
+	auto result = vk_device.waitForFences(impl.vkFence, true, timeout);
 	
 	if (result == vk::Result::eSuccess)
 		return true;

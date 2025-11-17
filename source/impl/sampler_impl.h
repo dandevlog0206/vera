@@ -9,7 +9,7 @@ class SamplerImpl
 public:
 	obj<Device>       device    = {};
 
-	vk::Sampler       sampler   = {};
+	vk::Sampler       vkSampler = {};
 
 	size_t            hashValue = {};
 	SamplerCreateInfo info      = {};

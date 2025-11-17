@@ -18,7 +18,6 @@ class Context;
 		
 		// Shader
 		class Shader;
-		class ShaderLayout;
 		class ShaderReflection;
 		class ShaderParameter;
 		
@@ -68,6 +67,8 @@ const vk::Fence& get_vk_fence(const_ref<Fence> fence) VERA_NOEXCEPT;
 vk::Fence& get_vk_fence(ref<Fence> fence) VERA_NOEXCEPT;
 const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore) VERA_NOEXCEPT;
 vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore) VERA_NOEXCEPT;
+const vk::Semaphore& get_vk_semaphore(const_ref<TimelineSemaphore> timeline_semaphore) VERA_NOEXCEPT;
+vk::Semaphore& get_vk_semaphore(ref<TimelineSemaphore> timeline_semaphore) VERA_NOEXCEPT;
 const vk::Sampler& get_vk_sampler(const_ref<Sampler> sampler) VERA_NOEXCEPT;
 vk::Sampler& get_vk_sampler(ref<Sampler> sampler) VERA_NOEXCEPT;
 const vk::DeviceMemory& get_vk_device_memory(const_ref<DeviceMemory> device_memory) VERA_NOEXCEPT;

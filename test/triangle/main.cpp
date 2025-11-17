@@ -29,7 +29,7 @@ public:
 			.presentMode = vr::PresentMode::Immediate
 		});
 
-		m_pass = std::make_unique<vr::GraphicsPass>(m_device, vr::GraphicsPassCreateInfo{
+		m_pass = vr::GraphicsPass::create(m_device, vr::GraphicsPassCreateInfo{
 			.vertexShader   = vr::Shader::create(m_device, "shader/triangle.vert.glsl.spv"),
 			.fragmentShader = vr::Shader::create(m_device, "shader/triangle.frag.glsl.spv"),
 			.vertexCount    = 6
@@ -66,31 +66,30 @@ public:
 
 	void drawFrame()
 	{
-		float time   = m_timer.elapsed();
-		auto& params = m_pass->getShaderParameter();
-		params["pc"]["scale"]     = std::abs(sinf(time) + 2) / 2;
-		params["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
-		params["pc"]["colors"][1] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.71666f, 1.9f) - 1.f)).unorm();
-		params["pc"]["colors"][2] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 1.38333f, 1.9f) - 1.f)).unorm();
+		float time     = m_timer.elapsed();
+		auto  root_var = m_pass->getRootVariable();
+		root_var["pc"]["scale"]     = std::abs(sinf(time) + 2) / 2;
+		root_var["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
+		root_var["pc"]["colors"][1] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.71666f, 1.9f) - 1.f)).unorm();
+		root_var["pc"]["colors"][2] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 1.38333f, 1.9f) - 1.f)).unorm();
 
 		m_pass->execute(m_render_ctx, m_swapchain->acquireNextImage());
-
 
 		m_render_ctx->submit();
 		m_swapchain->present();
 	}
 
 private:
-	vr::obj<vr::Context>              m_context;
-	vr::obj<vr::Device>               m_device;
-	vr::obj<vr::RenderContext>        m_render_ctx;
-	vr::obj<vr::Swapchain>            m_swapchain;
-	std::unique_ptr<vr::GraphicsPass> m_pass;
+	vr::obj<vr::Context>       m_context;
+	vr::obj<vr::Device>        m_device;
+	vr::obj<vr::RenderContext> m_render_ctx;
+	vr::obj<vr::Swapchain>     m_swapchain;
+	vr::obj<vr::GraphicsPass>  m_pass;
 
-	vr::os::Window                    m_window;
-	vr::Timer                         m_timer;
+	vr::os::Window             m_window;
+	vr::Timer                  m_timer;
 
-	bool                              m_exit;
+	bool                       m_exit;
 };
 
 int main()

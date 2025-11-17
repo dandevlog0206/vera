@@ -73,12 +73,12 @@ static void get_device_features(vk::PhysicalDevice physical_device, void* chain)
 
 const vk::Device& get_vk_device(const_ref<Device> device) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(device).device;
+	return CoreObject::getImpl(device).vkDevice;
 }
 
 vk::Device& get_vk_device(ref<Device> device) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(device).device;
+	return CoreObject::getImpl(device).vkDevice;
 }
 
 void DeviceFaultInfo::saveVendorBinaryToFile(std::string_view path) const
@@ -110,7 +110,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	impl.computeQueueFamilyIndex  = -1;
 	impl.pipelineCacheFilePath    = info.pipelineCacheFilePath;
 
-	auto    physical_device  = ctx_impl.instance.enumeratePhysicalDevices()[info.deviceID];
+	auto    physical_device  = ctx_impl.vkInstance.enumeratePhysicalDevices()[info.deviceID];
 	auto    queue_families   = physical_device.getQueueFamilyProperties();
 	int32_t graphics_family  = -1;
 	int32_t compute_family   = -1;
@@ -215,7 +215,7 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 
 	// Get physical device properties
 	vk::PhysicalDeviceProperties2 device_props;
-	device_props.pNext = &impl.descriptorIndexingProperties;
+	device_props.pNext = &impl.vkDescriptorIndexingProperties;
 
 	physical_device.getProperties2(&device_props);
 
@@ -230,15 +230,15 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 	device_info.pEnabledFeatures        = &device_features;
 	device_info.pNext                   = curr_chain;
 
-	impl.physicalDevice         = physical_device;
-	impl.deviceProperties       = physical_device.getProperties();
-	impl.deviceMemoryProperties = physical_device.getMemoryProperties();
-	impl.device                 = physical_device.createDevice(device_info);
-	impl.graphicsQueue          = impl.device.getQueue(graphics_family, 0);
-	impl.computeQueue           = impl.device.getQueue(compute_family, 0);
-	impl.transferQueue          = impl.device.getQueue(transfer_family, 0);
+	impl.vkPhysicalDevice         = physical_device;
+	impl.vkDeviceProperties       = physical_device.getProperties();
+	impl.vkDeviceMemoryProperties = physical_device.getMemoryProperties();
+	impl.vkDevice                 = physical_device.createDevice(device_info);
+	impl.vkGraphicsQueue          = impl.vkDevice.getQueue(graphics_family, 0);
+	impl.vkComputeQueue           = impl.vkDevice.getQueue(compute_family, 0);
+	impl.vkTransferQueue          = impl.vkDevice.getQueue(transfer_family, 0);
+	impl.vkSampleCount            = vk::SampleCountFlagBits::e1;
 
-	impl.sampleCount              = vk::SampleCountFlagBits::e1;
 	impl.colorFormat              = info.colorFormat == Format::Unknown ? Format::RGBA8Unorm : info.colorFormat;
 	impl.depthFormat              = info.depthFormat == Format::Unknown ? Format::D32Float : info.depthFormat;
 	impl.graphicsQueueFamilyIndex = graphics_family;
@@ -265,14 +265,14 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 			}
 		}
 
-		impl.pipelineCache = impl.device.createPipelineCache(cache_info);
+		impl.vkPipelineCache = impl.vkDevice.createPipelineCache(cache_info);
 	}
 
-	for (uint32_t i = 0; i < impl.deviceMemoryProperties.memoryTypeCount; ++i) {
-		uint32_t heap_idx   = impl.deviceMemoryProperties.memoryTypes[i].heapIndex;
-		auto     flags      = impl.deviceMemoryProperties.memoryTypes[i].propertyFlags;
-		size_t   heap_size  = impl.deviceMemoryProperties.memoryHeaps[heap_idx].size;
-		auto     heap_flags = impl.deviceMemoryProperties.memoryHeaps[heap_idx].flags;
+	for (uint32_t i = 0; i < impl.vkDeviceMemoryProperties.memoryTypeCount; ++i) {
+		uint32_t heap_idx   = impl.vkDeviceMemoryProperties.memoryTypes[i].heapIndex;
+		auto     flags      = impl.vkDeviceMemoryProperties.memoryTypes[i].propertyFlags;
+		size_t   heap_size  = impl.vkDeviceMemoryProperties.memoryHeaps[heap_idx].size;
+		auto     heap_flags = impl.vkDeviceMemoryProperties.memoryHeaps[heap_idx].flags;
 
 		auto& prop = impl.memoryTypes.emplace_back();
 		prop.heapID        = heap_idx;
@@ -289,26 +289,26 @@ Device::~Device()
 	auto& impl     = getImpl(this);
 	auto& ctx_impl = getImpl(impl.context);
 
-	VERA_ASSERT_MSG(impl.shaderCacheMap.empty(), "shader cache is not empty");
-	VERA_ASSERT_MSG(impl.shaderLayoutCacheMap.empty(), "shader layout cache is not empty");
-	VERA_ASSERT_MSG(impl.descriptorSetLayoutCacheMap.empty(), "descriptor set layout cache is not empty");
-	VERA_ASSERT_MSG(impl.pipelineLayoutCacheMap.empty(), "pipeline layout cache is not empty");
-	VERA_ASSERT_MSG(impl.pipelineLayoutCacheMapWithShader.empty(), "pipeline layout with shader cache is not empty");
-	VERA_ASSERT_MSG(impl.pipelineCacheMap.empty(), "pipeline cache is not empty");
-	VERA_ASSERT_MSG(impl.samplerCacheMap.empty(), "sampler cache is not empty");
+	VERA_ASSERT_MSG(impl.shaderCache.empty(), "shader cache is not empty");
+	VERA_ASSERT_MSG(impl.shaderLayoutCache.empty(), "shader layout cache is not empty");
+	VERA_ASSERT_MSG(impl.descriptorSetLayoutCache.empty(), "descriptor set layout cache is not empty");
+	VERA_ASSERT_MSG(impl.pipelineLayoutCache.empty(), "pipeline layout cache is not empty");
+	VERA_ASSERT_MSG(impl.pipelineLayoutCacheWithShader.empty(), "pipeline layout with shader cache is not empty");
+	VERA_ASSERT_MSG(impl.pipelineCache.empty(), "pipeline cache is not empty");
+	VERA_ASSERT_MSG(impl.samplerCache.empty(), "sampler cache is not empty");
 
-	if (impl.pipelineCache && !impl.pipelineCacheFilePath.empty()) {
+	if (impl.vkPipelineCache && !impl.pipelineCacheFilePath.empty()) {
 		std::ofstream file(impl.pipelineCacheFilePath.data(), std::ios::binary);
 
-		auto cache_data = impl.device.getPipelineCacheData(impl.pipelineCache);
+		auto cache_data = impl.vkDevice.getPipelineCacheData(impl.vkPipelineCache);
 
 		file.write(reinterpret_cast<const char*>(cache_data.data()), cache_data.size());
 	}
 
-	impl.device.waitIdle();
+	impl.vkDevice.waitIdle();
 
-	impl.device.destroy(impl.pipelineCache);
-	impl.device.destroy();
+	impl.vkDevice.destroy(impl.vkPipelineCache);
+	impl.vkDevice.destroy();
 
 	destroyObjectImpl<Device>(this);
 }
@@ -360,7 +360,7 @@ DeviceFaultInfo Device::getDeviceFaultInfo() const
 	vk::DeviceFaultCountsEXT fault_counts;
 	vk::DeviceFaultInfoEXT   fault_info;
 
-	if (impl.device.getFaultInfoEXT(&fault_counts, nullptr) != vk::Result::eSuccess)
+	if (impl.vkDevice.getFaultInfoEXT(&fault_counts, nullptr) != vk::Result::eSuccess)
 		throw Exception("failed to get device fault counts");
 
 	result.addressInfos.resize(fault_counts.addressInfoCount);
@@ -374,7 +374,7 @@ DeviceFaultInfo Device::getDeviceFaultInfo() const
 	fault_info.pVendorBinaryData =
 		reinterpret_cast<void*>(result.vendorBinaryData.data());
 
-	if (impl.device.getFaultInfoEXT(&fault_counts, &fault_info) != vk::Result::eSuccess)
+	if (impl.vkDevice.getFaultInfoEXT(&fault_counts, &fault_info) != vk::Result::eSuccess)
 		throw Exception("failed to get device fault info");
 
 	fault_info.pAddressInfos     = nullptr;
@@ -390,7 +390,7 @@ DeviceFaultInfo Device::getDeviceFaultInfo() const
 
 void Device::waitIdle() const
 {
-	getImpl(this).device.waitIdle();
+	getImpl(this).vkDevice.waitIdle();
 }
 
 bool DeviceImpl::isFeatureEnabled(DeviceFeatureType feature) const VERA_NOEXCEPT
@@ -411,14 +411,14 @@ void DeviceImpl::registerShader(hash_t hash_value, ref<Shader> shader)
 {
 	VERA_ASSERT(hash_value != 0);
 
-	if (!shaderCacheMap.emplace(hash_value, std::move(shader)).second)
+	if (!shaderCache.emplace(hash_value, shader).second)
 		throw Exception("Failed to register shader: hash collision(hash= {:016x})", hash_value);
 }
 
-void DeviceImpl::registerShaderLayout(hash_t hash_value, ref<ShaderLayout> shader_layout)
+void DeviceImpl::registerShaderReflection(hash_t hash_value, ref<ShaderReflection> shader_reflection)
 {
 	VERA_ASSERT(hash_value != 0);
-	if (!shaderLayoutCacheMap.emplace(hash_value, std::move(shader_layout)).second)
+	if (!shaderReflectionCache.emplace(hash_value, shader_reflection).second)
 		throw Exception("Failed to register shader layout: hash collision(hash= {:016x})", hash_value);
 }
 
@@ -426,7 +426,7 @@ void DeviceImpl::registerDescriptorSetLayout(hash_t hash_value, ref<DescriptorSe
 {
 	VERA_ASSERT(hash_value != 0);
 
-	if (!descriptorSetLayoutCacheMap.emplace(hash_value, std::move(descriptor_set_layout)).second)
+	if (!descriptorSetLayoutCache.emplace(hash_value, descriptor_set_layout).second)
 		throw Exception("Failed to register descriptor set layout: hash collision(hash= {:016x})", hash_value);
 }
 
@@ -434,7 +434,7 @@ void DeviceImpl::registerPipelineLayout(hash_t hash_value, ref<PipelineLayout> p
 {
 	VERA_ASSERT(hash_value != 0);
 
-	if (!pipelineLayoutCacheMap.emplace(hash_value, std::move(pipeline_layout)).second)
+	if (!pipelineLayoutCache.emplace(hash_value, pipeline_layout).second)
 		throw Exception("Failed to register pipeline layout: hash collision(hash= {:016x})", hash_value);
 }
 
@@ -442,7 +442,7 @@ void DeviceImpl::registerPipelineLayoutWithShaders(hash_t hash_value, ref<Pipeli
 {
 	VERA_ASSERT(hash_value != 0);
 
-	if (!pipelineLayoutCacheMapWithShader.emplace(hash_value, std::move(pipeline_layout)).second)
+	if (!pipelineLayoutCacheByShader.emplace(hash_value, pipeline_layout).second)
 		throw Exception("Failed to register pipeline layout: hash collision(hash= {:016x})", hash_value);
 }
 
@@ -450,7 +450,7 @@ void DeviceImpl::registerPipeline(hash_t hash_value, ref<Pipeline> pipeline)
 {
 	VERA_ASSERT(hash_value != 0);
 
-	if (!pipelineCacheMap.emplace(hash_value, std::move(pipeline)).second)
+	if (!pipelineCache.emplace(hash_value, std::move(pipeline)).second)
 		throw Exception("Failed to register pipeline: hash collision(hash= {:016x})", hash_value);
 }
 
@@ -458,27 +458,27 @@ void DeviceImpl::registerSampler(hash_t hash_value, ref<Sampler> sampler)
 {
 	VERA_ASSERT(hash_value != 0);
 
-	if (!samplerCacheMap.emplace(hash_value, std::move(sampler)).second)
+	if (!samplerCache.emplace(hash_value, std::move(sampler)).second)
 		throw Exception("Failed to register sampler: hash collision(hash= {:016x})", hash_value);
 }
 
 void DeviceImpl::unregisterShader(hash_t hash_value) VERA_NOEXCEPT
 {
-	size_t erased = shaderCacheMap.erase(hash_value);
+	size_t erased = shaderCache.erase(hash_value);
 	VERA_ASSERT_MSG(erased == 1, "shader not found in cache");
 	(void)erased;
 }
 
-void DeviceImpl::unregisterShaderLayout(hash_t hash_value) VERA_NOEXCEPT
+void DeviceImpl::unregisterShaderReflection(hash_t hash_value) VERA_NOEXCEPT
 {
-	size_t erased = shaderLayoutCacheMap.erase(hash_value);
+	size_t erased = shaderReflectionCache.erase(hash_value);
 	VERA_ASSERT_MSG(erased == 1, "shader layout not found in cache");
 	(void)erased;
 }
 
 void DeviceImpl::unregisterDescriptorSetLayout(hash_t hash_value) VERA_NOEXCEPT
 {
-	size_t erased = descriptorSetLayoutCacheMap.erase(hash_value);
+	size_t erased = descriptorSetLayoutCache.erase(hash_value);
 	VERA_ASSERT_MSG(erased == 1, "descriptor set layout not found in cache");
 	(void)erased;
 }
@@ -486,7 +486,7 @@ void DeviceImpl::unregisterDescriptorSetLayout(hash_t hash_value) VERA_NOEXCEPT
 void DeviceImpl::unregisterPipelineLayout(hash_t hash_value) VERA_NOEXCEPT
 {
 	if (hash_value) {
-		size_t erased = pipelineLayoutCacheMap.erase(hash_value);
+		size_t erased = pipelineLayoutCache.erase(hash_value);
 		VERA_ASSERT_MSG(erased == 1, "pipeline layout not found in cache");
 		(void)erased;
 	}
@@ -495,7 +495,7 @@ void DeviceImpl::unregisterPipelineLayout(hash_t hash_value) VERA_NOEXCEPT
 void DeviceImpl::unregisterPipelineLayoutWithShaders(hash_t hash_value) VERA_NOEXCEPT
 {
 	if (hash_value) {
-		size_t erased = pipelineLayoutCacheMapWithShader.erase(hash_value);
+		size_t erased = pipelineLayoutCacheByShader.erase(hash_value);
 		VERA_ASSERT_MSG(erased == 1, "pipeline layout with shaders not found in cache");
 		(void)erased;
 	}
@@ -503,14 +503,14 @@ void DeviceImpl::unregisterPipelineLayoutWithShaders(hash_t hash_value) VERA_NOE
 
 void DeviceImpl::unregisterPipeline(hash_t hash_value) VERA_NOEXCEPT
 {
-	size_t erased = pipelineCacheMap.erase(hash_value);
+	size_t erased = pipelineCache.erase(hash_value);
 	VERA_ASSERT_MSG(erased == 1, "pipeline not found in cache");
 	(void)erased;
 }
 
 void DeviceImpl::unregisterSampler(hash_t hash_value) VERA_NOEXCEPT
 {
-	size_t erased = samplerCacheMap.erase(hash_value);
+	size_t erased = samplerCache.erase(hash_value);
 	VERA_ASSERT_MSG(erased == 1, "sampler not found in cache");
 	(void)erased;
 }

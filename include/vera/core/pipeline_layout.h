@@ -1,7 +1,6 @@
 #pragma once
 
 #include "device.h"
-#include "shader_layout.h"
 #include "descriptor_set_layout.h"
 #include "shader_reflection.h"
 #include "../util/array_view.h"
@@ -10,6 +9,13 @@
 VERA_NAMESPACE_BEGIN
 
 class ShaderReflection;
+
+struct PushConstantRange
+{
+	ShaderStageFlags stageFlags = {};
+	uint32_t         offset     = 0;
+	uint32_t         size       = 0;
+};
 
 struct PipelineLayoutCreateInfo
 {

@@ -1,4 +1,5 @@
 #include "../../include/vera/core/texture.h"
+#include "../../include/vera/core/texture_view.h"
 #include "../impl/device_impl.h"
 #include "../impl/device_memory_impl.h"
 #include "../impl/texture_impl.h"
@@ -75,14 +76,14 @@ static void allocate_device_memory(
 	MemoryPropertyFlags flags
 ) {
 	auto& device_impl    = CoreObject::getImpl(device);
-	auto  req            = device_impl.device.getImageMemoryRequirements(image);
+	auto  req            = device_impl.vkDevice.getImageMemoryRequirements(image);
 
 	vk::MemoryAllocateInfo info;
 	info.allocationSize  = req.size;
 	info.memoryTypeIndex = device_impl.findMemoryTypeIndex(flags, req.memoryTypeBits);
 
 	impl.device        = std::move(device);
-	impl.memory        = device_impl.device.allocateMemory(info);
+	impl.vkMemory      = device_impl.vkDevice.allocateMemory(info);
 	impl.propertyFlags = flags;
 	impl.allocated     = info.allocationSize;
 	impl.typeIndex     = info.memoryTypeIndex;
@@ -91,12 +92,12 @@ static void allocate_device_memory(
 
 const vk::Image& get_vk_image(const_ref<Texture> texture) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(texture).image;
+	return CoreObject::getImpl(texture).vkImage;
 }
 
 vk::Image& get_vk_image(ref<Texture> texture) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(texture).image;
+	return CoreObject::getImpl(texture).vkImage;
 }
 
 obj<Texture> Texture::createDepth(obj<Device> device, uint32_t width, uint32_t height, DepthFormat format)
@@ -166,12 +167,12 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 	image_info.usage         = to_vk_image_usage_flags(impl.textureUsage);
 	image_info.sharingMode   = vk::SharingMode::eExclusive;
 
-	impl.image = vk_device.createImage(image_info);
+	impl.vkImage = vk_device.createImage(image_info);
 
 	allocate_device_memory(
 		memory_impl,
 		impl.device,
-		impl.image,
+		impl.vkImage,
 		MemoryPropertyFlagBits::DeviceLocal);
 
 	auto& binding = memory_impl.resourceBind.emplace_back();
@@ -182,7 +183,7 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 
 	impl.size = memory_impl.allocated;
 
-	vk_device.bindImageMemory(impl.image, memory_impl.memory, 0);
+	vk_device.bindImageMemory(impl.vkImage, memory_impl.vkMemory, 0);
 
 	return obj;
 }
@@ -202,7 +203,7 @@ Texture::~Texture()
 	std::swap(memory_impl.resourceBind[idx], memory_impl.resourceBind.back());
 	memory_impl.resourceBind.pop_back();
 
-	vk_device.destroy(impl.image);
+	vk_device.destroy(impl.vkImage);
 
 	destroyObjectImpl(this);
 }
@@ -273,7 +274,7 @@ ref<TextureView> Texture::getTextureView()
 		auto  vk_device = get_vk_device(impl.device);
 
 		vk::ImageViewCreateInfo view_info;
-		view_info.image                           = impl.image;
+		view_info.image                           = impl.vkImage;
 		view_info.viewType                        = vk::ImageViewType::e2D;
 		view_info.format                          = to_vk_format(impl.textureFormat);
 		view_info.components.r                    = vk::ComponentSwizzle::eIdentity;
@@ -286,12 +287,12 @@ ref<TextureView> Texture::getTextureView()
 		view_info.subresourceRange.baseArrayLayer = 0;
 		view_info.subresourceRange.layerCount     = 1;
 
-		view_impl.device    = impl.device;
-		view_impl.texture   = vr::obj<Texture>(this);
-		view_impl.imageView = vk_device.createImageView(view_info);
-		view_impl.width     = impl.width;
-		view_impl.height    = impl.height;
-		view_impl.depth     = impl.depth;
+		view_impl.device      = impl.device;
+		view_impl.texture     = vr::obj<Texture>(this);
+		view_impl.vkImageView = vk_device.createImageView(view_info);
+		view_impl.width       = impl.width;
+		view_impl.height      = impl.height;
+		view_impl.depth       = impl.depth;
 
 		return impl.textureView = obj;
 	}
@@ -328,6 +329,124 @@ extent3d Texture::extent() const
 {
 	auto& impl = getImpl(this);
 	
+	return { impl.width, impl.height, impl.depth };
+}
+
+const vk::ImageView& get_vk_image_view(const_ref<TextureView> texture_view) VERA_NOEXCEPT
+{
+	return CoreObject::getImpl(texture_view).vkImageView;
+}
+
+vk::ImageView& get_vk_image_view(ref<TextureView> texture_view) VERA_NOEXCEPT
+{
+	return CoreObject::getImpl(texture_view).vkImageView;
+}
+
+obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCreateInfo& info)
+{
+	auto  obj          = createNewCoreObject<TextureView>();
+	auto& impl         = getImpl(obj);
+	auto& texture_impl = getImpl(texture);
+	auto  vk_device    = get_vk_device(texture_impl.device);
+
+	vk::ImageViewCreateInfo view_info;
+	view_info.image                           = texture_impl.vkImage;
+	view_info.viewType                        = to_vk_image_view_type(info.type);
+	view_info.format                          = to_vk_format(info.format);
+	view_info.components.r                    = to_vk_component_swizzle(info.mapping.r);
+	view_info.components.g                    = to_vk_component_swizzle(info.mapping.g);
+	view_info.components.b                    = to_vk_component_swizzle(info.mapping.b);
+	view_info.components.a                    = to_vk_component_swizzle(info.mapping.a);
+	view_info.subresourceRange.aspectMask     = to_vk_image_aspect_flags(info.aspectFlags);
+	view_info.subresourceRange.baseMipLevel   = info.baseMipLevel;
+	view_info.subresourceRange.levelCount     = info.levelCount;
+	view_info.subresourceRange.baseArrayLayer = info.baseArrayLayer;
+	view_info.subresourceRange.layerCount     = info.layerCount;
+
+	impl.device         = texture_impl.device;
+	impl.texture        = std::move(texture);
+	impl.vkImageView    = vk_device.createImageView(view_info);
+	impl.width          = texture_impl.width;
+	impl.height         = texture_impl.height;
+	impl.depth          = texture_impl.depth;
+	impl.type           = info.type;
+	impl.format         = info.format;
+	impl.mapping        = info.mapping;
+	impl.aspectFlags    = info.aspectFlags;
+	impl.baseMipLevel   = info.baseMipLevel;
+	impl.levelCount     = info.levelCount;
+	impl.baseArrayLayer = info.baseArrayLayer;
+	impl.layerCount     = info.layerCount;
+
+	return obj;
+}
+
+TextureView::~TextureView()
+{
+	auto& impl      = getImpl(this);
+	auto  vk_device = get_vk_device(impl.device);
+
+	vk_device.destroy(impl.vkImageView);
+
+	destroyObjectImpl(this);
+}
+
+obj<Device> TextureView::getDevice()
+{
+	return getImpl(this).device;
+}
+
+obj<Texture> TextureView::getTexture()
+{
+	return getImpl(this).texture;
+}
+
+TextureViewType TextureView::getType() const
+{
+	return getImpl(this).type;
+}
+
+Format TextureView::getFormat() const
+{
+	return getImpl(this).format;
+}
+
+ComponentMapping TextureView::getComponentMapping() const
+{
+	return getImpl(this).mapping;
+}
+
+TextureSubresourceRange TextureView::getTextureSubresourceRange() const
+{
+	auto& impl = getImpl(this);
+
+	return TextureSubresourceRange{
+		.aspectFlags    = impl.aspectFlags,
+		.baseMipLevel   = impl.baseMipLevel,
+		.levelCount     = impl.levelCount,
+		.baseArrayLayer = impl.baseArrayLayer,
+		.layerCount     = impl.layerCount
+	};
+}
+
+uint32_t TextureView::width() const
+{
+	return getImpl(this).width;
+}
+
+uint32_t TextureView::height() const
+{
+	return getImpl(this).height;
+}
+
+uint32_t TextureView::depth() const
+{
+	return getImpl(this).depth;
+}
+
+extent3d TextureView::extent() const
+{
+	auto& impl = getImpl(this);
 	return { impl.width, impl.height, impl.depth };
 }
 

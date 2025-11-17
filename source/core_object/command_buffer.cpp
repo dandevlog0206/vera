@@ -62,12 +62,12 @@ static vk::ImageView get_vk_image_view(ref<Texture> texture)
 
 const vk::CommandBuffer& get_vk_command_buffer(const_ref<CommandBuffer> cmd_buffer) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(cmd_buffer).commandBuffer;
+	return CoreObject::getImpl(cmd_buffer).vkCommandBuffer;
 }
 
 vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> cmd_buffer) VERA_NOEXCEPT
 {
-	return CoreObject::getImpl(cmd_buffer).commandBuffer;
+	return CoreObject::getImpl(cmd_buffer).vkCommandBuffer;
 }
 
 obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
@@ -87,8 +87,8 @@ obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 	impl.device                = device;
 	impl.semaphore             = Semaphore::create(impl.device);
 	impl.fence                 = Fence::create(impl.device);
-	impl.commandPool           = alloc_info.commandPool;
-	impl.commandBuffer         = vk_device.allocateCommandBuffers(alloc_info).front();
+	impl.vkCommandPool         = alloc_info.commandPool;
+	impl.vkCommandBuffer       = vk_device.allocateCommandBuffers(alloc_info).front();
 	impl.submitID              = 0;
 	impl.submitQueueType       = SubmitQueueType::Transfer;
 	impl.state                 = CommandBufferState::Initialized;
@@ -113,8 +113,8 @@ CommandBuffer::~CommandBuffer()
 	impl.boundObjects.clear();
 	impl.boundShaderParameters.clear();
 
-	vk_device.freeCommandBuffers(impl.commandPool, impl.commandBuffer);
-	vk_device.destroy(impl.commandPool);
+	vk_device.freeCommandBuffers(impl.vkCommandPool, impl.vkCommandBuffer);
+	vk_device.destroy(impl.vkCommandPool);
 
 	destroyObjectImpl(this);
 }
@@ -155,7 +155,7 @@ void CommandBuffer::reset()
 	impl.currentDescriptorSets   = {};
 	impl.currentPipeline         = {};
 
-	vk_device.resetCommandPool(impl.commandPool);
+	vk_device.resetCommandPool(impl.vkCommandPool);
 }
 
 void CommandBuffer::begin()
@@ -167,7 +167,7 @@ void CommandBuffer::begin()
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-	impl.commandBuffer.begin(begin_info);
+	impl.vkCommandBuffer.begin(begin_info);
 }
 
 void CommandBuffer::copyBufferToTexture(
@@ -198,8 +198,8 @@ void CommandBuffer::copyBufferToTexture(
 	copy_info.imageExtent.height              = image_extent.height;
 	copy_info.imageExtent.depth               = image_extent.depth;
 
-	impl.commandBuffer.copyBufferToImage(
-		buffer_impl.buffer,
+	impl.vkCommandBuffer.copyBufferToImage(
+		buffer_impl.vkBuffer,
 		texture_impl.image,
 		vk::ImageLayout::eTransferDstOptimal,
 		copy_info);
@@ -231,7 +231,7 @@ void CommandBuffer::transitionImageLayout(
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount     = 1;
 
-	impl.commandBuffer.pipelineBarrier(
+	impl.vkCommandBuffer.pipelineBarrier(
 		to_vk_pipeline_stage_flags(src_stage_mask),
 		to_vk_pipeline_stage_flags(dst_stage_mask),
 		vk::DependencyFlagBits{},
@@ -255,7 +255,7 @@ void CommandBuffer::setViewport(const Viewport& viewport)
 	vk_viewport.minDepth = viewport.minDepth;
 	vk_viewport.maxDepth = viewport.maxDepth;
 
-	impl.commandBuffer.setViewport(0, vk_viewport);
+	impl.vkCommandBuffer.setViewport(0, vk_viewport);
 	impl.currentViewport = viewport;
 }
 
@@ -269,7 +269,7 @@ void CommandBuffer::setScissor(const Scissor& scissor)
 	vk_rect.extent.width  = scissor.maxX;
 	vk_rect.extent.height = scissor.maxY;
 
-	impl.commandBuffer.setScissor(0, vk_rect);
+	impl.vkCommandBuffer.setScissor(0, vk_rect);
 	impl.currentScissor = scissor;
 }
 
@@ -282,7 +282,7 @@ void CommandBuffer::bindVertexBuffer(obj<Buffer> buffer, size_t offset)
 	if (!buffer_impl.usage.has(BufferUsageFlagBits::VertexBuffer))
 		throw Exception("buffer is not for vertex");
 
-	impl.commandBuffer.bindVertexBuffers(0, 1, &buffer_impl.buffer, &offsets);
+	impl.vkCommandBuffer.bindVertexBuffers(0, 1, &buffer_impl.vkBuffer, &offsets);
 	impl.currentVertexBuffer = buffer;
 	impl.boundObjects.push_back(obj_cast<CoreObject>(std::move(buffer)));
 }
@@ -295,7 +295,7 @@ void CommandBuffer::bindIndexBuffer(obj<Buffer> buffer, size_t offset)
 	if (!buffer_impl.usage.has(BufferUsageFlagBits::IndexBuffer))
 		throw Exception("buffer is not for index");
 
-	impl.commandBuffer.bindIndexBuffer(buffer_impl.buffer, offset, to_vk_index_type(buffer_impl.indexType));
+	impl.vkCommandBuffer.bindIndexBuffer(buffer_impl.vkBuffer, offset, to_vk_index_type(buffer_impl.indexType));
 	impl.currentIndexBuffer = buffer;
 	impl.boundObjects.push_back(obj_cast<CoreObject>(std::move(buffer)));
 }
@@ -305,7 +305,7 @@ void CommandBuffer::bindPipeline(obj<Pipeline> pipeline)
 	auto& impl          = getImpl(this);
 	auto& pipeline_impl = getImpl(pipeline);
 
-	impl.commandBuffer.bindPipeline(
+	impl.vkCommandBuffer.bindPipeline(
 		to_vk_pipeline_bind_point(pipeline_impl.pipelineBindPoint),
 		pipeline_impl.pipeline);
 	impl.currentPipeline = pipeline;
@@ -320,7 +320,7 @@ void CommandBuffer::pushConstant(
 	uint32_t                  size)
 {
 	auto& impl = getImpl(this);
-	impl.commandBuffer.pushConstants(
+	impl.vkCommandBuffer.pushConstants(
 		get_vk_pipeline_layout(pipeline_layout),
 		to_vk_shader_stage_flags(stage_flags),
 		offset,
@@ -335,7 +335,7 @@ void CommandBuffer::bindDescriptorSet(
 ) {
 	auto& impl = getImpl(this);
 
-	impl.commandBuffer.bindDescriptorSets(
+	impl.vkCommandBuffer.bindDescriptorSets(
 		vk::PipelineBindPoint::eGraphics,
 		get_vk_pipeline_layout(pipeline_layout),
 		set,
@@ -355,7 +355,7 @@ void CommandBuffer::bindDescriptorSet(
 	
 	auto& impl = getImpl(this);
 
-	impl.commandBuffer.bindDescriptorSets(
+	impl.vkCommandBuffer.bindDescriptorSets(
 		vk::PipelineBindPoint::eGraphics,
 		get_vk_pipeline_layout(pipeline_layout),
 		set,
@@ -368,7 +368,7 @@ void CommandBuffer::bindDescriptorSet(
 void CommandBuffer::bindGraphicsState(const GraphicsState& state)
 {
 	auto& impl   = getImpl(this);
-	auto  vk_cmd = impl.commandBuffer;
+	auto  vk_cmd = impl.vkCommandBuffer;
 
 	if (state.m_viewport.posX != INFINITY)
 		setViewport(state.m_viewport);
@@ -484,7 +484,7 @@ void CommandBuffer::beginRendering(const RenderingInfo& info)
 	render_info.pDepthAttachment     = info.depthAttachment ? &depth_attachment : nullptr;
 	render_info.pStencilAttachment   = info.stencilAttachment ? &stencil_attachment : nullptr;
 
-	impl.commandBuffer.beginRendering(render_info);
+	impl.vkCommandBuffer.beginRendering(render_info);
 	impl.currentRenderingInfo = info;
 }
 
@@ -495,7 +495,7 @@ void CommandBuffer::draw(
 	uint32_t instance_offset
 ) {
 	auto& impl = getImpl(this);
-	impl.commandBuffer.draw(vtx_count, instance_count, vtx_offset, instance_offset);
+	impl.vkCommandBuffer.draw(vtx_count, instance_count, vtx_offset, instance_offset);
 }
 
 void CommandBuffer::drawIndexed(
@@ -506,7 +506,7 @@ void CommandBuffer::drawIndexed(
 	uint32_t instance_offset
 ) {
 	auto& impl = getImpl(this);
-	impl.commandBuffer.drawIndexed(idx_count, instance_count, idx_offset, vtx_offset, instance_offset);
+	impl.vkCommandBuffer.drawIndexed(idx_count, instance_count, idx_offset, vtx_offset, instance_offset);
 }
 
 void CommandBuffer::drawMeshTask(
@@ -515,14 +515,14 @@ void CommandBuffer::drawMeshTask(
 	uint32_t group_count_z
 ) {
 	auto& impl = getImpl(this);
-	impl.commandBuffer.drawMeshTasksEXT(group_count_x, group_count_y, group_count_z);
+	impl.vkCommandBuffer.drawMeshTasksEXT(group_count_x, group_count_y, group_count_z);
 }
 
 void CommandBuffer::endRendering()
 {
 	auto& impl = getImpl(this);
 
-	impl.commandBuffer.endRendering();
+	impl.vkCommandBuffer.endRendering();
 
 	impl.currentPipeline      = {};
 	impl.currentRenderingInfo = {};
@@ -534,7 +534,7 @@ void CommandBuffer::end()
 
 	impl.state = CommandBufferState::Executable;
 
-	impl.commandBuffer.end();
+	impl.vkCommandBuffer.end();
 }
 
 CommandBufferSync CommandBuffer::submit()
@@ -546,7 +546,7 @@ CommandBufferSync CommandBuffer::submit()
 
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount   = 1;
-	submit_info.pCommandBuffers      = &impl.commandBuffer;
+	submit_info.pCommandBuffers      = &impl.vkCommandBuffer;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &get_vk_semaphore(impl.semaphore);
 
@@ -557,13 +557,13 @@ CommandBufferSync CommandBuffer::submit()
 
 	switch (impl.submitQueueType) {
 	case SubmitQueueType::Transfer:
-		device_impl.transferQueue.submit(submit_info, get_vk_fence(impl.fence));
+		device_impl.vkTransferQueue.submit(submit_info, get_vk_fence(impl.fence));
 		break;
 	case SubmitQueueType::Compute:
-		device_impl.computeQueue.submit(submit_info, get_vk_fence(impl.fence));
+		device_impl.vkComputeQueue.submit(submit_info, get_vk_fence(impl.fence));
 		break;
 	case SubmitQueueType::Graphics:
-		device_impl.graphicsQueue.submit(submit_info, get_vk_fence(impl.fence));
+		device_impl.vkGraphicsQueue.submit(submit_info, get_vk_fence(impl.fence));
 		break;
 	}
 
