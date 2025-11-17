@@ -3,12 +3,15 @@
 #include "../impl/shader_impl.h"
 #include "../impl/shader_reflection_impl.h"
 
+#include "../../include/vera/core/logger.h"
 #include "../../include/vera/core/device.h"
 #include "../../include/vera/core/pipeline_layout.h"
 #include "../../include/vera/core/descriptor_set_layout.h"
 #include "../../include/vera/util/hash.h"
+#include <spirv_cross/spirv_cross.hpp>
 #include <spirv_reflect.h>
 #include <fstream>
+#include <chrono>
 
 VERA_NAMESPACE_BEGIN
 
@@ -111,22 +114,42 @@ static void create_shader_impl(
 	shader_info.pCode    = spirv_code.data();
 
 	impl.device           = std::move(device);
+	impl.shaderModule     = device_impl.device.createShaderModule(shader_info);
 	impl.shaderLayout     = {};
 	impl.shaderReflection = {};
-	impl.shaderModule     = device_impl.device.createShaderModule(shader_info);
 	impl.parserInfo       = std::make_unique<ShaderParserInfo>();
 	impl.hashValue        = hash_value;
 
 	impl.parserInfo->spirvCode.swap(spirv_code);
-	
+
+	auto begin0 = std::chrono::high_resolution_clock::now();
+
+	spirv_cross::Compiler compiler(
+		impl.parserInfo->spirvCode.data(),
+		impl.parserInfo->spirvCode.size());
+
+	auto end0 = std::chrono::high_resolution_clock::now();
+
+	auto begin1 = std::chrono::high_resolution_clock::now();
+
 	SpvReflectResult result = spvReflectCreateShaderModule2(
 		SPV_REFLECT_MODULE_FLAG_NO_COPY,
 		impl.parserInfo->spirvCode.size() * sizeof(uint32_t),
 		impl.parserInfo->spirvCode.data(),
 		&impl.parserInfo->reflectModule);
 
+	auto end1 = std::chrono::high_resolution_clock::now();
+
+	auto resources = compiler.get_shader_resources();
+
 	if (result != SPV_REFLECT_RESULT_SUCCESS)
 		throw Exception("failed to create SPIR-V reflection module");
+
+	Logger::info(
+		"Shader parsing time: {:.3f} ms (SPIRV-Cross: {:.3f} ms, SPIRV-Reflect: {:.3f} ms)",
+		std::chrono::duration<double, std::milli>(end1 - begin0).count(),
+		std::chrono::duration<double, std::milli>(end0 - begin0).count(),
+		std::chrono::duration<double, std::milli>(end1 - begin1).count());
 }
 
 static size_t hash_shader_code(array_view<uint32_t> spirv_code)

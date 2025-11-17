@@ -41,7 +41,7 @@ VERA_NORETURN void __assert_impl(
 	__debugbreak();
 #	endif
 
-	exit(1);
+	terminate();
 }
 
 VERA_NORETURN void __error_impl(
@@ -60,7 +60,7 @@ VERA_NORETURN void __error_impl(
 	__debugbreak();
 #	endif
 
-	exit(1);
+	terminate();
 }
 
 VERA_PRIV_NAMESPACE_END

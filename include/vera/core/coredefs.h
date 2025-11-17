@@ -94,6 +94,7 @@ public:
 
 // keywords
 #define VERA_INLINE inline
+#define VERA_FORCEINLINE __forceinline
 #define VERA_NOEXCEPT noexcept
 #define VERA_CONSTEXPR constexpr
 

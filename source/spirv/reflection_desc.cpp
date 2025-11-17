@@ -3,7 +3,6 @@
 #include "../../include/vera/core/exception.h"
 #include "../../include/vera/core/logger.h"
 #include "../../include/vera/util/static_vector.h"
-#include "spirv_parser.h"
 #include <spirv_reflect.h>
 
 #define MAX_SHADER_STAGE_COUNT 16

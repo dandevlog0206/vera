@@ -76,7 +76,7 @@ ShaderStageFlags ShaderLayout::getShaderStageFlags() const VERA_NOEXCEPT
 	return getImpl(this).pushConstantRange.stageFlags;
 }
 
-array_view<ShaderLayoutBinding> ShaderLayout::getBindings() const VERA_NOEXCEPT
+array_view<ShaderLayoutBinding> ShaderLayout::enumerateBindings() const VERA_NOEXCEPT
 {
 	return getImpl(this).bindings;
 }

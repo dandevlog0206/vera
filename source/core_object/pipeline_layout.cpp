@@ -2,6 +2,7 @@
 #include "../impl/device_impl.h"
 #include "../impl/pipeline_impl.h"
 #include "../impl/pipeline_layout_impl.h"
+#include "../impl/shader_layout_impl.h"
 #include "../impl/shader_reflection_impl.h"
 #include "../impl/descriptor_set_layout_impl.h"
 
@@ -18,6 +19,19 @@
 	DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount
 
 VERA_NAMESPACE_BEGIN
+
+typedef static_vector<const ShaderLayoutBinding*, MAX_SHADER_STAGE_COUNT> PerStageLayoutBindingIteratorArray;
+typedef static_vector<ShaderStageFlags, MAX_SHADER_STAGE_COUNT> PerStageShaderStageFlagsArray;
+typedef static_vector<PushConstantRange, MAX_SHADER_STAGE_COUNT> PerStagePushConstantArray;
+
+static bool operator!=(const ShaderLayoutBinding& lhs, const ShaderLayoutBinding& rhs) VERA_NOEXCEPT
+{
+	return
+		lhs.set != rhs.set ||
+		lhs.binding != rhs.binding ||
+		lhs.descriptorType != rhs.descriptorType ||
+		lhs.descriptorCount != rhs.descriptorCount;
+}
 
 static bool operator==(const PushConstantRange& lhs, const PushConstantRange& rhs) VERA_NOEXCEPT
 {
@@ -44,6 +58,145 @@ static PipelineBindPoint get_pipeline_bind_point(ShaderStageFlags stage_flags)
 
 	VERA_ASSERT_MSG(false, "invalid shader stage for pipeline bind point");
 	return {};
+}
+
+static uint64_t combine_set_binding(uint32_t set, uint32_t binding)
+{
+	return (static_cast<uint64_t>(set) << 32) | static_cast<uint64_t>(binding);
+}
+
+static const ShaderLayoutBinding* find_minimum_binding(
+	PerStageLayoutBindingIteratorArray&  binding_begins,
+	PerStageLayoutBindingIteratorArray&  binding_ends,
+	const PerStageShaderStageFlagsArray& stage_flags_array,
+	ShaderStageFlags&                    out_stageFlags
+) {
+	ShaderStageFlags           stage_flags = {};
+	size_t                     stage_count = binding_begins.size();
+	const ShaderLayoutBinding* min_binding = nullptr;
+	uint32_t                   min_value   = UINT64_MAX;
+
+	for (size_t i = 0; i < stage_count; ++i) {
+		if (binding_begins[i] == binding_ends[i]) continue;
+
+		const auto& binding = *binding_begins[i];
+		uint32_t    value   = combine_set_binding(binding.set, binding.binding);
+		
+		if (value < min_value) {
+			min_value   = value;
+			min_binding = &binding;
+		}
+	}
+
+	if (!min_binding) return nullptr;
+
+	for (size_t i = 0; i < stage_count; ++i) {
+		if (binding_begins[i] == binding_ends[i]) continue;
+
+		const auto& binding = *binding_begins[i];
+		uint32_t    value   = combine_set_binding(binding.set, binding.binding);
+
+		if (binding != *min_binding)
+			throw Exception("shader layouts have inconsistent bindings for set={} binding={}",
+				min_binding->set, min_binding->binding);
+
+		if (value == min_value) {
+			++binding_begins[i];
+
+			stage_flags |= stage_flags_array[i];
+		}
+	}
+
+	return min_binding;
+}
+
+static void combine_shader_layouts(
+	PipelineLayoutImpl&           impl,
+	array_view<obj<ShaderLayout>> shader_layouts
+) {
+	PerStageShaderStageFlagsArray      stage_flags_array;
+	PerStageLayoutBindingIteratorArray binding_begins;
+	PerStageLayoutBindingIteratorArray binding_ends;
+	PerStagePushConstantArray          pc_ranges;
+	DescriptorSetLayoutCreateInfo      layout_info;
+	ShaderStageFlags                   stage_flags;
+
+	uint32_t binding_count = 0;
+
+	for (const auto& layout : shader_layouts) {
+		auto& layout_impl = CoreObject::getImpl(layout);
+		auto  stage_flag  = layout_impl.pushConstantRange.stageFlags;
+
+		if (stage_flags.has(stage_flag))
+			throw Exception("shader layouts have duplicate push constant stage flags");
+
+		if (!layout_impl.bindings.empty()) {
+			const auto* binding_data = layout_impl.bindings.data();
+			const auto  binding_size = layout_impl.bindings.size();
+
+			stage_flags_array.push_back(stage_flag);
+			binding_begins.push_back(binding_data);
+			binding_ends.push_back(binding_data + binding_size);
+
+			binding_count += static_cast<uint32_t>(binding_size);
+		}
+		if (layout_impl.pushConstantRange.size > 0)
+			pc_ranges.push_back(layout_impl.pushConstantRange);
+
+		stage_flags |= stage_flag;
+	}
+
+	layout_info.bindings.reserve(binding_count);
+
+	uint32_t prev_set = 0;
+
+	const auto* min_binding = find_minimum_binding(
+		binding_begins, binding_ends, stage_flags_array, stage_flags);
+
+	if (min_binding) {
+		prev_set = min_binding->set;
+
+		do {
+			if (min_binding->set != prev_set) {
+				impl.descriptorSetLayouts.push_back(DescriptorSetLayout::create(impl.device,layout_info));
+				layout_info.bindings.clear();
+				prev_set = min_binding->set;
+			}
+
+			auto& new_binding = layout_info.bindings.emplace_back();
+			new_binding.binding         = min_binding->binding;
+			new_binding.descriptorType  = min_binding->descriptorType;
+			new_binding.descriptorCount = min_binding->descriptorCount;
+			new_binding.stageFlags      = stage_flags;
+		} while (min_binding = find_minimum_binding(
+			binding_begins, binding_ends, stage_flags_array, stage_flags));
+
+		impl.descriptorSetLayouts.push_back(DescriptorSetLayout::create(impl.device,layout_info));
+	}
+
+	for (const auto& pc_range : pc_ranges) {
+		bool merged = false;
+		
+		for (auto& existing_range : impl.pushConstantRanges) {
+			uint32_t pc_end       = pc_range.offset + pc_range.size;
+			uint32_t existing_end = existing_range.offset + existing_range.size;
+
+			if (!(pc_end <= existing_range.offset || existing_end <= pc_range.offset)) {
+				uint32_t new_start = std::min(existing_range.offset, pc_range.offset);
+				uint32_t new_end   = std::max(existing_end, pc_end);
+
+				existing_range.offset     = new_start;
+				existing_range.size       = new_end - new_start;
+				existing_range.stageFlags |= pc_range.stageFlags;
+
+				merged = true;
+				break;
+			}
+		}
+
+		if (!merged)
+			impl.pushConstantRanges.push_back(pc_range);
+	}
 }
 
 static void fill_descriptor_set_layouts(
@@ -98,7 +251,7 @@ static void fill_push_constant_ranges(
 		pc_ranges.emplace_back(pc_node->pushConstantRange);
 }
 
-static void create_pipeline_layout(const DeviceImpl & device_impl, PipelineLayoutImpl& impl)
+static void create_pipeline_layout(const DeviceImpl& device_impl, PipelineLayoutImpl& impl)
 {
 	static_vector<vk::DescriptorSetLayout, MAX_SET_COUNT>    vk_layouts;
 	static_vector<vk::PushConstantRange, MAX_PC_RANGE_COUNT> vk_pc_ranges;
@@ -127,23 +280,24 @@ static bool check_layout_device(ref<Device> device, array_view<obj<DescriptorSet
 	return true;
 }
 
-static bool check_shader_device(ref<Device> device, array_view<obj<Shader>> shaders)
+static bool check_shader_layout_device(ref<Device> device, array_view<obj<ShaderLayout>> shader_layouts)
 {
-	if (shaders.empty()) return false;
-	for (const auto shader : shaders)
-		if (!shader || CoreObject::getImpl(shader).device != device)
+	if (shader_layouts.empty()) return false;
+
+	for (const auto layout : shader_layouts)
+		if (!layout || CoreObject::getImpl(layout).device != device)
 			return false;
 
 	return true;
 }
 
-static hash_t hash_shaders(array_view<obj<Shader>> shaders)
+static hash_t hash_shaders(array_view<obj<ShaderLayout>> shader_layouts)
 {
 	hash_t seed = 0;
 
-	hash_combine(seed, shaders.size());
-	for (const auto& shader : shaders)
-		hash_unordered(seed, shader->hash());
+	hash_combine(seed, shader_layouts.size());
+	for (const auto& layout : shader_layouts)
+		hash_unordered(seed, layout->hash());
 
 	return seed;
 }
@@ -186,13 +340,13 @@ vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout) 
 	return CoreObject::getImpl(pipeline_layout).pipelineLayout;
 }
 
-obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<obj<Shader>> shaders)
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<obj<ShaderLayout>> shaders)
 {
 	if (!device)
 		throw Exception("device is null");
 	if (shaders.empty())
 		throw Exception("shaders array is empty");
-	if (!check_shader_device(device, shaders))
+	if (!check_shader_layout_device(device, shaders))
 		throw Exception("shader device mismatch");
 
 	auto& device_impl = getImpl(device);
@@ -202,8 +356,10 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<obj<Sh
 		it != device_impl.pipelineLayoutCacheMapWithShader.end())
 		return unsafe_obj_cast<PipelineLayout>(it->second);
 
-	auto  obj  = create(std::move(device), ShaderReflection::create(shaders));
+	auto  obj  = createNewCoreObject<PipelineLayout>();
 	auto& impl = getImpl(obj);
+
+
 
 	impl.hashValueWithShader = hash_value;
 	device_impl.registerPipelineLayoutWithShaders(hash_value, obj);
@@ -211,63 +367,55 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<obj<Sh
 	return obj;
 }
 
-obj<PipelineLayout> PipelineLayout::create(obj<Device> device, obj<ShaderReflection> shader_reflection)
-{
-	if (!device)
-		throw Exception("device is null");
-	if (!shader_reflection)
-		throw Exception("shader reflection is null");
-
-	auto& refl_impl = getImpl(shader_reflection);
-	auto* root_node = refl_impl.requestMinimalReflectionRootNode();
-
-	std::vector<obj<DescriptorSetLayout>> set_layouts;
-	std::vector<PushConstantRange>        pc_ranges;
-
-	fill_descriptor_set_layouts(set_layouts, device, root_node);
-	fill_push_constant_ranges(pc_ranges, root_node);
-
-	auto&  device_impl = getImpl(device);
-	hash_t hash_value  = hash_pipeline_layout(set_layouts, pc_ranges);
-
-	if (auto it = device_impl.pipelineLayoutCacheMap.find(hash_value);
-		it != device_impl.pipelineLayoutCacheMap.end())
-		return unsafe_obj_cast<PipelineLayout>(it->second);
-
-	auto  obj  = createNewCoreObject<PipelineLayout>();
-	auto& impl = getImpl(obj);
-
-	impl.descriptorSetLayouts = std::move(set_layouts);
-	impl.pushConstantRanges   = std::move(pc_ranges);
-
-	impl.device           = std::move(device);
-	impl.shaderReflection = std::move(shader_reflection);
-	impl.hashValue        = hash_value;
-
-	create_pipeline_layout(device_impl, impl);
-
-	device_impl.registerPipelineLayout(impl.hashValue, obj);
-
-	return obj;
-}
+//obj<PipelineLayout> PipelineLayout::create(obj<Device> device, obj<ShaderReflection> shader_reflection)
+//{
+//	if (!device)
+//		throw Exception("device is null");
+//	if (!shader_reflection)
+//		throw Exception("shader reflection is null");
+//
+//	auto& refl_impl = getImpl(shader_reflection);
+//	auto* root_node = refl_impl.requestMinimalReflectionRootNode();
+//
+//	std::vector<obj<DescriptorSetLayout>> set_layouts;
+//	std::vector<PushConstantRange>        pc_ranges;
+//
+//	fill_descriptor_set_layouts(set_layouts, device, root_node);
+//	fill_push_constant_ranges(pc_ranges, root_node);
+//
+//	auto&  device_impl = getImpl(device);
+//	hash_t hash_value  = hash_pipeline_layout(set_layouts, pc_ranges);
+//
+//	if (auto it = device_impl.pipelineLayoutCacheMap.find(hash_value);
+//		it != device_impl.pipelineLayoutCacheMap.end())
+//		return unsafe_obj_cast<PipelineLayout>(it->second);
+//
+//	auto  obj  = createNewCoreObject<PipelineLayout>();
+//	auto& impl = getImpl(obj);
+//
+//	impl.descriptorSetLayouts = std::move(set_layouts);
+//	impl.pushConstantRanges   = std::move(pc_ranges);
+//
+//	impl.device           = std::move(device);
+//	impl.shaderReflection = std::move(shader_reflection);
+//	impl.hashValue        = hash_value;
+//
+//	create_pipeline_layout(device_impl, impl);
+//
+//	device_impl.registerPipelineLayout(impl.hashValue, obj);
+//
+//	return obj;
+//}
 
 obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLayoutCreateInfo& info)
 {
-	return create(device, info.descriptorSetLayouts, info.pushConstantRanges);
-}
-
-obj<PipelineLayout> PipelineLayout::create(
-	obj<Device>                          device,
-	array_view<obj<DescriptorSetLayout>> set_layouts,
-	array_view<PushConstantRange>        pc_ranges)
-{
 	if (!device)
 		throw Exception("device is null");
-	if (!check_layout_device(device, set_layouts))
+	if (!check_layout_device(device, info.descriptorSetLayouts))
 		throw Exception("layout device mismatch");
 
 	auto&  device_impl = getImpl(device);
-	hash_t hash_value  = hash_pipeline_layout(set_layouts, pc_ranges);
+	hash_t hash_value  = hash_pipeline_layout(info.descriptorSetLayouts, info.pushConstantRanges);
 
 	if (auto it = device_impl.pipelineLayoutCacheMap.find(hash_value);
 		it != device_impl.pipelineLayoutCacheMap.end())
@@ -276,12 +424,12 @@ obj<PipelineLayout> PipelineLayout::create(
 	auto  obj  = createNewCoreObject<PipelineLayout>();
 	auto& impl = getImpl(obj);
 
-	impl.descriptorSetLayouts.assign(set_layouts.begin(), set_layouts.end());
-	impl.pushConstantRanges.assign(pc_ranges.begin(), pc_ranges.end());
+	impl.descriptorSetLayouts.assign(info.descriptorSetLayouts.begin(), info.descriptorSetLayouts.end());
+	impl.pushConstantRanges.assign(info.pushConstantRanges.begin(), info.pushConstantRanges.end());
 
-	impl.device            = std::move(device);
-	impl.shaderReflection  = {};
-	impl.hashValue         = hash_value;
+	impl.device           = std::move(device);
+	impl.shaderReflection = {};
+	impl.hashValue        = hash_value;
 
 	create_pipeline_layout(device_impl, impl);
 	
@@ -289,6 +437,40 @@ obj<PipelineLayout> PipelineLayout::create(
 
 	return obj;
 }
+
+//obj<PipelineLayout> PipelineLayout::create(
+//	obj<Device>                          device,
+//	array_view<obj<DescriptorSetLayout>> set_layouts,
+//	array_view<PushConstantRange>        pc_ranges)
+//{
+//	if (!device)
+//		throw Exception("device is null");
+//	if (!check_layout_device(device, set_layouts))
+//		throw Exception("layout device mismatch");
+//
+//	auto&  device_impl = getImpl(device);
+//	hash_t hash_value  = hash_pipeline_layout(set_layouts, pc_ranges);
+//
+//	if (auto it = device_impl.pipelineLayoutCacheMap.find(hash_value);
+//		it != device_impl.pipelineLayoutCacheMap.end())
+//		return unsafe_obj_cast<PipelineLayout>(it->second);
+//
+//	auto  obj  = createNewCoreObject<PipelineLayout>();
+//	auto& impl = getImpl(obj);
+//
+//	impl.descriptorSetLayouts.assign(set_layouts.begin(), set_layouts.end());
+//	impl.pushConstantRanges.assign(pc_ranges.begin(), pc_ranges.end());
+//
+//	impl.device            = std::move(device);
+//	impl.shaderReflection  = {};
+//	impl.hashValue         = hash_value;
+//
+//	create_pipeline_layout(device_impl, impl);
+//	
+//	device_impl.registerPipelineLayout(hash_value, obj);
+//
+//	return obj;
+//}
 
 PipelineLayout::~PipelineLayout()
 {
@@ -307,11 +489,6 @@ obj<Device> PipelineLayout::getDevice() VERA_NOEXCEPT
 	return getImpl(this).device;
 }
 
-obj<DescriptorSetLayout> PipelineLayout::getDescriptorSetLayout(uint32_t set) VERA_NOEXCEPT
-{
-	return getImpl(this).descriptorSetLayouts[set];
-}
-
 obj<ShaderReflection> PipelineLayout::getShaderReflection() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
@@ -323,7 +500,17 @@ obj<ShaderReflection> PipelineLayout::getShaderReflection() VERA_NOEXCEPT
 	return impl.shaderReflection;
 }
 
-array_view<ref<DescriptorSetLayout>> PipelineLayout::getDescriptorSetLayouts() const VERA_NOEXCEPT
+uint32_t PipelineLayout::getDescriptorSetLayoutCount() const VERA_NOEXCEPT
+{
+	return static_cast<uint32_t>(getImpl(this).descriptorSetLayouts.size());
+}
+
+obj<DescriptorSetLayout> PipelineLayout::getDescriptorSetLayout(uint32_t set) VERA_NOEXCEPT
+{
+	return getImpl(this).descriptorSetLayouts[set];
+}
+
+array_view<ref<DescriptorSetLayout>> PipelineLayout::enumerateDescriptorSetLayouts() const VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 
@@ -331,11 +518,6 @@ array_view<ref<DescriptorSetLayout>> PipelineLayout::getDescriptorSetLayouts() c
 		reinterpret_cast<const ref<DescriptorSetLayout>*>(impl.descriptorSetLayouts.data()),
 		impl.descriptorSetLayouts.size()
 	};
-}
-
-uint32_t PipelineLayout::getDescriptorSetLayoutCount() const VERA_NOEXCEPT
-{
-	return static_cast<uint32_t>(getImpl(this).descriptorSetLayouts.size());
 }
 
 array_view<PushConstantRange> PipelineLayout::getPushConstantRanges() const VERA_NOEXCEPT

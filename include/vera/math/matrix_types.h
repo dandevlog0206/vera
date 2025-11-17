@@ -12,26 +12,6 @@
 
 VERA_NAMESPACE_BEGIN
 
-typedef matrix_base<2, 2, row_major, float, packed_highp> float2x2;
-typedef matrix_base<2, 3, row_major, float, packed_highp> float2x3;
-typedef matrix_base<2, 4, row_major, float, packed_highp> float2x4;
-typedef matrix_base<3, 2, row_major, float, packed_highp> float3x2;
-typedef matrix_base<3, 3, row_major, float, packed_highp> float3x3;
-typedef matrix_base<3, 4, row_major, float, packed_highp> float3x4;
-typedef matrix_base<4, 2, row_major, float, packed_highp> float4x2;
-typedef matrix_base<4, 3, row_major, float, packed_highp> float4x3;
-typedef matrix_base<4, 4, row_major, float, packed_highp> float4x4;
-
-typedef matrix_base<2, 2, row_major, double, packed_highp> double2x2;
-typedef matrix_base<2, 3, row_major, double, packed_highp> double2x3;
-typedef matrix_base<2, 4, row_major, double, packed_highp> double2x4;
-typedef matrix_base<3, 2, row_major, double, packed_highp> double3x2;
-typedef matrix_base<3, 3, row_major, double, packed_highp> double3x3;
-typedef matrix_base<3, 4, row_major, double, packed_highp> double3x4;
-typedef matrix_base<4, 2, row_major, double, packed_highp> double4x2;
-typedef matrix_base<4, 3, row_major, double, packed_highp> double4x3;
-typedef matrix_base<4, 4, row_major, double, packed_highp> double4x4;
-
 typedef matrix_base<2, 2, row_major, float, packed_highp> rfloat2x2;
 typedef matrix_base<2, 3, row_major, float, packed_highp> rfloat2x3;
 typedef matrix_base<2, 4, row_major, float, packed_highp> rfloat2x4;
@@ -71,5 +51,25 @@ typedef matrix_base<3, 4, col_major, double, packed_highp> cdouble3x4;
 typedef matrix_base<4, 2, col_major, double, packed_highp> cdouble4x2;
 typedef matrix_base<4, 3, col_major, double, packed_highp> cdouble4x3;
 typedef matrix_base<4, 4, col_major, double, packed_highp> cdouble4x4;
+
+typedef matrix_base<2, 2, default_major, float, packed_highp> float2x2;
+typedef matrix_base<2, 3, default_major, float, packed_highp> float2x3;
+typedef matrix_base<2, 4, default_major, float, packed_highp> float2x4;
+typedef matrix_base<3, 2, default_major, float, packed_highp> float3x2;
+typedef matrix_base<3, 3, default_major, float, packed_highp> float3x3;
+typedef matrix_base<3, 4, default_major, float, packed_highp> float3x4;
+typedef matrix_base<4, 2, default_major, float, packed_highp> float4x2;
+typedef matrix_base<4, 3, default_major, float, packed_highp> float4x3;
+typedef matrix_base<4, 4, default_major, float, packed_highp> float4x4;
+
+typedef matrix_base<2, 2, default_major, double, packed_highp> double2x2;
+typedef matrix_base<2, 3, default_major, double, packed_highp> double2x3;
+typedef matrix_base<2, 4, default_major, double, packed_highp> double2x4;
+typedef matrix_base<3, 2, default_major, double, packed_highp> double3x2;
+typedef matrix_base<3, 3, default_major, double, packed_highp> double3x3;
+typedef matrix_base<3, 4, default_major, double, packed_highp> double3x4;
+typedef matrix_base<4, 2, default_major, double, packed_highp> double4x2;
+typedef matrix_base<4, 3, default_major, double, packed_highp> double4x3;
+typedef matrix_base<4, 4, default_major, double, packed_highp> double4x4;
 
 VERA_NAMESPACE_END

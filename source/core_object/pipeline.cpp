@@ -77,8 +77,8 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Gr
 		shaders.push_back(info.geometryShader);
 	}
 
-
-	return PipelineLayout::create(device, shaders);
+	return {};
+	// return PipelineLayout::create(device, shaders);
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const MeshPipelineCreateInfo& info)
@@ -99,7 +99,8 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Me
 		shaders.push_back(info.taskShader);
 	}
 
-	return PipelineLayout::create(device, shaders);
+	return {};
+	// return PipelineLayout::create(device, shaders);
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const ComputePipelineCreateInfo& info)
@@ -109,7 +110,8 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Co
 
 	check_shader_stage(info.computeShader, ShaderStageFlagBits::Compute);
 
-	return PipelineLayout::create(device, info.computeShader);
+	return {};
+	// return PipelineLayout::create(device, info.computeShader);
 }
 
 static void add_shader_stage(

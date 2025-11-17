@@ -21,21 +21,16 @@ class PipelineLayout : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(PipelineLayout)
 public:
-	static obj<PipelineLayout> create(obj<Device> device, array_view<obj<Shader>> shaders);
-	static obj<PipelineLayout> create(obj<Device> device, obj<ShaderReflection> shader_reflection);
+	static obj<PipelineLayout> create(obj<Device> device, array_view<obj<ShaderLayout>> shader_layouts);
 	static obj<PipelineLayout> create(obj<Device> device, const PipelineLayoutCreateInfo& info);
-	static obj<PipelineLayout> create(
-		obj<Device>                          device,
-		array_view<obj<DescriptorSetLayout>> set_layouts,
-		array_view<PushConstantRange>        pc_ranges);
 	~PipelineLayout();
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
-	VERA_NODISCARD obj<DescriptorSetLayout> getDescriptorSetLayout(uint32_t set) VERA_NOEXCEPT;
 	VERA_NODISCARD obj<ShaderReflection> getShaderReflection() VERA_NOEXCEPT;
 
 	VERA_NODISCARD uint32_t getDescriptorSetLayoutCount() const VERA_NOEXCEPT;
-	VERA_NODISCARD array_view<ref<DescriptorSetLayout>> getDescriptorSetLayouts() const VERA_NOEXCEPT;
+	VERA_NODISCARD obj<DescriptorSetLayout> getDescriptorSetLayout(uint32_t set) VERA_NOEXCEPT;
+	VERA_NODISCARD array_view<ref<DescriptorSetLayout>> enumerateDescriptorSetLayouts() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD array_view<PushConstantRange> getPushConstantRanges() const VERA_NOEXCEPT;
 

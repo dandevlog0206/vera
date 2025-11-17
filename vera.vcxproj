@@ -113,7 +113,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\nsight_aftermath\include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\spirv-reflect;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -123,7 +123,7 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib;$(VULKAN_SDK)\Lib\spirv-cross-cored.lib;$(VULKAN_SDK)\Lib\spirv-cross-reflectd.lib</AdditionalDependencies>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -150,7 +150,7 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib;$(VULKAN_SDK)\Lib\spirv-cross-core.lib;$(VULKAN_SDK)\Lib\spirv-cross-reflect.lib</AdditionalDependencies>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -161,9 +161,8 @@
     <ClCompile Include="source\core_object\shader_layout.cpp" />
     <ClCompile Include="source\core_object\shader_reflection.cpp" />
     <ClCompile Include="source\spirv\reflection_desc.cpp" />
-    <ClCompile Include="source\spirv\spirv_parser.cpp" />
     <ClCompile Include="source\util\rect_packer.cpp" />
-    <ClCompile Include="source\debug\renderdoc.cpp" />
+    <ClCompile Include="source\util\renderdoc.cpp" />
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
     <ClInclude Include="include\vera\core\enum_types.h" />
@@ -177,6 +176,7 @@
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_variable.h" />
+    <ClInclude Include="include\vera\util\renderdoc.h" />
     <ClInclude Include="include\vera\geometry\aabb.h" />
     <ClInclude Include="include\vera\geometry\bezier.h" />
     <ClInclude Include="include\vera\geometry\circle.h" />
@@ -246,10 +246,10 @@
     <ClInclude Include="include\vera\util\range.h" />
     <ClInclude Include="include\vera\util\ranged_set.h" />
     <ClInclude Include="include\vera\util\rect_packer.h" />
-    <ClInclude Include="include\vera\debug\renderdoc.h" />
     <ClInclude Include="include\vera\util\result_message.h" />
     <ClInclude Include="include\vera\util\ring_vector.h" />
     <ClInclude Include="include\vera\util\stack_allocator.h" />
+    <ClInclude Include="include\vera\util\stopwatch.h" />
     <ClInclude Include="include\vera\util\string_pool.h" />
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
@@ -257,8 +257,7 @@
     <ClInclude Include="source\impl\shader_layout_impl.h" />
     <ClInclude Include="source\spirv\reflection_desc.h" />
     <ClInclude Include="source\impl\shader_reflection_impl.h" />
-    <ClInclude Include="source\spirv\spirv_parser.h" />
-    <ClInclude Include="source\debug\renderdoc_app.h" />
+    <ClInclude Include="source\util\renderdoc_app.h" />
     <ClInclude Include="source\typography\font_impl_base.h" />
     <ClInclude Include="source\typography\open_type.h" />
     <ClInclude Include="source\graphics\pixel.h" />

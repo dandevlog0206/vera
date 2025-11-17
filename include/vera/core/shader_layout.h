@@ -38,7 +38,7 @@ public:
 	VERA_NODISCARD obj<Device> getDevice() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD ShaderStageFlags getShaderStageFlags() const VERA_NOEXCEPT;
-	VERA_NODISCARD array_view<ShaderLayoutBinding> getBindings() const VERA_NOEXCEPT;
+	VERA_NODISCARD array_view<ShaderLayoutBinding> enumerateBindings() const VERA_NOEXCEPT;
 	VERA_NODISCARD PushConstantRange getPushConstantRange() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD hash_t hash() const VERA_NOEXCEPT;

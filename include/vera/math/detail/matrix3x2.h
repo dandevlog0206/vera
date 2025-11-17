@@ -158,7 +158,7 @@ public:
 			rows[0][0] * rhs[0] + rows[0][1] * rhs[1] + rows[0][2] * rhs[2],
 			rows[1][0] * rhs[0] + rows[1][1] * rhs[1] + rows[1][2] * rhs[2],
 			rows[2][0] * rhs[0] + rows[2][1] * rhs[1] + rows[2][2] * rhs[2]
-		}
+		};
 	}
 
 	friend VERA_NODISCARD VERA_CONSTEXPR col_type operator*(const row_type& lhs, const matrix_base& rhs) VERA_NOEXCEPT

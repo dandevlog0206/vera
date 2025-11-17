@@ -9,7 +9,9 @@ VERA_NAMESPACE_BEGIN
 enum MathMatrixOrder
 {
 	row_major,
-	col_major
+	col_major,
+
+	default_major = row_major
 };
 
 // Helper: dependent false to delay static_assert until instantiation

@@ -35,9 +35,6 @@
 #include "core/texture.h"
 #include "core/texture_view.h"
 
-// debug
-#include "debug/renderdoc.h"
-
 // geometry
 #include "geometry/aabb.h"
 #include "geometry/bezier.h"
@@ -116,6 +113,7 @@
 #include "util/rect.h"
 #include "util/rect_packer.h"
 #include "util/result_message.h"
+#include "util/renderdoc.h"
 #include "util/ring_vector.h"
 #include "util/small_vector.h"
 #include "util/stack_allocator.h"

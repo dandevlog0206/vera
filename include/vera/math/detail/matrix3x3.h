@@ -288,7 +288,7 @@ private:
 };
 
 template <class T, MathQualifier Q>
-class matrix_base<3, 3, row_major, T, Q>
+class matrix_base<3, 3, col_major, T, Q>
 {
 public:
 	static VERA_CONSTEXPR MathDimType     col_size    = 3;

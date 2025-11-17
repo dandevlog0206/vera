@@ -285,16 +285,16 @@ public:
 	using vec2_type   = vector_base<2, T, Q>;
 	using vec3_type   = vector_base<3, T, Q>;
 	using vec4_type   = vector_base<4, T, Q>;
-	using mat2x2_type = matrix_base<2, 2, T, Q>;
-	using mat2x3_type = matrix_base<2, 3, T, Q>;
-	using mat2x4_type = matrix_base<2, 4, T, Q>;
-	using mat3x2_type = matrix_base<3, 2, T, Q>;
-	using mat3x3_type = matrix_base<3, 3, T, Q>;
-	using mat3x4_type = matrix_base<3, 4, T, Q>;
-	using mat4x2_type = matrix_base<4, 2, T, Q>;
-	using mat4x3_type = matrix_base<4, 3, T, Q>;
-	using mat4x4_type = matrix_base<4, 4, T, Q>;
-	using this_type   = matrix_base<4, 2, T, Q>;
+	using mat2x2_type = matrix_base<2, 2, col_major, T, Q>;
+	using mat2x3_type = matrix_base<2, 3, col_major, T, Q>;
+	using mat2x4_type = matrix_base<2, 4, col_major, T, Q>;
+	using mat3x2_type = matrix_base<3, 2, col_major, T, Q>;
+	using mat3x3_type = matrix_base<3, 3, col_major, T, Q>;
+	using mat3x4_type = matrix_base<3, 4, col_major, T, Q>;
+	using mat4x2_type = matrix_base<4, 2, col_major, T, Q>;
+	using mat4x3_type = matrix_base<4, 3, col_major, T, Q>;
+	using mat4x4_type = matrix_base<4, 4, col_major, T, Q>;
+	using this_type   = matrix_base<4, 2, col_major, T, Q>;
 
 	static VERA_CONSTEXPR mat4x2_type identity() VERA_NOEXCEPT
 	{

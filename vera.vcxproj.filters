@@ -468,10 +468,7 @@
     <ClInclude Include="include\vera\util\rect_packer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\debug\renderdoc_app.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\vera\debug\renderdoc.h">
+    <ClInclude Include="source\util\renderdoc_app.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\geometry\circle.h">
@@ -504,9 +501,6 @@
     <ClInclude Include="source\spirv\reflection_desc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\spirv\spirv_parser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\vera\util\bool32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -514,6 +508,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\impl\shader_layout_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\renderdoc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\stopwatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -662,16 +662,13 @@
     <ClCompile Include="source\util\rect_packer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\debug\renderdoc.cpp">
+    <ClCompile Include="source\util\renderdoc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core\shader_variable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core_object\shader_reflection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\spirv\spirv_parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\spirv\reflection_desc.cpp">
