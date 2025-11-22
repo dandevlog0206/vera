@@ -2680,7 +2680,7 @@ Color Colormaps::managua(uint8_t value)
 Color Colormaps::vanimo(uint8_t value)
 {
 	static const float3 data[] = {
-		{ 1.f,       0.80346,   0.99215f  },
+		{ 1.f,       0.80346f,  0.99215f  },
 		{ 0.99397f,  0.79197f,  0.98374f  },
 		{ 0.98791f,  0.78052f,  0.97535f  },
 		{ 0.98185f,  0.7691f,   0.96699f  },

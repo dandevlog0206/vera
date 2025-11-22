@@ -58,7 +58,7 @@ obj<GraphicsPass> GraphicsPass::create(obj<Device> device, const GraphicsPassCre
 	}
 
 	obj->m_pipeline = Pipeline::create(device, pipeline_info);
-	obj->m_param    = ShaderParameter::create(obj->m_pipeline->getPipelineLayout());
+	// obj->m_param    = ShaderParameter::create(obj->m_pipeline->getPipelineLayout());
 	// m_param    = ShaderParameter::create(nullptr);
 	obj->m_param = nullptr;
 	obj->m_states.setPipeline(obj->m_pipeline);

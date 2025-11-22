@@ -38,7 +38,7 @@ struct FBXLoader
 {
 	typedef ResultMessage<AssetResult> Result;
 
-	enum PropertyTypeCode : char {
+	enum PropertyTypeCode : uint8_t {
 		BYTE         = 'Z',
 		SHORT        = 'Y',
 		BOOL         = 'B',
@@ -295,7 +295,7 @@ struct FBXLoader
 		uint64_t propertyListLength;
 		uint8_t  nameLength;
 	};
-#pragma pack(pop, 1)
+#pragma pack(pop)
 
 	static Result load(AssetLoader& loader, std::string_view path)
 	{
@@ -457,7 +457,7 @@ private:
 			// parse properties
 			prop_end_offset = raw_node.propertyListLength + input_file.tellg();
 
-			if ((node.propertyCount = raw_node.propertyCount) != 0) {
+			if ((node.propertyCount = static_cast<uint32_t>(raw_node.propertyCount)) != 0) {
 				node.properties = allocator.allocate<PropertyRecordPtr>(raw_node.propertyCount);
 				FBX_CHECK_ALLOC(node.properties);
 

@@ -17,8 +17,9 @@ public:
 	IndexType         indexType = {};
 };
 
-struct BufferViewImpl
+class BufferViewImpl
 {
+public:
 	obj<Device>    device       = {};
 	obj<Buffer>    buffer       = {};
 

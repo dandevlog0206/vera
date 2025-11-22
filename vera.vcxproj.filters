@@ -72,7 +72,7 @@
     <ClInclude Include="include\vera\util\extent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\internal\include_vulkan.h">
+    <ClInclude Include="source\impl\include_vulkan.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\context.h">
@@ -520,6 +520,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\reflection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\util\hybrid_vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

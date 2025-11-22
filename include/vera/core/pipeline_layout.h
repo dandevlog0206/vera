@@ -5,6 +5,7 @@
 #include "shader_reflection.h"
 #include "../util/array_view.h"
 #include <vector>
+#include "program_reflection.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -28,6 +29,7 @@ class PipelineLayout : protected CoreObject
 	VERA_CORE_OBJECT_INIT(PipelineLayout)
 public:
 	static obj<PipelineLayout> create(obj<Device> device, array_view<const_ref<Shader>> shaders);
+	static obj<PipelineLayout> create(obj<Device> device, const_ref<ProgramReflection> program_reflection);
 	static obj<PipelineLayout> create(obj<Device> device, array_view<const_ref<ShaderReflection>> shader_reflections);
 	static obj<PipelineLayout> create(obj<Device> device, const PipelineLayoutCreateInfo& info);
 	~PipelineLayout() VERA_NOEXCEPT override;

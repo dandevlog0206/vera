@@ -76,6 +76,8 @@ static RENDERDOC_InputButton get_renderdoc_input_button(os::Key key)
 	case os::Key::End:         return eRENDERDOC_Key_End;
 	case os::Key::PageDown:    return eRENDERDOC_Key_PageDn;
 	}
+
+	VERA_ERROR_MSG("Unsupported key for RenderDoc input button");
 }
 
 bool RenderDoc::init(RenderDocAPIVersion version)

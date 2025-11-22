@@ -36,9 +36,7 @@ public:
 	ShaderVariable() = default;
 
 	VERA_NODISCARD bool isRoot() const VERA_NOEXCEPT;
-	VERA_NODISCARD bool isPushConstant() const VERA_NOEXCEPT;
-	VERA_NODISCARD bool isDescriptor() const VERA_NOEXCEPT;
-	VERA_NODISCARD DescriptorType getDescriptorType() const VERA_NOEXCEPT;
+	VERA_NODISCARD bool isArray() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD ShaderVariable operator[](std::string_view name) VERA_NOEXCEPT;
 	VERA_NODISCARD ShaderVariable operator[](uint32_t idx) VERA_NOEXCEPT;
@@ -50,13 +48,6 @@ public:
 	void operator=(obj<TextureView> texture_view);
 	void operator=(obj<BufferView> buffer_view);
 	void operator=(obj<Buffer> buffer);
-
-	template <class T>
-	// requires requires(ShaderVariable& s, const T& t) { s.setValue(t); }
-	void operator=(const T& value)
-	{
-		setValue(value);
-	}
 
 	void setSampler(obj<Sampler> sampler);
 	void setTextureView(
@@ -117,24 +108,50 @@ public:
 	void setValue(const double4& value);
 
 	// matrix types
-	void setValue(const float2x2& value);
-	void setValue(const float2x3& value);
-	void setValue(const float2x4& value);
-	void setValue(const float3x2& value);
-	void setValue(const float3x3& value);
-	void setValue(const float3x4& value);
-	void setValue(const float4x2& value);
-	void setValue(const float4x3& value);
-	void setValue(const float4x4& value);
-	void setValue(const double2x2& value);
-	void setValue(const double2x3& value);
-	void setValue(const double2x4& value);
-	void setValue(const double3x2& value);
-	void setValue(const double3x3& value);
-	void setValue(const double3x4& value);
-	void setValue(const double4x2& value);
-	void setValue(const double4x3& value);
-	void setValue(const double4x4& value);
+	void setValue(const rfloat2x2& value);
+	void setValue(const rfloat2x3& value);
+	void setValue(const rfloat2x4& value);
+	void setValue(const rfloat3x2& value);
+	void setValue(const rfloat3x3& value);
+	void setValue(const rfloat3x4& value);
+	void setValue(const rfloat4x2& value);
+	void setValue(const rfloat4x3& value);
+	void setValue(const rfloat4x4& value);
+	void setValue(const rdouble2x2& value);
+	void setValue(const rdouble2x3& value);
+	void setValue(const rdouble2x4& value);
+	void setValue(const rdouble3x2& value);
+	void setValue(const rdouble3x3& value);
+	void setValue(const rdouble3x4& value);
+	void setValue(const rdouble4x2& value);
+	void setValue(const rdouble4x3& value);
+	void setValue(const rdouble4x4& value);
+
+	void setValue(const cfloat2x2& value);
+	void setValue(const cfloat2x3& value);
+	void setValue(const cfloat2x4& value);
+	void setValue(const cfloat3x2& value);
+	void setValue(const cfloat3x3& value);
+	void setValue(const cfloat3x4& value);
+	void setValue(const cfloat4x2& value);
+	void setValue(const cfloat4x3& value);
+	void setValue(const cfloat4x4& value);
+	void setValue(const cdouble2x2& value);
+	void setValue(const cdouble2x3& value);
+	void setValue(const cdouble2x4& value);
+	void setValue(const cdouble3x2& value);
+	void setValue(const cdouble3x3& value);
+	void setValue(const cdouble3x4& value);
+	void setValue(const cdouble4x2& value);
+	void setValue(const cdouble4x3& value);
+	void setValue(const cdouble4x4& value);
+
+	template <class T>
+	requires requires(ShaderVariable& s, const T& t) { s.setValue(t); }
+	void operator=(const T& value)
+	{
+		setValue(value);
+	}
 
 	VERA_NODISCARD bool empty() const VERA_NOEXCEPT;
 

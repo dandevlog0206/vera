@@ -3,16 +3,10 @@
 #include "enum_types.h"
 #include "../util/array_view.h"
 #include <string_view>
-#include <optional>
 
 VERA_NAMESPACE_BEGIN
 
 class ReflectionSpecConstant;
-
-enum
-{
-	MAX_REFLECTION_ARRAY_DIMENSION_COUNT = 8
-};
 
 enum class ReflectionPrimitiveType VERA_ENUM
 {
@@ -310,57 +304,57 @@ private:
 class ReflectionInterfaceVariable
 {
 public:
-	ShaderStageFlags                               stageFlags;
-	std::string_view                               name;
-	uint32_t                                       location;
-	uint32_t                                       component;
-	ReflectionInterfaceIO                          io;
-	std::string_view                               semantic;
-	ReflectionDecorationFlags                      decorationFlags;
-	ReflectionBuiltIn                              builtIn;
-	ReflectionPrimitiveType                        primitiveType;
-	Format                                         format;
-	ReflectionArrayTraits                          arrayTraits;
-	array_view<const ReflectionInterfaceVariable*> members;
+	ShaderStageFlags                               stageFlags      = {};
+	std::string_view                               name            = {};
+	uint32_t                                       location        = {};
+	uint32_t                                       component       = {};
+	ReflectionInterfaceIO                          io              = {};
+	std::string_view                               semantic        = {};
+	ReflectionDecorationFlags                      decorationFlags = {};
+	ReflectionBuiltIn                              builtIn         = {};
+	ReflectionPrimitiveType                        primitiveType   = {};
+	Format                                         format          = {};
+	ReflectionArrayTraits                          arrayTraits     = {};
+	array_view<const ReflectionInterfaceVariable*> members         = {};
 };
 
 class ReflectionBlockVariable
 {
 public:
-	ShaderStageFlags                           stageFlags;
-	std::string_view                           name;
-	uint32_t                                   offset;
-	uint32_t                                   absoluteOffset;
-	uint32_t                                   size;
-	uint32_t                                   paddedSize;
-	ReflectionDecorationFlags                  decorationFlags;
-	ReflectionPrimitiveType                    primitiveType;
-	ReflectionArrayTraits                      arrayTraits;
-	array_view<const ReflectionBlockVariable*> members;
+	ShaderStageFlags                           stageFlags      = {};
+	std::string_view                           name            = {};
+	uint32_t                                   offset          = {};
+	uint32_t                                   absoluteOffset  = {};
+	uint32_t                                   size            = {};
+	uint32_t                                   paddedSize      = {};
+	ReflectionDecorationFlags                  decorationFlags = {};
+	ReflectionPrimitiveType                    primitiveType   = {};
+	ReflectionArrayTraits                      arrayTraits     = {};
+	array_view<const ReflectionBlockVariable*> members         = {};
 };
 
 class ReflectionDescriptorBinding
 {
 public:
-	ShaderStageFlags               stageFlags;
-	std::string_view               name;
-	uint32_t                       set;
-	uint32_t                       binding;
-	uint32_t                       inputAttachmentIndex;
-	DescriptorType                 descriptorType;
-	ReflectionDecorationFlags      decorationFlags;
-	ReflectionArrayTraits          arrayTraits;
-	const ReflectionBlockVariable* block;
-	uint32_t                       elementCount;
-	bool                           accessed;
+	ShaderStageFlags               stageFlags           = {};
+	std::string_view               name                 = {};
+	uint32_t                       set                  = {};
+	uint32_t                       binding              = {};
+	uint32_t                       inputAttachmentIndex = {};
+	DescriptorType                 descriptorType       = {};
+	ReflectionDecorationFlags      decorationFlags      = {};
+	ReflectionArrayTraits          arrayTraits          = {};
+	const ReflectionBlockVariable* block                = {};
+	uint32_t                       elementCount         = {};
+	bool                           accessed             = {};
 };
 
 class ReflectionDescriptorSet
 {
 public:
-	ShaderStageFlags                               stageFlags;
-	uint32_t                                       set;
-	array_view<const ReflectionDescriptorBinding*> bindings;
+	ShaderStageFlags                               stageFlags = {};
+	uint32_t                                       set        = {};
+	array_view<const ReflectionDescriptorBinding*> bindings   = {};
 
 	VERA_NODISCARD VERA_CONSTEXPR const ReflectionDescriptorBinding* getBinding(uint32_t binding) const VERA_NOEXCEPT
 	{
@@ -375,18 +369,25 @@ public:
 class ReflectionPushConstant
 {
 public:
-	ShaderStageFlags               stageFlags;
-	std::string_view               name;
-	uint32_t                       offset;
-	uint32_t                       size;
-	const ReflectionBlockVariable* block;
+	ShaderStageFlags               stageFlags = {};
+	std::string_view               name       = {};
+	uint32_t                       offset     = {};
+	uint32_t                       size       = {};
+	const ReflectionBlockVariable* block      = {};
 };
 
 class ReflectionSpecConstant
 {
 public:
-	std::string_view name;
-	uint32_t         constantId;
+	std::string_view name       = {};
+	uint32_t         constantId = {};
+};
+
+class ReflectionEntryPoint
+{
+public:
+	ShaderStageFlags stageFlags = {};
+	std::string_view name       = {};
 };
 
 VERA_NAMESPACE_END

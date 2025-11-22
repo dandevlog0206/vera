@@ -16,17 +16,14 @@ int main()
 	auto vert_shader = vr::Shader::create(device, "spirv/test.vert.glsl.spv");
 	auto geom_shader = vr::Shader::create(device, "spirv/test.geom.glsl.spv");
 	auto frag_shader = vr::Shader::create(device, "spirv/test.frag.glsl.spv");
-	auto frag2_shader = vr::Shader::create(device, "spirv/shader_toy/shader_toy3.frag.glsl.spv");
 
-	auto begin = std::chrono::high_resolution_clock::now();
-
-	// auto reflection = vr::ShaderReflection::create({ vert_shader, geom_shader, frag_shader });
-
-	auto end = std::chrono::high_resolution_clock::now();
-
-	std::cout << "Shader reflection took " <<
-		std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<
-		" us" << std::endl;
+	auto reflection = vr::ProgramReflection::create(
+		device,
+		{
+			vr::ShaderReflection::create(device, vert_shader),
+			vr::ShaderReflection::create(device, geom_shader),
+			vr::ShaderReflection::create(device, frag_shader)
+		});
 
 	auto pass_info = vr::GraphicsPassCreateInfo{
 		.vertexShader   = vr::Shader::create(device, "spirv/triangle_minimal.vert.glsl.spv"),

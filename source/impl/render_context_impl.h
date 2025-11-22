@@ -12,8 +12,9 @@ struct RenderContextFrame : RenderFrame
 	FrameBuffers framebuffers;
 };
 
-struct RenderContextImpl
+class RenderContextImpl
 {
+public:
 	using RenderContextFrames = std::vector<RenderContextFrame*>;
 
 	obj<Device>         device            = {};

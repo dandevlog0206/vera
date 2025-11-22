@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/coredefs.h"
+#include "../core/assertion.h"
 #include <type_traits>
 #include <bit>
 

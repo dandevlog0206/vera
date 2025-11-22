@@ -79,19 +79,27 @@ struct NodeLayoutValidation
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, primitiveType, PrimitiveType));
 };
 
+typedef const ReflectionNode* ReflectionNodePtr;
 typedef const ReflectionResourceNode* ReflectionResourceNodePtr;
 typedef const ReflectionBlockNode* ReflectionBlockNodePtr;
+typedef const ReflectionRootNode* ReflectionRootNodePtr;
 typedef const ReflectionDescriptorNode* ReflectionDescriptorNodePtr;
+typedef const ReflectionDescriptorArrayNode* ReflectionDescriptorArrayNodePtr;
+typedef const ReflectionDescriptorBlockNode* ReflectionDescriptorBlockNodePtr;
 typedef const ReflectionPushConstantNode* ReflectionPushConstantNodePtr;
+typedef const ReflectionStructNode* ReflectionStructNodePtr;
+typedef const ReflectionArrayNode* ReflectionArrayNodePtr;
+typedef const ReflectionPrimitiveNode* ReflectionPrimitiveNodePtr;
 
 typedef static_vector<const ReflectionResourceNodePtr*, MAX_SHADER_STAGE_COUNT> PerStageResourceNodeIteratorArray;
 typedef static_vector<const ReflectionBlockNodePtr*, MAX_SHADER_STAGE_COUNT> PerStageBlockNodeIteratorArray;
 typedef static_vector<const ReflectionDescriptorNodePtr*, MAX_SHADER_STAGE_COUNT> PerStageDescriptorNodeIteratorArray;
 typedef static_vector<const ReflectionRootNode*, MAX_SHADER_STAGE_COUNT>  PerStageRootNodeArray;
 typedef static_vector<const ReflectionResourceNode*, MAX_SHADER_STAGE_COUNT>  PerStageRootMemberNodeArray;
-typedef static_vector<const ReflectionBlockNode*, MAX_SHADER_STAGE_COUNT> PerStageBlockMemberNodeArray;
+typedef static_vector<const ReflectionBlockNode*, MAX_SHADER_STAGE_COUNT> PerStageBlockNodeArray;
 typedef static_vector<const ReflectionDescriptorNode*, MAX_SHADER_STAGE_COUNT> PerStageDescriptorNodeArray;
 typedef static_vector<const ReflectionPushConstantNode*, MAX_SHADER_STAGE_COUNT>  PerStagePushConstantNodeArray;
+typedef static_vector<const ReflectionStructNode*, MAX_SHADER_STAGE_COUNT>  PerStageStructNodeArray;
 
 class TestMemoryResource : public std::pmr::memory_resource
 {
@@ -247,11 +255,6 @@ static uint32_t get_array_stride(const SpvReflectArrayTraits& traits, uint32_t d
 		result *= traits.dims[i];
 
 	return result;
-}
-
-static basic_range<uint32_t> get_pc_range(const SpvReflectBlockVariable& block)
-{
-	return { block.offset, block.offset + block.padded_size };
 }
 
 static ReflectionPrimitiveType reflect_matrix_type(const SpvReflectBlockVariable& block)
@@ -542,9 +545,10 @@ static const ReflectionBlockNode* parse_block_variable(
 ) {
 	if (block.array.dims_count != array_dim) {
 		auto* array_node = construct_node<ReflectionArrayNode>(ctx.memory);
-		array_node->type         = ReflectionDescType::Array;
-		array_node->offset       = block.offset;
+		array_node->type         = ReflectionNodeType::Array;
+		array_node->stageFlags   = ctx.stageFlags;
 		array_node->name         = construct_string(ctx.memory, block.name);
+		array_node->offset       = block.offset;
 		array_node->paddedSize   = block.padded_size;
 		array_node->elementNode  = parse_block_variable(ctx, block, array_dim + 1);
 		array_node->elementCount = block.array.dims[array_dim] <= 1 ? UINT32_MAX : block.array.dims[array_dim];
@@ -555,9 +559,10 @@ static const ReflectionBlockNode* parse_block_variable(
 
 	if (block.member_count) {
 		auto* struct_node = construct_node<ReflectionStructNode>(ctx.memory);
-		struct_node->type       = ReflectionDescType::Struct;
-		struct_node->offset     = block.offset;
+		struct_node->type       = ReflectionNodeType::Struct;
+		struct_node->stageFlags = ctx.stageFlags;
 		struct_node->name       = construct_string(ctx.memory, block.name);
+		struct_node->offset     = block.offset;
 
 		ReflectionNameMap name_map(ctx.tempMemory);
 
@@ -581,9 +586,11 @@ static const ReflectionBlockNode* parse_block_variable(
 	}
 	
 	auto* prim_node = construct_node<ReflectionPrimitiveNode>(ctx.memory);
-	prim_node->type          = ReflectionDescType::Primitive;
-	prim_node->offset        = block.offset;
+	prim_node->type          = ReflectionNodeType::Primitive;
+	prim_node->stageFlags    = ctx.stageFlags;
 	prim_node->name          = construct_string(ctx.memory, block.name);
+	prim_node->offset        = block.offset;
+	prim_node->paddedSize    = block.padded_size;
 	prim_node->primitiveType = parse_primitive_type(block);
 
 	return prim_node->as<ReflectionBlockNode>();
@@ -594,10 +601,11 @@ const ReflectionPushConstantNode* parse_push_constant(
 	const SpvReflectBlockVariable& block
 ) {
 	auto* pc_node = construct_node<ReflectionPushConstantNode>(ctx.memory);
-	pc_node->type       = ReflectionDescType::PushConstant;
+	pc_node->type       = ReflectionNodeType::PushConstant;
 	pc_node->stageFlags = ctx.stageFlags;
 	pc_node->name       = construct_string(ctx.memory, block.name);
-	pc_node->range      = get_pc_range(block);
+	pc_node->offset     = block.offset;
+	pc_node->paddedSize = block.padded_size;
 	pc_node->block      = parse_block_variable(ctx, block)->as<ReflectionStructNode>();
 
 	return pc_node;
@@ -614,7 +622,7 @@ static const ReflectionDescriptorNode* parse_descriptor_binding(
 				SET_BINDING_FMT(binding));
 
 		auto* array_node = construct_node<ReflectionDescriptorArrayNode>(ctx.memory);
-		array_node->type           = ReflectionDescType::DescriptorArray;
+		array_node->type           = ReflectionNodeType::DescriptorArray;
 		array_node->stageFlags     = ctx.stageFlags;
 		array_node->name           = construct_string(ctx.memory, binding.name);
 		array_node->descriptorType = to_descriptor_type(binding.descriptor_type);
@@ -629,7 +637,7 @@ static const ReflectionDescriptorNode* parse_descriptor_binding(
 
 	if (is_block_variable(binding)) {
 		auto* block_node = construct_node<ReflectionDescriptorBlockNode>(ctx.memory);
-		block_node->type           = ReflectionDescType::DescriptorBlock;
+		block_node->type           = ReflectionNodeType::DescriptorBlock;
 		block_node->stageFlags     = ctx.stageFlags;
 		block_node->name           = construct_string(ctx.memory, binding.name);
 		block_node->descriptorType = to_descriptor_type(binding.descriptor_type);
@@ -641,7 +649,7 @@ static const ReflectionDescriptorNode* parse_descriptor_binding(
 	}
 
 	auto* desc_node = construct_node<ReflectionDescriptorNode>(ctx.memory);
-	desc_node->type           = ReflectionDescType::Descriptor;
+	desc_node->type           = ReflectionNodeType::Descriptor;
 	desc_node->stageFlags     = ctx.stageFlags;
 	desc_node->name           = construct_string(ctx.memory, binding.name);
 	desc_node->descriptorType = to_descriptor_type(binding.descriptor_type);
@@ -677,7 +685,7 @@ static ReflectionRootNode* parse_impl(
 	}
 
 	auto* root_node = construct_node<ReflectionRootNode>(ctx.memory);
-	root_node->type              = ReflectionDescType::Root;
+	root_node->type              = ReflectionNodeType::Root;
 	root_node->stageFlags        = to_shader_stage(module.shader_stage);
 	root_node->targetFlags       = ReflectionTargetFlagBits::Shader;
 	root_node->descriptorCount   = desc_node_count;
@@ -734,685 +742,523 @@ static ReflectionRootNode* parse_impl(
 	return root_node;
 }
 
-//static bool check_node_compatible(const ReflectionNode* lhs, const ReflectionNode* rhs);
+static const ReflectionBlockNode* clone_block_node(
+	ReflectionContext&         ctx,
+	const ReflectionBlockNode* src_node
+) {
+	switch (src_node->type) {
+	case ReflectionNodeType::Struct: {
+		const auto* src_strcut   = static_cast<const ReflectionStructNode*>(src_node);
+		auto*       new_struct   = construct_node<ReflectionStructNode>(ctx.memory);
 
-//// member count can be different, but each member must be compatible
-//static bool check_block_compatible(
-//	const ReflectionResourceNode* lhs,
-//	const ReflectionResourceNode* rhs
-//) {
-//	if (lhs == rhs) return true;
-//
-//	auto lhs_type = lhs->getType();
-//	auto rhs_type = rhs->getType();
-//
-//	if (lhs_type != rhs_type) return false;
-//
-//	VERA_ASSERT_MSG(
-//		lhs_type == ReflectionDescType::DescriptorBlock ||
-//		lhs_type == ReflectionDescType::PushConstant,
-//		"cannot check compatibility on non-block node");
-//
-//	auto lhs_members = lhs->getBlockMemberNodes();
-//	auto rhs_members = rhs->getBlockMemberNodes();
-//	auto lhs_first   = lhs_members.begin();
-//	auto rhs_first   = rhs_members.begin();
-//	auto lhs_last    = lhs_members.end();
-//	auto rhs_last    = rhs_members.end();
-//
-//	while (lhs_first != lhs_last && rhs_first != rhs_last) {
-//		auto lhs_offset = (*lhs_first)->getOffset();
-//		auto lhs_size   = (*lhs_first)->getPaddedSize();
-//		auto rhs_offset = (*rhs_first)->getOffset();
-//		auto rhs_size   = (*rhs_first)->getPaddedSize();
-//
-//		if (lhs_offset == rhs_offset) {
-//			if (!check_node_compatible(*lhs_first, *rhs_first))
-//				return false;
-//
-//			++lhs_first;
-//			++rhs_first;
-//		} else if (lhs_offset < rhs_offset) {
-//			if (rhs_offset < lhs_offset + lhs_size)
-//				return false;
-//
-//			++lhs_first;
-//		} else {
-//			if (lhs_offset < rhs_offset + rhs_size)
-//				return false;
-//
-//			++rhs_first;
-//		}
-//	}
-//
-//	return true;
-//}
+		size_t   member_count = src_strcut->memberNodes.size();
+		auto*    member_nodes = construct_array<ReflectionBlockNodePtr>(ctx.memory, member_count);
+		uint32_t member_idx   = 0;
 
-//static bool check_node_compatible(const ReflectionNode* lhs, const ReflectionNode* rhs)
-//{
-//	if (lhs == rhs) return true;
-//
-//	auto lhs_type = lhs->getType();
-//	auto rhs_type = rhs->getType();
-//
-//	if (lhs_type != rhs_type) return false;
-//
-//	VERA_ASSERT_MSG(lhs_type != ReflectionDescType::Root,
-//		"cannot check compatibility on root node");
-//
-//	switch (lhs_type) {
-//	case ReflectionDescType::Descriptor: {
-//		auto lhs_desc = static_cast<const ReflectionDescriptorNode*>(lhs);
-//		auto rhs_desc = static_cast<const ReflectionDescriptorNode*>(rhs);
-//
-//		return
-//			lhs_desc->descriptorType == rhs_desc->descriptorType &&
-//			lhs_desc->set == rhs_desc->set &&
-//			lhs_desc->binding == rhs_desc->binding;
-//	}
-//	case ReflectionDescType::DescriptorArray: {
-//		auto lhs_array = static_cast<const ReflectionDescriptorArrayNode*>(lhs);
-//		auto rhs_array = static_cast<const ReflectionDescriptorArrayNode*>(rhs);
-//
-//		return
-//			lhs_array->descriptorType == rhs_array->descriptorType &&
-//			lhs_array->set == rhs_array->set &&
-//			lhs_array->binding == rhs_array->binding &&
-//			lhs_array->elementCount == rhs_array->elementCount &&
-//			lhs_array->stride == rhs_array->stride &&
-//			check_node_compatible(lhs_array->elementNode, rhs_array->elementNode);
-//	}
-//	case ReflectionType::DescriptorBlock: {
-//		auto lhs_block = static_cast<const ReflectionDescriptorBlockNode*>(lhs);
-//		auto rhs_block = static_cast<const ReflectionDescriptorBlockNode*>(rhs);
-//
-//		return
-//			lhs_block->descriptorType == rhs_block->descriptorType &&
-//			lhs_block->set == rhs_block->set &&
-//			lhs_block->binding == rhs_block->binding &&
-//			check_block_compatible(lhs_block, rhs_block);
-//	}
-//	case ReflectionType::PushConstant: {
-//		auto lhs_pc = static_cast<const ReflectionPushConstantNode*>(lhs);
-//		auto rhs_pc = static_cast<const ReflectionPushConstantNode*>(rhs);
-//
-//		return check_block_compatible(lhs_pc, rhs_pc);
-//	}
-//	case ReflectionType::Struct: {
-//		auto lhs_struct  = static_cast<const ReflectionStructNode*>(lhs);
-//		auto rhs_struct  = static_cast<const ReflectionStructNode*>(rhs);
-//		auto lhs_members = lhs_struct->memberNodes;
-//		auto rhs_members = rhs_struct->memberNodes;
-//
-//		if (lhs_struct->offset != rhs_struct->offset ||
-//			lhs_struct->paddedSize != rhs_struct->paddedSize ||
-//			lhs_members.size() != rhs_members.size())
-//			return false;
-//
-//		for (size_t i = 0; i < lhs_members.size(); ++i)
-//			if (!check_node_compatible(lhs_members[i], rhs_members[i]))
-//				return false;
-//
-//		return true;
-//	}
-//	case ReflectionType::Array: {
-//		auto lhs_array = static_cast<const ReflectionArrayNode*>(lhs);
-//		auto rhs_array = static_cast<const ReflectionArrayNode*>(rhs);
-//
-//		return
-//			lhs_array->offset == rhs_array->offset &&
-//			lhs_array->paddedSize == rhs_array->paddedSize &&
-//			lhs_array->elementCount == rhs_array->elementCount &&
-//			lhs_array->stride == rhs_array->stride &&
-//			check_node_compatible(lhs_array->elementNode, rhs_array->elementNode);
-//	}
-//	case ReflectionType::Primitive: {
-//		auto lhs_prim = static_cast<const ReflectionPrimitiveNode*>(lhs);
-//		auto rhs_prim = static_cast<const ReflectionPrimitiveNode*>(rhs);
-//
-//		return
-//			lhs_prim->offset == rhs_prim->offset &&
-//			lhs_prim->paddedSize == rhs_prim->paddedSize &&
-//			lhs_prim->primitiveType == rhs_prim->primitiveType;
-//	}
-//	}
-//	
-//	VERA_ERROR_MSG("invalid reflection type");
-//}
+		new_struct->type        = ReflectionNodeType::Struct;
+		new_struct->stageFlags  = src_strcut->stageFlags;
+		new_struct->name        = construct_string(ctx.memory, src_strcut->name);
+		new_struct->offset      = src_strcut->offset;
+		new_struct->paddedSize  = src_strcut->paddedSize;
+		new_struct->memberNodes = array_view{ member_nodes, src_strcut->memberNodes.size() };
+		new_struct->nameMap     = ReflectionNameMap(src_strcut->nameMap, ctx.memory);
 
-//static bool find_minimum_descriptor_node(
-//	PerStageDescriptorNodeIteratorArray& desc_begins,
-//	PerStageDescriptorNodeIteratorArray& desc_ends,
-//	PerStageDescriptorNodeArray&         out_nodes,
-//	ShaderStageFlags&                    out_stage_flags
-//) {
-//	ReflectionDescriptorNodePtr min_node        = nullptr;
-//	uint64_t                    min_binding_key = UINT64_MAX;
-//	size_t                      stage_count     = desc_begins.size();
-//	bool                        is_block        = false;
-//
-//	out_nodes.clear();
-//	out_stage_flags = {};
-//
-//	for (size_t i = 0; i < stage_count; ++i) {
-//		const auto it = desc_begins[i];
-//		
-//		if (it == desc_ends[i]) continue;
-//
-//		uint64_t key = COMBINE_SET_BINDING((*it)->set, (*it)->binding);
-//
-//		if (key < min_binding_key) {
-//			min_binding_key = key;
-//			min_node        = *it;
-//			is_block        = (*it)->type == ReflectionType::DescriptorBlock;
-//		}
-//	}
-//
-//	if (!min_node) return false;
-//
-//	// advance iterators which point to the minimum node and check compatibility
-//	for (size_t i = 0; i < stage_count; ++i) {
-//		const auto it = desc_begins[i];
-//
-//		if (it == desc_ends[i]) continue;
-//
-//		uint64_t key = COMBINE_SET_BINDING((*it)->set, (*it)->binding);
-//
-//		if (key == min_binding_key) {
-//			if (!is_block && !check_node_compatible(min_node, *it))
-//				throw Exception("incompatible descriptor binding at" SET_BINDING_FMT(*min_node));
-//			
-//			out_nodes.push_back(*it);
-//			out_stage_flags |= (*it)->getStageFlags();
-//			desc_begins[i]++;
-//		}
-//	}
-//
-//	// block nodes must be checked each other
-//	if (is_block) {
-//		size_t block_count = out_nodes.size();
-//
-//		for (size_t i = 0; i < block_count; ++i)
-//			for (size_t j = i + 1; j < block_count; ++j)
-//				if (!check_block_compatible(out_nodes[i], out_nodes[j]))
-//					throw Exception("incompatible descriptor block binding at" SET_BINDING_FMT(*min_node));
-//	}
-//
-//	return true;
-//}
+		for (const auto* member : src_strcut->memberNodes)
+			member_nodes[member_idx++] = clone_block_node(ctx, member);
 
-//static bool find_minimum_block_member_node(
-//	PerStageBlockNodeIteratorArray& member_begins,
-//	PerStageBlockNodeIteratorArray& member_ends,
-//	PerStageBlockMemberNodeArray&         out_member_nodes,
-//	ShaderStageFlags&                     out_stage_flags
-//) {
-//	ReflectionBlockNodePtr min_node    = nullptr;
-//	uint32_t                     min_offset  = UINT32_MAX;
-//	size_t                       stage_count = member_begins.size();
-//
-//	out_member_nodes.clear();
-//	out_stage_flags = {};
-//
-//	for (size_t i = 0; i < stage_count; ++i) {
-//		if (const auto it = member_begins[i]; it != member_ends[i]) {
-//			if (uint32_t offset = (*it)->getOffset(); offset < min_offset) {
-//				min_offset = offset;
-//				min_node   = *it;
-//			}
-//		}
-//	}
-//
-//	if (!min_node) return false;
-//
-//	for (size_t i = 0; i < stage_count; ++i) {
-//		if (const auto it = member_begins[i]; it != member_ends[i]) {
-//			if (uint32_t offset = (*it)->getOffset(); offset == min_offset) {
-//				out_member_nodes.push_back(*it);
-//				out_stage_flags |= (*it)->getStageFlags();
-//				member_begins[i]++;
-//			}
-//		}
-//	}
-//
-//	return true;
-//}
-//
-//static void insert_name_list(
-//	ReflectionNameMap&         name_map,
-//	const ReflectionNameChain* name_list,
-//	const ReflectionNode*      new_node
-//) {
-//	for (const auto* curr = name_list; curr; curr = curr->next) {
-//		if (auto it = name_map.find(curr->name); it == name_map.end()) {
-//			name_map.insert({
-//				curr->name,
-//				ReflectionNodeMapping{ new_node, curr->stageFlags }
-//			});
-//		} else if (it->second.node != new_node) {
-//			throw Exception("name map collision with name: {}", static_cast<const char*>(curr->name));
-//		}
-//	}
-//
-//}
+		return new_struct;
+	}
+	case ReflectionNodeType::Array: {
+		const auto* src_array = static_cast<const ReflectionArrayNode*>(src_node);
+		auto*       new_array = construct_node<ReflectionArrayNode>(ctx.memory);
 
-//static const ReflectionBlockNode* clone_block_member_node(
-//	ReflectionContext&               ctx,
-//	const ReflectionBlockNode* src_node,
-//	ShaderStageFlags                 stage_flags
-//) {
-//	switch (src_node->type) {
-//	case ReflectionType::Struct: {
-//		const auto* src_strcut   = static_cast<const ReflectionStructNode*>(src_node);
-//		auto*       new_struct   = construct_node<ReflectionStructNode>(ctx.memory);
-//
-//		uint32_t member_count = static_cast<uint32_t>(src_strcut->memberNodes.size());
-//		uint32_t member_idx   = 0;
-//		auto*    member_nodes = construct_array<ReflectionBlockNodePtr>(ctx.memory, member_count);
-//
-//		new_struct->type        = ReflectionType::Struct;
-//		new_struct->offset      = src_strcut->offset;
-//		new_struct->nameList    = construct_name_chain(ctx.memory, src_strcut->getName());
-//		new_struct->paddedSize  = src_strcut->paddedSize;
-//		new_struct->memberNodes = array_view{ member_nodes, src_strcut->memberNodes.size() };
-//		new_struct->nameMap     = ReflectionNameMap(src_strcut->nameMap, ctx.memory);
-//
-//		for (auto& mapping : new_struct->nameMap)
-//			mapping.second.stageFlags = stage_flags;
-//		for (const auto* member : src_strcut->memberNodes)
-//			member_nodes[member_idx++] = clone_block_member_node(ctx, member, stage_flags);
-//
-//		return new_struct;
-//	}
-//	case ReflectionType::Array: {
-//		const auto* src_array = static_cast<const ReflectionArrayNode*>(src_node);
-//		auto*       new_array = construct_node<ReflectionArrayNode>(ctx.memory);
-//
-//		new_array->type         = ReflectionType::Array;
-//		new_array->offset       = src_array->offset;
-//		new_array->nameList     = construct_name_chain(ctx.memory, src_array->getName());
-//		new_array->paddedSize   = src_array->paddedSize;
-//		new_array->stride       = src_array->stride;
-//		new_array->elementCount = src_array->elementCount;
-//		new_array->elementNode  = clone_block_member_node(ctx, src_array->elementNode, stage_flags);
-//
-//		return new_array;
-//	}
-//	case ReflectionType::Primitive: {
-//		const auto* src_prim = static_cast<const ReflectionPrimitiveNode*>(src_node);
-//		auto*       new_prim = construct_node<ReflectionPrimitiveNode>(ctx.memory);
-//
-//		new_prim->type          = ReflectionType::Primitive;
-//		new_prim->offset        = src_prim->offset;
-//		new_prim->nameList      = construct_name_chain(ctx.memory, src_prim->getName());
-//		new_prim->paddedSize    = src_prim->paddedSize;
-//		new_prim->primitiveType = src_prim->primitiveType;
-//
-//		return new_prim;
-//	}
-//	}
-//
-//	VERA_ERROR_MSG("invalid reflection type");
-//}
+		new_array->type         = ReflectionNodeType::Array;
+		new_array->stageFlags   = src_array->stageFlags;
+		new_array->name         = construct_string(ctx.memory, src_array->name);
+		new_array->offset       = src_array->offset;
+		new_array->paddedSize   = src_array->paddedSize;
+		new_array->stride       = src_array->stride;
+		new_array->elementCount = src_array->elementCount;
+		new_array->elementNode  = clone_block_node(ctx, src_array->elementNode);
 
-//static const ReflectionBlockNode* merge_block_member_node(
-//	ReflectionContext&                       ctx,
-//	array_view<ReflectionBlockNodePtr> src_nodes
-//) {
-//	ShaderStageFlags       stage_flags = {}; 
-//	ReflectionStringChain* name_list   = nullptr;
-//
-//	for (const auto* src : src_nodes) {
-//		stage_flags |= src->getStageFlags();
-//		name_list    = intern_string_chain(
-//			ctx.memory,
-//			name_list,
-//			src->getName());
-//	}
-//
-//	switch (src_nodes.front()->type) {
-//	case ReflectionType::Struct: {
-//		const auto* src_strcut   = static_cast<const ReflectionStructNode*>(src_nodes.front());
-//		auto*       new_struct   = construct_node<ReflectionStructNode>(ctx.memory);
-//
-//		uint32_t member_count = src_strcut->memberNodes.size();
-//		auto*    member_nodes = construct_array<ReflectionBlockNodePtr>(ctx.memory, member_count);
-//
-//		PerStageBlockMemberNodeArray block_members;
-//		ReflectionNameMap            name_map(ctx.tempNameMapAllocator);
-//
-//		new_struct->type        = ReflectionType::Struct;
-//		new_struct->offset      = src_strcut->offset;
-//		new_struct->nameList    = name_list;
-//		new_struct->blockSize   = src_strcut->blockSize;
-//		new_struct->memberNodes = array_view{ member_nodes, src_strcut->memberNodes.size() };
-//		new_struct->nameMap     = {};
-//
-//		for (uint32_t i = 0; i < member_count; ++i) {
-//			block_members.clear();
-//
-//			for (const auto* src : src_nodes)
-//				block_members.push_back(src->as<ReflectionStructNode>()->memberNodes[i]);
-//
-//			auto* new_member = merge_block_member_node(ctx, block_members);
-//
-//			member_nodes[i] = new_member;
-//
-//			for (const auto* curr = new_member->nameList; curr; curr = curr->next) {
-//
-//			}
-//
-//			for (const auto* block_member : block_members) {
-//				const auto  member_stage_flags = block_member->getStageFlags();
-//				const char* member_name        = block_member->getName();
-//
-//				if (auto it = name_map.find(member_name); it == name_map.end()) {
-//					name_map.insert({
-//						member_name,
-//						ReflectionNodeMapping{ new_member, member_stage_flags  }
-//					});
-//				} else {
-//					if (it->second.node != new_member)
-//						throw Exception("name map collision with name: {}", member_name);
-//
-//					it->second.stageFlags |= member_stage_flags ;
-//				}
-//			}
-//		}
-//
-//		new_struct->nameMap = ReflectionNameMap(name_map, ctx.nameMapAllocator);
-//
-//		return new_struct;
-//	}
-//	case ReflectionType::Array: {
-//		const auto* src_array = static_cast<const ReflectionArrayNode*>(src_nodes.front());
-//		auto*       new_array = construct_node<ReflectionArrayNode>(ctx.memory);
-//
-//		new_array->type         = ReflectionType::Array;
-//		new_array->offset       = src_array->offset;
-//		new_array->nameList     = name_list;
-//		new_array->stride       = src_array->stride;
-//		new_array->elementCount = src_array->elementCount;
-//		new_array->elementNode  = clone_block_member_node(ctx, src_array->elementNode, stage_flags);
-//
-//		return new_array;
-//	}
-//	case ReflectionType::Primitive: {
-//		const auto* src_prim = static_cast<const ReflectionPrimitiveNode*>(src_nodes.front());
-//		auto*       new_prim = construct_node<ReflectionPrimitiveNode>(ctx.memory);
-//
-//		new_prim->type          = ReflectionType::Primitive;
-//		new_prim->offset        = src_prim->offset;
-//		new_prim->nameList      = name_list;
-//		new_prim->primitiveType = src_prim->primitiveType;
-//
-//		return new_prim;
-//	}
-//	}
-//}
+		return new_array;
+	}
+	case ReflectionNodeType::Primitive: {
+		const auto* src_prim = static_cast<const ReflectionPrimitiveNode*>(src_node);
+		auto*       new_prim = construct_node<ReflectionPrimitiveNode>(ctx.memory);
 
-//static const ReflectionDescriptorNode* merge_descriptor_node(
-//	ReflectionContext&                      ctx,
-//	array_view<ReflectionDescriptorNodePtr> src_nodes,
-//	ShaderStageFlags                        stage_flags
-//) {
-//	switch (src_nodes.front()->type) {
-//	case ReflectionType::Descriptor: {
-//		const auto* first_desc = src_nodes.front();
-//		auto*       new_desc   = construct_node<ReflectionDescriptorNode>(ctx.memory);
-//
-//		new_desc->type           = ReflectionType::Descriptor;
-//		new_desc->stageFlags     = stage_flags;
-//		new_desc->nameList       = nullptr;
-//		new_desc->descriptorType = first_desc->descriptorType;
-//		new_desc->set            = first_desc->set;
-//		new_desc->binding        = first_desc->binding;
-//
-//		for (const auto* src : src_nodes)
-//			new_desc->nameList = intern_name_chain(ctx.memory, new_desc->nameList, src->getName());
-//
-//		return new_desc;
-//	}
-//	case ReflectionType::DescriptorArray: {
-//		const auto* first_array = static_cast<const ReflectionDescriptorArrayNode*>(src_nodes.front());
-//		auto*       new_array   = construct_node<ReflectionDescriptorArrayNode>(ctx.memory);
-//
-//		new_array->type           = ReflectionType::DescriptorArray;
-//		new_array->stageFlags     = stage_flags;
-//		new_array->nameList       = nullptr;
-//		new_array->descriptorType = first_array->descriptorType;
-//		new_array->set            = first_array->set;
-//		new_array->binding        = first_array->binding;
-//		new_array->elementCount   = first_array->elementCount;
-//		new_array->elementNode    = nullptr;
-//		new_array->stride         = first_array->stride;
-//
-//		PerStageDescriptorNodeArray element_nodes;
-//
-//		for (const auto* src : src_nodes) {
-//			new_array->nameList = intern_name_chain(ctx.memory, new_array->nameList, src->getName());
-//			element_nodes.push_back(src);
-//		}
-//
-//		new_array->elementNode = merge_descriptor_node(ctx, element_nodes, stage_flags);
-//
-//		return new_array;
-//	}
-//	case ReflectionType::DescriptorBlock: {
-//		const auto* first_block = static_cast<const ReflectionDescriptorBlockNode*>(src_nodes.front());
-//		auto*       new_block   = construct_node<ReflectionDescriptorBlockNode>(ctx.memory);
-//
-//		new_block->type           = ReflectionType::DescriptorBlock;
-//		new_block->stageFlags     = stage_flags;
-//		new_block->nameList       = nullptr;
-//		new_block->descriptorType = first_block->descriptorType;
-//	
-//		std::pmr::vector<ReflectionBlockNodePtr> block_members(ctx.tempMemory);
-//		ReflectionNameMap                              name_map(ctx.tempMemory);
-//
-//		PerStageBlockNodeIteratorArray member_begins;
-//		PerStageBlockNodeIteratorArray member_ends;
-//		PerStageBlockMemberNodeArray         member_nodes;
-//		ShaderStageFlags                     stage_flags;
-//
-//		for (const auto* src : src_nodes) {
-//			const auto* src_block = src->as<ReflectionDescriptorBlockNode>();
-//			member_begins.push_back(src_block->memberNodes.begin());
-//			member_ends.push_back(src_block->memberNodes.end());
-//			new_block->nameList = intern_name_chain(ctx.memory, new_block->nameList, src->getName());
-//		}
-//
-//		while (find_minimum_block_member_node(member_begins, member_ends, member_nodes, stage_flags)) {
-//			// TODO: support merging with varying name(when member_nodes.size() > 1)
-//			auto* new_member = clone_block_member_node(ctx, member_nodes.front(), stage_flags);
-//
-//			block_members.push_back(new_member);
-//			name_map.insert({
-//				new_member->getName(),
-//				ReflectionNodeMapping{ new_member, stage_flags }
-//			});
-//		}
-//
-//		return new_block;
-//	}
-//	}
-//
-//	VERA_ERROR_MSG("invalid reflection type");
-//}
+		new_prim->type          = ReflectionNodeType::Primitive;
+		new_prim->stageFlags    = src_prim->stageFlags;
+		new_prim->name          = construct_string(ctx.memory, src_prim->name);
+		new_prim->offset        = src_prim->offset;
+		new_prim->paddedSize    = src_prim->paddedSize;
+		new_prim->primitiveType = src_prim->primitiveType;
 
-//static void verify_push_constant_compatibility(
-//	array_view<ReflectionPushConstantNodePtr> pc_nodes,
-//	ShaderStageFlags                          src_stage_mask,
-//	uint32_t                                  target_idx
-//) {
-//	ReflectionPushConstantNodePtr target_node = pc_nodes[target_idx];
-//
-//	for (const auto* pc : pc_nodes) {
-//		if (!(pc->getStageFlags() & src_stage_mask)) continue;
-//
-//		if (!check_block_compatible(target_node, pc)) {
-//			auto src_stage    = pc->getStageFlags().flag_bit();
-//			auto target_stage = target_node->getStageFlags().flag_bit();
-//
-//			throw Exception("incompatible push constant block between stages "
-//				"'{}' and '{}' ",
-//				get_shader_stage_string(src_stage),
-//				get_shader_stage_string(target_stage));
-//		}
-//	}
-//}
+		return new_prim;
+	}
+	}
 
-//static const ReflectionPushConstantNode* merge_push_constant_node(
-//	ReflectionContext&                        ctx,
-//	array_view<ReflectionPushConstantNodePtr> src_nodes,
-//	const PushConstantRange&                  target_range
-//) {
-//	PerStageBlockNodeIteratorArray pc_begins;
-//	PerStageBlockNodeIteratorArray pc_ends;
-//	PerStageBlockMemberNodeArray         min_pc_nodes;
-//	ShaderStageFlags                     stage_flags;
-//	ReflectionNameChain*                 name_list  = nullptr;
-//
-//	for (const auto& pc : src_nodes) {
-//		pc_begins.push_back(pc->memberNodes.begin());
-//		pc_ends.push_back(pc->memberNodes.end());
-//		stage_flags |= pc->getStageFlags();
-//		name_list    = intern_name_chain(ctx.memory, name_list, pc->getName());
-//	}
-//
-//	std::pmr::vector<ReflectionBlockNodePtr> block_members(ctx.tempMemory);
-//	ReflectionNameMap                              name_map(ctx.tempMemory);
-//
-//	auto* new_pc = construct_node<ReflectionPushConstantNode>(ctx.memory);
-//	new_pc->type        = ReflectionType::PushConstant;
-//	new_pc->stageFlags  = stage_flags;
-//	new_pc->nameList    = name_list;
-//	new_pc->memberNodes = {};
-//	new_pc->nameMap     = {};
-//
-//	while (find_minimum_block_member_node(pc_begins, pc_ends, min_pc_nodes, stage_flags)) {
-//		auto* new_member = clone_block_member_node(ctx, min_pc_nodes.front(), stage_flags);
-//
-//		block_members.push_back(new_member);
-//
-//		name_map.insert({
-//			new_member->getName(),
-//			ReflectionNodeMapping{ new_member, stage_flags }
-//		});
-//	}
-//
-//	auto** member_nodes = construct_array<ReflectionBlockNodePtr>(ctx.memory, block_members.size());
-//	std::copy(VERA_SPAN(block_members), member_nodes);
-//
-//	new_pc->memberNodes = array_view{ member_nodes, block_members.size() };
-//	new_pc->nameMap     = ReflectionNameMap(name_map, ctx.memory);
-//
-//	return new_pc;
-//}
+	VERA_ERROR_MSG("invalid reflection type");
+}
 
-//static ReflectionRootNode* merge_impl(
-//	ReflectionContext&                    ctx,
-//	array_view<const ReflectionRootNode*> root_nodes,
-//	PerStageDescriptorNodeIteratorArray&  desc_begins,
-//	PerStageDescriptorNodeIteratorArray&  desc_ends,
-//	PerStagePushConstantNodeArray&        pc_nodes
-//) {
-//	uint32_t entry_point_count = 0;
-//	uint32_t entry_point_idx   = 0;
-//
-//	for (const auto* root_node : root_nodes)
-//		entry_point_count += root_node->entryPoints.empty() ? 0 : 1;
-//
-//	auto* entry_points = construct_array<ReflectionEntryPoint>(ctx.memory, entry_point_count);
-//
-//	for (const auto* root_node : root_nodes) {
-//		if (root_node->entryPoints.empty()) continue;
-//
-//		entry_points[entry_point_idx++] = ReflectionEntryPoint{
-//			root_node->getShaderStageFlags(),
-//			construct_string(ctx.memory, root_node->entryPoints.front().name)
-//		};
-//	}
-//
-//	auto* root_node = construct_node<ReflectionRootNode>(ctx.memory);
-//	root_node->type              = ReflectionType::Root;
-//	root_node->stageFlags        = ctx.stageFlags;
-//	root_node->entryPoints       = array_view(entry_points, entry_point_count);
-//	root_node->minSet            = UINT32_MAX;
-//	root_node->maxSet            = 0;
-//	root_node->descriptorCount   = 0;
-//	root_node->pushConstantCount = 0;
-//	root_node->targetFlags       = ReflectionTargetFlagBits::PipelineLayout;
-//
-//	PerStageDescriptorNodeArray                       min_nodes;
-//	ShaderStageFlags                                  stage_flags;
-//	ReflectionNameMap                                 name_map(ctx.tempMemory);
-//	std::pmr::vector<const ReflectionResourceNode*> member_nodes(ctx.tempMemory);
-//
-//	while (find_minimum_descriptor_node(desc_begins, desc_ends, min_nodes, stage_flags)) {
-//		auto* new_node = merge_descriptor_node(ctx, min_nodes, stage_flags);
-//
-//		member_nodes.push_back(new_node);
-//		insert_name_list(name_map, new_node->nameList, new_node);
-//
-//		root_node->minSet = std::min(root_node->minSet, min_nodes.front()->set);
-//		root_node->maxSet = std::max(root_node->maxSet, min_nodes.front()->set);
-//		root_node->descriptorCount++;
-//	}
-//
-//	if (!pc_nodes.empty()) {
-//		static_vector<PushConstantRange, MAX_SHADER_STAGE_COUNT> pc_ranges;
-//
-//		for (const auto& pc : pc_nodes) {
-//			auto& pc_range = pc_ranges.emplace_back();
-//
-//			pc_range.offset = pc->range.first();
-//			pc_range.size   = pc->range.size();
-//		}
-//
-//		// if range intersects each other, merge into one range
-//		for (size_t i = 0; i < pc_ranges.size(); ++i) {
-//			auto& lhs_range = pc_ranges[i];
-//
-//			for (size_t j = i + 1; j < pc_ranges.size();) {
-//				auto& rhs_range = pc_ranges[j];
-//
-//				if (is_pc_range_intersect(lhs_range, rhs_range)) {
-//					auto target_idx = static_cast<uint32_t>(j);
-//
-//					verify_push_constant_compatibility(pc_nodes, lhs_range.stageFlags, target_idx);
-//
-//					lhs_range.stageFlags |= rhs_range.stageFlags;
-//					lhs_range.offset      = std::min(lhs_range.offset, rhs_range.offset);
-//					lhs_range.size        = std::max(
-//						lhs_range.offset + lhs_range.size,
-//						rhs_range.offset + rhs_range.size) - lhs_range.offset;
-//
-//					pc_ranges.erase(pc_ranges.cbegin() + j);
-//				} else {
-//					++j;
-//				}
-//			}
-//		}
-//
-//		for (const auto& pc_range : pc_ranges) {
-//			auto* new_pc = merge_push_constant_node(ctx, pc_nodes, pc_range);
-//			member_nodes.push_back(new_pc);
-//			insert_name_list(name_map, new_pc->name, new_pc);
-//			root_node->pushConstantCount++;
-//		}
-//	}
-//
-//	if (!member_nodes.empty()) {
-//		auto** root_members = construct_array<ReflectionResourceNodePtr>(ctx.memory, member_nodes.size());
-//		std::copy(VERA_SPAN(member_nodes), root_members);
-//
-//		root_node->nameMap     = ReflectionNameMap(name_map, ctx.memory);
-//		root_node->memberNodes = array_view{ root_members, member_nodes.size() };
-//	}
-//
-//	return root_node;
-//}
+static const ReflectionBlockNode* find_minimum_block_node(
+	PerStageBlockNodeIteratorArray& node_begins,
+	PerStageBlockNodeIteratorArray& node_ends,
+	ShaderStageFlags&               out_stage_flags
+) {
+	const ReflectionBlockNode* min_node    = nullptr;
+	uint32_t                   min_offset  = UINT32_MAX;
+	size_t                     stage_count = node_begins.size();
+
+	out_stage_flags = {};
+
+	for (size_t i = 0; i < stage_count; ++i) {
+		if (node_begins[i] == node_ends[i]) continue;
+
+		if (uint32_t offset = (*node_begins[i])->offset; offset < min_offset) {
+			min_offset = offset;
+			min_node   = *node_begins[i];
+		}
+	}
+
+	if (!min_node) return nullptr;
+
+	for (size_t i = 0; i < stage_count; ++i) {
+		if (node_begins[i] == node_ends[i]) continue;
+
+		if (uint32_t offset = (*node_begins[i])->offset; offset == min_offset) {
+			out_stage_flags |= (*node_begins[i])->stageFlags;
+			node_begins[i]++;
+		}
+	}
+
+	return min_node;
+}
+
+static const ReflectionStructNode* merge_block_node(
+	ReflectionContext&                  ctx,
+	array_view<ReflectionStructNodePtr> src_nodes
+) {
+	const auto* first_struct = src_nodes.front();
+	auto*       new_struct   = construct_node<ReflectionStructNode>(ctx.memory);
+	
+	std::pmr::vector<ReflectionBlockNodePtr> member_nodes(ctx.tempMemory);
+
+	PerStageBlockNodeIteratorArray member_begins;
+	PerStageBlockNodeIteratorArray member_ends;
+	ShaderStageFlags               stage_flags;
+
+	for (const auto* src : src_nodes) {
+		member_begins.push_back(src->memberNodes.begin());
+		member_ends.push_back(src->memberNodes.end());
+	}
+
+	while (const auto* min_node = find_minimum_block_node(member_begins, member_ends, stage_flags))
+		member_nodes.push_back(clone_block_node(ctx, min_node));
+
+	new_struct->type        = ReflectionNodeType::Struct;
+	new_struct->stageFlags  = stage_flags;
+	new_struct->name        = construct_string(ctx.memory, first_struct->name);
+	new_struct->offset      = first_struct->offset;
+	new_struct->paddedSize  = first_struct->paddedSize;
+	new_struct->memberNodes = array_view{ member_nodes.data(), member_nodes.size() };
+	new_struct->nameMap     = ReflectionNameMap(first_struct->nameMap, ctx.memory);
+
+	return new_struct;
+}
+
+static const ReflectionDescriptorNode* merge_descriptor_node(
+	ReflectionContext&                      ctx,
+	array_view<ReflectionDescriptorNodePtr> src_nodes,
+	ShaderStageFlags                        stage_flags
+) {
+	switch (src_nodes.front()->type) {
+	case ReflectionNodeType::Descriptor: {
+		const auto* first_desc = src_nodes.front();
+		auto*       new_desc   = construct_node<ReflectionDescriptorNode>(ctx.memory);
+
+		new_desc->type           = ReflectionNodeType::Descriptor;
+		new_desc->stageFlags     = stage_flags;
+		new_desc->name           = construct_string(ctx.memory, first_desc->name);
+		new_desc->descriptorType = first_desc->descriptorType;
+		new_desc->set            = first_desc->set;
+		new_desc->binding        = first_desc->binding;
+
+		return new_desc;
+	}
+	case ReflectionNodeType::DescriptorArray: {
+		const auto* first_array = static_cast<const ReflectionDescriptorArrayNode*>(src_nodes.front());
+		auto*       new_array   = construct_node<ReflectionDescriptorArrayNode>(ctx.memory);
+
+		PerStageDescriptorNodeArray element_nodes;
+
+		for (const auto* src : src_nodes)
+			element_nodes.push_back(src);
+
+		new_array->type           = ReflectionNodeType::DescriptorArray;
+		new_array->stageFlags     = stage_flags;
+		new_array->name           = construct_string(ctx.memory, first_array->name);
+		new_array->descriptorType = first_array->descriptorType;
+		new_array->set            = first_array->set;
+		new_array->binding        = first_array->binding;
+		new_array->elementCount   = first_array->elementCount;
+		new_array->elementNode    = merge_descriptor_node(ctx, element_nodes, stage_flags);
+		new_array->stride         = first_array->stride;
+
+		return new_array;
+	}
+	case ReflectionNodeType::DescriptorBlock: {
+		const auto* first_block = static_cast<const ReflectionDescriptorBlockNode*>(src_nodes.front());
+		auto*       new_block   = construct_node<ReflectionDescriptorBlockNode>(ctx.memory);
+
+		PerStageStructNodeArray block_nodes;
+
+		for (const auto* src : src_nodes)
+			block_nodes.push_back(src->as<ReflectionDescriptorBlockNode>()->block);
+
+		new_block->type           = ReflectionNodeType::DescriptorBlock;
+		new_block->stageFlags     = stage_flags;
+		new_block->name           = construct_string(ctx.memory, first_block->name);
+		new_block->descriptorType = first_block->descriptorType;
+		new_block->set            = first_block->set;
+		new_block->binding        = first_block->binding;
+		new_block->block          = merge_block_node(ctx, block_nodes);
+
+		return new_block;
+	}
+	}
+
+	VERA_ERROR_MSG("invalid reflection type");
+}
+
+static bool check_block_node_compatible(
+	const ReflectionBlockNode* lhs,
+	const ReflectionBlockNode* rhs
+) {
+	if (lhs == rhs) return true;
+
+	auto lhs_type = lhs->getType();
+	auto rhs_type = rhs->getType();
+
+	if (lhs_type != rhs_type || strcmp(lhs->name, rhs->name) != 0)
+		return false;
+
+	switch (lhs_type) {
+	case ReflectionNodeType::Struct: {
+		auto lhs_struct  = static_cast<const ReflectionStructNode*>(lhs);
+		auto rhs_struct  = static_cast<const ReflectionStructNode*>(rhs);
+		auto lhs_members = lhs_struct->memberNodes;
+		auto rhs_members = rhs_struct->memberNodes;
+
+		if (lhs_struct->offset != rhs_struct->offset ||
+			lhs_struct->paddedSize != rhs_struct->paddedSize ||
+			lhs_members.size() != rhs_members.size())
+			return false;
+
+		for (size_t i = 0; i < lhs_members.size(); ++i)
+			if (!check_block_node_compatible(lhs_members[i], rhs_members[i]))
+				return false;
+
+		return true;
+	}
+	case ReflectionNodeType::Array: {
+		auto lhs_array = static_cast<const ReflectionArrayNode*>(lhs);
+		auto rhs_array = static_cast<const ReflectionArrayNode*>(rhs);
+
+		return
+			lhs_array->offset == rhs_array->offset &&
+			lhs_array->paddedSize == rhs_array->paddedSize &&
+			check_block_node_compatible(lhs_array->elementNode, rhs_array->elementNode) &&
+			lhs_array->elementCount == rhs_array->elementCount &&
+			lhs_array->stride == rhs_array->stride;
+	}
+	case ReflectionNodeType::Primitive: {
+		auto lhs_prim = static_cast<const ReflectionPrimitiveNode*>(lhs);
+		auto rhs_prim = static_cast<const ReflectionPrimitiveNode*>(rhs);
+
+		return
+			lhs_prim->offset == rhs_prim->offset &&
+			lhs_prim->paddedSize == rhs_prim->paddedSize &&
+			lhs_prim->primitiveType == rhs_prim->primitiveType;
+	}
+	}
+
+	VERA_ERROR_MSG("invalid reflection type");
+}
+
+static bool check_block_compatible(
+	const ReflectionStructNode* lhs,
+	const ReflectionStructNode* rhs
+) {
+	auto lhs_first = lhs->memberNodes.begin();
+	auto rhs_first = rhs->memberNodes.begin();
+	auto lhs_last = lhs->memberNodes.end();
+	auto rhs_last = rhs->memberNodes.end();
+
+	while (lhs_first != lhs_last && rhs_first != rhs_last) {
+		auto lhs_offset = (*lhs_first)->getOffset();
+		auto rhs_offset = (*rhs_first)->getOffset();
+
+		if (lhs_offset == rhs_offset) {
+			if (!check_block_node_compatible(*lhs_first, *rhs_first))
+				return false;
+			++lhs_first;
+			++rhs_first;
+		} else if (lhs_offset < rhs_offset) {
+			if (rhs_offset < lhs_offset + (*lhs_first)->getPaddedSize())
+				return false;
+			++lhs_first;
+		} else {
+			if (lhs_offset < rhs_offset + (*rhs_first)->getPaddedSize())
+				return false;
+			++rhs_first;
+		}
+	}
+	
+	return true;
+}
+
+static bool check_descriptor_node_compatible(
+	const ReflectionDescriptorNode* lhs,
+	const ReflectionDescriptorNode* rhs,
+	bool                            check_block = false
+) {
+	if (lhs == rhs) return true;
+
+	auto lhs_type = lhs->getType();
+	auto rhs_type = rhs->getType();
+
+	if (lhs_type != rhs_type) return false;
+
+	VERA_ASSERT_MSG(lhs_type != ReflectionNodeType::Root,
+		"cannot check compatibility on root node");
+
+	switch (lhs_type) {
+	case ReflectionNodeType::Descriptor: {
+		const auto* lhs_desc = static_cast<const ReflectionDescriptorNode*>(lhs);
+		const auto* rhs_desc = static_cast<const ReflectionDescriptorNode*>(rhs);
+
+		return
+			lhs_desc->descriptorType == rhs_desc->descriptorType &&
+			lhs_desc->set == rhs_desc->set &&
+			lhs_desc->binding == rhs_desc->binding;
+	}
+	case ReflectionNodeType::DescriptorArray: {
+		const auto* lhs_array = static_cast<const ReflectionDescriptorArrayNode*>(lhs);
+		const auto* rhs_array = static_cast<const ReflectionDescriptorArrayNode*>(rhs);
+
+		return
+			lhs_array->descriptorType == rhs_array->descriptorType &&
+			lhs_array->set == rhs_array->set &&
+			lhs_array->binding == rhs_array->binding &&
+			check_descriptor_node_compatible(lhs_array->elementNode, rhs_array->elementNode, check_block) &&
+			lhs_array->stride == rhs_array->stride;
+	}
+	case ReflectionNodeType::DescriptorBlock: {
+		const auto* lhs_block = static_cast<const ReflectionDescriptorBlockNode*>(lhs);
+		const auto* rhs_block = static_cast<const ReflectionDescriptorBlockNode*>(rhs);
+
+		return
+			lhs_block->descriptorType == rhs_block->descriptorType &&
+			lhs_block->set == rhs_block->set &&
+			lhs_block->binding == rhs_block->binding &&
+			(!check_block || check_block_compatible(lhs_block->block, rhs_block->block));
+	}
+	}
+	
+	VERA_ERROR_MSG("invalid reflection type");
+}
+
+static bool find_minimum_descriptor_nodes(
+	PerStageDescriptorNodeIteratorArray& desc_begins,
+	PerStageDescriptorNodeIteratorArray& desc_ends,
+	PerStageDescriptorNodeArray&         out_nodes,
+	ShaderStageFlags&                    out_stage_flags
+) {
+	ReflectionDescriptorNodePtr min_node        = nullptr;
+	uint64_t                    min_binding_key = UINT64_MAX;
+	size_t                      stage_count     = desc_begins.size();
+
+	out_nodes.clear();
+	out_stage_flags = {};
+
+	for (size_t i = 0; i < stage_count; ++i) {
+		const auto it = desc_begins[i];
+		
+		if (it == desc_ends[i]) continue;
+
+		uint64_t key = COMBINE_SET_BINDING((*it)->set, (*it)->binding);
+
+		if (key < min_binding_key) {
+			min_binding_key = key;
+			min_node        = *it;
+		}
+	}
+
+	if (!min_node) return false;
+
+	for (size_t i = 0; i < stage_count; ++i) {
+		const auto it = desc_begins[i];
+
+		if (it == desc_ends[i]) continue;
+
+		uint64_t key = COMBINE_SET_BINDING((*it)->set, (*it)->binding);
+
+		if (key == min_binding_key) {
+			out_nodes.push_back(*it);
+			out_stage_flags |= (*it)->getStageFlags();
+			desc_begins[i]++;
+		}
+	}
+
+	return true;
+}
+
+static ReflectionRootNode* merge_impl(
+	ReflectionContext&                    ctx,
+	array_view<const ReflectionRootNode*> root_nodes,
+	PerStageDescriptorNodeIteratorArray&  desc_begins,
+	PerStageDescriptorNodeIteratorArray&  desc_ends,
+	PerStagePushConstantNodeArray&        pc_nodes
+) {
+	static const auto sort_by_name =
+		[](const ReflectionResourceNodePtr& lhs, const ReflectionResourceNodePtr& rhs) {
+			return std::strcmp(lhs->name, rhs->name) < 0;
+		};
+
+	uint32_t entry_point_count = 0;
+	uint32_t entry_point_idx   = 0;
+
+	auto* root_node = construct_node<ReflectionRootNode>(ctx.memory);
+	root_node->type              = ReflectionNodeType::Root;
+	root_node->stageFlags        = ctx.stageFlags;
+	root_node->targetFlags       = ReflectionTargetFlagBits::PipelineLayout;
+	root_node->setCount          = 0;
+	root_node->minSet            = UINT32_MAX;
+	root_node->maxSet            = 0;
+	root_node->descriptorCount   = 0;
+	root_node->pushConstantCount = 0;
+
+	PerStageDescriptorNodeArray                 min_nodes;
+	ShaderStageFlags                            stage_flags;
+	ReflectionNameMap                           name_map(ctx.tempMemory);
+	std::pmr::vector<ReflectionResourceNodePtr> member_nodes(ctx.tempMemory);
+
+	while (find_minimum_descriptor_nodes(desc_begins, desc_ends, min_nodes, stage_flags)) {
+		std::sort(VERA_SPAN(min_nodes), sort_by_name);
+
+		auto** first = min_nodes.begin();
+		auto** last  = first + 1;
+		auto** end   = min_nodes.end();
+		auto*  prev  = *first;
+
+		while (first != end) {
+			while (last < end && strcmp((*first)->name, (*last)->name) == 0) last++;
+
+			if (!check_descriptor_node_compatible(prev, *first))
+				throw Exception("incompatible descriptor binding between stages "
+					"'{}' and '{}' at set {}, binding {}",
+					get_shader_stage_string(prev->stageFlags.flag_bit()),
+					get_shader_stage_string((*first)->stageFlags.flag_bit()),
+					prev->set,
+					prev->binding);
+
+			for (auto** it0 = first; it0 != last; ++it0) {
+				for (auto** it1 = it0 + 1; it1 != last; ++it1) {
+					if (!check_descriptor_node_compatible(*it0, *it1, true))
+						throw Exception("incompatible descriptor binding between stages "
+							"'{}' and '{}' at set {}, binding {}",
+							get_shader_stage_string((*it0)->stageFlags.flag_bit()),
+							get_shader_stage_string((*it1)->stageFlags.flag_bit()),
+							(*it0)->set,
+							(*it0)->binding);
+				}
+			}
+
+			auto* new_node = merge_descriptor_node(
+				ctx,
+				array_view(first, static_cast<uint32_t>(last - first)),
+				stage_flags);
+
+			member_nodes.push_back(new_node);
+
+			if (auto it = name_map.find(new_node->name); it == name_map.end()) {
+				name_map.insert({ new_node->name, new_node });
+			} else {
+				throw Exception("name map collision with name: {}", new_node->name);
+			}
+
+			first = last++;
+		}
+
+		root_node->minSet = std::min(root_node->minSet, min_nodes.front()->set);
+		root_node->maxSet = std::max(root_node->maxSet, min_nodes.front()->set);
+		root_node->descriptorCount++;
+	}
+
+	if (root_node->minSet == UINT32_MAX && root_node->maxSet == 0) {
+		root_node->maxSet = UINT32_MAX;
+	} else {
+		root_node->setCount = root_node->maxSet - root_node->minSet + 1;
+	}
+
+	if (!pc_nodes.empty()) {
+		std::sort(VERA_SPAN(pc_nodes), sort_by_name);
+
+		auto** first = pc_nodes.begin();
+		auto** last  = first + 1;
+		auto** end   = pc_nodes.end();
+
+		while (first != end) {
+			while (last < end && strcmp((*first)->name, (*last)->name) == 0) last++;
+
+			for (auto** it0 = first; it0 != last; ++it0) {
+				for (auto** it1 = it0 + 1; it1 != last; ++it1) {
+					if (!check_block_node_compatible((*it0)->block, (*it1)->block))
+						throw Exception("incompatible push constant block between stages '{}' and '{}' ",
+							get_shader_stage_string((*it0)->stageFlags.flag_bit()),
+							get_shader_stage_string((*it1)->stageFlags.flag_bit()));
+				}
+			}
+
+			PerStageStructNodeArray block_nodes;
+			ShaderStageFlags        stage_flags;
+
+			for (auto** it = first; it != last; ++it) {
+				block_nodes.push_back((*it)->block);
+				stage_flags |= (*it)->stageFlags;
+			}
+
+			auto* new_node = construct_node<ReflectionPushConstantNode>(ctx.memory);
+			new_node->type       = ReflectionNodeType::PushConstant;
+			new_node->stageFlags = stage_flags;
+			new_node->name       = construct_string(ctx.memory, (*first)->name);
+			new_node->block      = merge_block_node(ctx, block_nodes);
+			new_node->offset     = new_node->block->offset;
+			new_node->paddedSize = new_node->block->paddedSize;
+
+			member_nodes.push_back(new_node);
+
+			if (auto it = name_map.find(new_node->name); it == name_map.end()) {
+				name_map.insert({ new_node->name, new_node });
+			} else {
+				throw Exception("name map collision with name: {}", new_node->name);
+			}
+
+			root_node->pushConstantCount++;
+		}
+	}
+
+	if (!member_nodes.empty()) {
+		auto** root_members = construct_array<ReflectionResourceNodePtr>(ctx.memory, member_nodes.size());
+		std::copy(VERA_SPAN(member_nodes), root_members);
+
+		root_node->nameMap     = ReflectionNameMap(name_map, ctx.memory);
+		root_node->memberNodes = array_view{ root_members, member_nodes.size() };
+	}
+
+	return root_node;
+}
 
 const ReflectionRootNode* ReflectionRootNode::create(
 	const spv_reflect::ShaderModule& shader_module,
@@ -1436,45 +1282,44 @@ const ReflectionRootNode* ReflectionRootNode::merge(array_view<const ReflectionR
 	VERA_ASSERT_MSG(roots.size() <= MAX_SHADER_STAGE_COUNT,
 		"exceeded maximum shader stage count for merging reflections");
 
-	//PerStageDescriptorNodeIteratorArray desc_begins;
-	//PerStageDescriptorNodeIteratorArray desc_ends;
-	//PerStagePushConstantNodeArray       pcs;
-	//ShaderStageFlags                    stage_flags;
+	PerStageDescriptorNodeIteratorArray desc_begins;
+	PerStageDescriptorNodeIteratorArray desc_ends;
+	PerStagePushConstantNodeArray       pcs;
+	ShaderStageFlags                    stage_flags;
 
-	//for (const auto* root_node : roots) {
-	//	VERA_ASSERT(root_node);
+	for (const auto* root_node : roots) {
+		VERA_ASSERT(root_node);
 
-	//	const auto target = root_node->targetFlags;
+		const auto target = root_node->targetFlags;
 
-	//	if (target == ReflectionTargetFlagBits::DescriptorSetLayout || target == ReflectionTargetFlagBits::Shader)
-	//		throw Exception("only descriptor set layout and shader reflection can be merged");
+		if (target != ReflectionTargetFlagBits::DescriptorSetLayout &&
+			target != ReflectionTargetFlagBits::Shader)
+			throw Exception("only descriptor set layout and shader reflection can be merged");
 
-	//	if (target == ReflectionTargetFlagBits::Shader) {
-	//		if (stage_flags.has(root_node->getShaderStageFlags()))
-	//			throw Exception("duplicate shader stage in merging reflections");
-	//		stage_flags |= root_node->getShaderStageFlags();
-	//	}
+		if (target == ReflectionTargetFlagBits::Shader) {
+			if (stage_flags.has(root_node->stageFlags))
+				throw Exception("duplicate shader stage in merging reflections");
+			stage_flags |= root_node->stageFlags;
+		}
 
-	//	if (auto desc_view = root_node->enumerateDescriptor(); !desc_view.empty()) {
-	//		desc_begins.push_back(desc_view.data());
-	//		desc_ends.push_back(desc_view.data() + desc_view.size());
-	//	}
+		if (auto desc_view = root_node->enumerateDescriptor(); !desc_view.empty()) {
+			desc_begins.push_back(desc_view.data());
+			desc_ends.push_back(desc_view.data() + desc_view.size());
+		}
 
-	//	if (const auto* pc_node = root_node->findPushConstant())
-	//		pcs.push_back(pc_node);
-	//}
+		if (const auto* pc_node = root_node->findPushConstant())
+			pcs.push_back(pc_node);
+	}
 
-	//std::pmr::monotonic_buffer_resource temp_memory(VERA_KIB(1));
+	std::pmr::monotonic_buffer_resource temp_memory(VERA_KIB(1));
 
-	//ReflectionContext ctx = {
-	//	.memory     = memory,
-	//	.tempMemory = &temp_memory,
-	//	.stageFlags = stage_flags
-	//};
+	ReflectionContext ctx = {
+		.memory     = memory,
+		.tempMemory = &temp_memory,
+		.stageFlags = stage_flags
+	};
 
-	return nullptr;
-
-	// return merge_impl(ctx, roots, desc_begins, desc_ends, pcs);
+	return merge_impl(ctx, roots, desc_begins, desc_ends, pcs);
 }
 
 array_view<const ReflectionDescriptorNode*> ReflectionRootNode::enumerateDescriptor() const VERA_NOEXCEPT

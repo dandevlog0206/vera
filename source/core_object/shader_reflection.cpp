@@ -459,14 +459,14 @@ static T* allocate(
 }
 
 static std::string_view copy_string(
-	std::pmr::monotonic_buffer_resource* memory,
-	const char*                          str
+	ShaderReflectionImpl& impl,
+	const char*           str
 ) {
 	if (!str)
 		return std::string_view();
 
 	if (size_t len = strlen(str); len > 0) {
-		auto* ptr = reinterpret_cast<char*>(memory->allocate(len + 1, alignof(char)));
+		auto* ptr = reinterpret_cast<char*>(impl.memory.allocate(len + 1, alignof(char)));
 		memcpy(ptr, str, len);
 		ptr[len] = '\0';
 
@@ -562,11 +562,11 @@ static ReflectionInterfaceVariable* create_interface_variable(
 ) {
 	auto* new_var = allocate<ReflectionInterfaceVariable>(impl);
 	new_var->stageFlags      = impl.stageFlags;
-	new_var->name            = copy_string(&impl.memory, var.name);
+	new_var->name            = copy_string(impl, var.name);
 	new_var->location        = var.location;
 	new_var->component       = var.component;
 	new_var->io              = to_interface_io(var.storage_class);
-	new_var->semantic        = copy_string(&impl.memory, var.semantic);
+	new_var->semantic        = copy_string(impl, var.semantic);
 	new_var->decorationFlags = to_decoration_flags(var.decoration_flags);
 	new_var->builtIn         = to_builtin(var.built_in);
 	new_var->format          = to_format(var.format);
@@ -591,7 +591,7 @@ static ReflectionBlockVariable* create_block_variable(
 
 	auto* new_var = allocate<ReflectionBlockVariable>(impl);
 	new_var->stageFlags      = impl.stageFlags;
-	new_var->name            = copy_string(&impl.memory, var.name);
+	new_var->name            = copy_string(impl, var.name);
 	new_var->offset          = var.offset;
 	new_var->absoluteOffset  = var.absolute_offset;
 	new_var->size            = var.size;
@@ -616,7 +616,7 @@ static ReflectionDescriptorBinding* create_descriptor_binding(
 ) {
 	auto* new_binding = allocate<ReflectionDescriptorBinding>(impl);
 	new_binding->stageFlags           = impl.stageFlags;
-	new_binding->name                 = copy_string(&impl.memory, binding.name);
+	new_binding->name                 = copy_string(impl, binding.name);
 	new_binding->set                  = binding.set;
 	new_binding->binding              = binding.binding;
 	new_binding->inputAttachmentIndex = binding.input_attachment_index;
@@ -636,7 +636,7 @@ static void create_shader_reflection_impl(ShaderReflectionImpl& impl, const SpvR
 		throw Exception("multiple entry points are not supported");
 
 	impl.stageFlags     = to_shader_stage(module.shader_stage);
-	impl.entryPointName = copy_string(&impl.memory, module.entry_point_name);
+	impl.entryPointName = copy_string(impl, module.entry_point_name);
 	impl.localSize      = uint3(
 		module.entry_points[0].local_size.x,
 		module.entry_points[0].local_size.y,
@@ -649,7 +649,7 @@ static void create_shader_reflection_impl(ShaderReflectionImpl& impl, const SpvR
 			auto& src = module.spec_constants[i];
 			auto& dst = spec_constants[i];
 
-			dst.name       = copy_string(&impl.memory, src.name);
+			dst.name       = copy_string(impl, src.name);
 			dst.constantId = src.constant_id;
 		}
 
@@ -689,11 +689,12 @@ static void create_shader_reflection_impl(ShaderReflectionImpl& impl, const SpvR
 		uint32_t set_idx = 0;
 
 		for (const auto& src : array_view(module.descriptor_sets, module.descriptor_set_count)) {
-			auto* bindings = allocate<const ReflectionDescriptorBinding*>(impl, src.binding_count);
+			auto*    bindings    = allocate<const ReflectionDescriptorBinding*>(impl, src.binding_count);
+			uint32_t binding_idx = 0;
 
 			for (auto* binding : impl.descriptorBindings) {
 				if (binding->set == src.set) {
-					bindings[binding->binding] = binding;
+					bindings[binding_idx++] = binding;
 				} else if (binding->set > src.set) {
 					break; // early out
 				}
@@ -756,6 +757,7 @@ obj<ShaderReflection> ShaderReflection::create(obj<Device> device, const_ref<Sha
 
 	impl.device       = std::move(device);
 	impl.spirvVersion = get_spirv_version(shader_impl.spirvCode);
+	impl.rootNode     = ReflectionRootNode::create(module, &impl.memory);
 	impl.hashValue    = hash_value;
 
 	sw1.start();
@@ -794,6 +796,7 @@ obj<ShaderReflection> ShaderReflection::create(obj<Device> device, array_view<ui
 
 	impl.device       = std::move(device);
 	impl.spirvVersion = get_spirv_version(spirv_code);
+	impl.rootNode     = ReflectionRootNode::create(module, &impl.memory);
 	impl.hashValue    = hash_value;
 
 	sw1.start();

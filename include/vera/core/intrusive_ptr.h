@@ -440,12 +440,14 @@ public:
 		m_ptr(ptr) {}
 
 	template <class T>
+	requires requires (T* p) { static_cast<const Object*>(p); }
 	VERA_INLINE const_ref(ref<T> rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<const T*>(rhs.m_ptr)) {}
+		m_ptr(static_cast<const Object*>(rhs.m_ptr)) {}
 
 	template <class T>
+	requires requires (T* p) { static_cast<const Object*>(p); }
 	VERA_INLINE const_ref(const_ref<T> rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<const T*>(rhs.m_ptr)) {}
+		m_ptr(static_cast<const Object*>(rhs.m_ptr)) {}
 
 	VERA_INLINE	const_ref(const const_ref& rhs) VERA_NOEXCEPT :
 		m_ptr(rhs.m_ptr) {}
@@ -529,6 +531,7 @@ public:
 		my_base(ptr) {}
 
 	template <class T>
+	requires requires (T* p) { static_cast<const Object*>(p); }
 	VERA_INLINE ref(ref<T> rhs) VERA_NOEXCEPT :
 		my_base(static_cast<const Object*>(rhs.m_ptr)) {}
 

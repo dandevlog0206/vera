@@ -132,7 +132,7 @@ public:
 			static_assert("unsupported CoreObject type for caching");
 		}
 
-		VERA_ASSERT_MSG(erased == 1, "failed to unregister cached object (hash= {:016x})", hash_value);
+		VERA_ASSERT_MSG(erased == 1, "failed to unregister cached object");
 		(void)erased;
 	}
 };

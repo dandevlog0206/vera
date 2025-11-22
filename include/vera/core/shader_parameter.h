@@ -9,6 +9,7 @@ enum class DescriptorType VERA_ENUM;
 enum class TextureLayout VERA_ENUM;
 
 class Device;
+class ProgramReflection;
 class PipelineLayout;
 class DescriptorPool;
 
@@ -23,7 +24,10 @@ class ShaderParameter : protected CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ShaderParameter)
 public:
-	static obj<ShaderParameter> create(obj<PipelineLayout> pipeline_layout, obj<DescriptorPool> descriptor_pool = {});
+	static obj<ShaderParameter> create(
+		obj<Device>            device,
+		obj<ProgramReflection> program_reflection,
+		obj<DescriptorPool>    descriptor_pool = {});
 	~ShaderParameter() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice() VERA_NOEXCEPT;
@@ -71,11 +75,10 @@ public:
 		size_t      offset = 0,
 		size_t      range  = 0);
 
-	void pushConstants(
-		ShaderStageFlags stage_flags,
-		const void*      data,
-		size_t           size,
-		size_t           offset = 0);
+	void pushConstant(
+		const void* data,
+		size_t      size,
+		size_t      offset = 0);
 };
 
 VERA_NAMESPACE_END

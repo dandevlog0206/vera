@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../internal/include_vulkan.h"
+#include "include_vulkan.h"
 #include "../../include/vera/core/core_object.h"
 #include "../../include/vera/core/exception.h"
 #include "../../include/vera/core/enum_types.h"
@@ -210,7 +210,7 @@ static vk::DescriptorBindingFlags to_vk_descriptor_binding_flags(DescriptorSetLa
 
 static vk::DescriptorType to_vk_descriptor_type(DescriptorType type)
 {
-	VERA_ASSERT(type == DescriptorType::Unknown);
+	VERA_ASSERT(type != DescriptorType::Unknown);
 	return static_cast<vk::DescriptorType>(static_cast<uint32_t>(type) - 1);
 }
 

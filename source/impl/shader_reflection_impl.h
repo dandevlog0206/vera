@@ -10,22 +10,22 @@ VERA_NAMESPACE_BEGIN
 class ShaderReflectionImpl
 {
 public:
-	obj<Device>                                    device;
+	obj<Device>                                    device             = {};
 
-	std::pmr::monotonic_buffer_resource            memory;
-	ShaderStageFlags                               stageFlags;
-	Version                                        spirvVersion;
-	std::string_view                               entryPointName;
-	uint3                                          localSize;
-	array_view<const ReflectionInterfaceVariable*> interfaceVariables;
-	array_view<const ReflectionInterfaceVariable*> inputVariables;
-	array_view<const ReflectionInterfaceVariable*> outputVariables;
-	array_view<const ReflectionDescriptorBinding*> descriptorBindings;
-	array_view<const ReflectionDescriptorSet*>     descriptorSets;
-	const ReflectionBlockVariable*                 pushConstantBlock;
-	array_view<ReflectionSpecConstant>             specConstants;
-	const ReflectionRootNode*                      rootNode;
-	hash_t                                         hashValue;
+	std::pmr::monotonic_buffer_resource            memory             = {};
+	ShaderStageFlags                               stageFlags         = {};
+	Version                                        spirvVersion       = {};
+	std::string_view                               entryPointName     = {};
+	uint3                                          localSize          = {};
+	array_view<const ReflectionInterfaceVariable*> interfaceVariables = {};
+	array_view<const ReflectionInterfaceVariable*> inputVariables     = {};
+	array_view<const ReflectionInterfaceVariable*> outputVariables    = {};
+	array_view<const ReflectionDescriptorBinding*> descriptorBindings = {};
+	array_view<const ReflectionDescriptorSet*>     descriptorSets     = {};
+	const ReflectionBlockVariable*                 pushConstantBlock  = {};
+	array_view<ReflectionSpecConstant>             specConstants      = {};
+	const ReflectionRootNode*                      rootNode           = {};
+	hash_t                                         hashValue          = {};
 };
 
 VERA_NAMESPACE_END

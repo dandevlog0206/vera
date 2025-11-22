@@ -62,8 +62,8 @@ static bool push_constant_ranges_overlap(
 }
 
 static void insert_descriptor_binding_info(
-	DescriptorSetLayoutCreateInfo&           layout_info,
-	const ReflectionDescriptorBinding*       binding_info
+	DescriptorSetLayoutCreateInfo&     layout_info,
+	const ReflectionDescriptorBinding* binding_info
 ) {
 	DescriptorSetLayoutBinding* p_binding = nullptr;
 
@@ -233,6 +233,21 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_
 	impl.hashValueByShaders = hash_value;
 
 	return obj;
+}
+
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const_ref<ProgramReflection> program_reflection)
+{
+	if (!device)
+		throw Exception("device is null");
+	if (program_reflection->getDevice() != device)
+		throw Exception("program reflection device mismatch");
+
+	auto shader_reflections = program_reflection->enumerateShaderReflections();
+	auto reflection_crefs   = array_view(
+		reinterpret_cast<const const_ref<ShaderReflection>*>(shader_reflections.data()),
+		shader_reflections.size());
+
+	return PipelineLayout::create(device, reflection_crefs);
 }
 
 obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_ref<ShaderReflection>> shader_reflections)

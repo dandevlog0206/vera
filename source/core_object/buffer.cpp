@@ -30,7 +30,7 @@ static uint32_t find_buffer_bind_idx(DeviceMemoryImpl& impl, Buffer* this_ptr)
 
 	VERA_ASSERT(iter != impl.resourceBind.end());
 
-	return iter - impl.resourceBind.cbegin();
+	return static_cast<uint32_t>(iter - impl.resourceBind.cbegin());
 }
 
 static void allocate_device_memory(

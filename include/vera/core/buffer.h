@@ -6,9 +6,9 @@ VERA_NAMESPACE_BEGIN
 
 struct BufferCreateInfo
 {
-	size_t              size;
-	BufferUsageFlags    usage;
-	MemoryPropertyFlags propetyFlags;
+	size_t              size         = {};
+	BufferUsageFlags    usage        = {};
+	MemoryPropertyFlags propetyFlags = {};
 };
 
 class Buffer : protected CoreObject

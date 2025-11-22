@@ -115,6 +115,8 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)thirdparty\glfw\include;$(SolutionDir)thirdparty\stb_image;$(SolutionDir)thirdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(SolutionDir)source\pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,7 +125,7 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib;$(VULKAN_SDK)\Lib\spirv-cross-cored.lib;$(VULKAN_SDK)\Lib\spirv-cross-reflectd.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib</AdditionalDependencies>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -150,7 +152,7 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib;$(VULKAN_SDK)\Lib\spirv-cross-core.lib;$(VULKAN_SDK)\Lib\spirv-cross-reflect.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib</AdditionalDependencies>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -179,6 +181,7 @@
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_variable.h" />
+    <ClInclude Include="include\vera\util\hybrid_vector.h" />
     <ClInclude Include="include\vera\util\renderdoc.h" />
     <ClInclude Include="include\vera\geometry\aabb.h" />
     <ClInclude Include="include\vera\geometry\bezier.h" />
@@ -331,7 +334,7 @@
     <ClInclude Include="source\impl\swapchain_impl.h" />
     <ClInclude Include="source\impl\texture_impl.h" />
     <ClInclude Include="include\vera\core\texture_view.h" />
-    <ClInclude Include="source\internal\include_vulkan.h" />
+    <ClInclude Include="source\impl\include_vulkan.h" />
     <ClInclude Include="source\impl\window_impl.h" />
     <ClCompile Include="source\core\command_buffer_sync.cpp" />
     <ClCompile Include="source\core\exception.cpp" />
