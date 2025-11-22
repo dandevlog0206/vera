@@ -69,7 +69,7 @@ class Device : protected CoreObject
 	VERA_CORE_OBJECT_INIT(Device)
 public:
 	static obj<Device> create(obj<Context> context, const DeviceCreateInfo& info = {});
-	~Device();
+	~Device() VERA_NOEXCEPT override;
 
 	VERA_NODISCARD obj<Context> getContext() VERA_NOEXCEPT;
 

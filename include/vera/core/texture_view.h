@@ -48,7 +48,7 @@ class TextureView : protected CoreObject
 	VERA_CORE_OBJECT_INIT(TextureView)
 public:
 	static obj<TextureView> create(obj<Texture> texture, const TextureViewCreateInfo& info = {});
-	~TextureView();
+	~TextureView() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 	obj<Texture> getTexture();

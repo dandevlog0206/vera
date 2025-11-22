@@ -249,7 +249,7 @@ obj<Buffer> Buffer::create(obj<DeviceMemory> memory, size_t offset, const Buffer
 	return obj;
 }
 
-Buffer::~Buffer()
+Buffer::~Buffer() VERA_NOEXCEPT
 {
 	auto& impl        = getImpl(this);
 	auto& memory_impl = getImpl(impl.memory);

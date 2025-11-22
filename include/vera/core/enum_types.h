@@ -4,6 +4,36 @@
 
 VERA_NAMESPACE_BEGIN
 
+enum class CoreObjectType VERA_ENUM
+{
+	Unknown,
+	Context,
+	Device,
+	Pipeline,
+	PipelineLayout,
+	Shader,
+	ShaderReflection,
+	ProgramReflection,
+	ShaderParameter,
+	DescriptorSetLayout,
+	DescriptorPool,
+	DescriptorSet,
+	RenderContext,
+	CommandBuffer,
+	Fence,
+	Semaphore,
+	TimelineSemaphore,
+	Swapchain,
+	FrameBuffer,
+	Sampler,
+	DeviceMemory,
+	Buffer,
+	BufferView,
+	Texture,
+	TextureView,
+	__COUNT__
+};
+
 enum class DeviceFeatureType VERA_ENUM
 {
 	Swapchain,
@@ -306,108 +336,145 @@ VERA_VK_ABI_COMPATIBLE enum class ShaderStageFlagBits VERA_FLAG_BITS
 	All                    = 0x00001FFF
 } VERA_ENUM_FLAGS(ShaderStageFlagBits, ShaderStageFlags)
 
-enum class ReflectionTargetFlagBits VERA_ENUM
+enum class ReflectionAccessFlagBits VERA_FLAG_BITS
 {
-	None                = 0,
-	DescriptorSetLayout = 1 << 0,
-	Shader              = 1 << 1,
-	PipelineLayout      = 1 << 2 
-} VERA_ENUM_FLAGS(ReflectionTargetFlagBits, ReflectionTargetFlags)
+	None        = 0,
+	Read        = 1 << 0,
+	Write       = 1 << 1,
+	ReadWrite   = Read | Write
+} VERA_ENUM_FLAGS(ReflectionAccessFlagBits, ReflectionAccessFlags)
 
-enum class ReflectionVariableType VERA_ENUM
+enum class ReflectionStorageClass VERA_ENUM
 {
 	Unknown,
-	Descriptor,
-	DescriptorArray,
+	UniformConstant,
+	Input,
+	Uniform,
+	Output,
+	Workgroup,
+	CrossWorkgroup,
+	Private,
+	Function,
+	Generic,
 	PushConstant,
-	Struct,
-	Array,
-	Primitive
+	AtomicCounter,
+	ClassImage,
+	ClassStorageBuffer,
+	ClassCallableData,
+	ClassIncomingCallableData,
+	ClassRayPayload,
+	ClassHitAttribute,
+	ClassIncomingRayPayload,
+	ClassShaderRecordBuffer,
+	ClassPhysicalStorageBuffer,
+	ClassHitObjectAttribute,
+	ClassTaskPayloadWorkgroup,
 };
 
-enum class ReflectionPrimitiveType VERA_ENUM
-{
-	Unknown,
-
-	// Scalar types
-	Bool,
-	Char,
-	UChar,
-	Short,
-	Int,
-	UInt,
-	Long,
-	ULong,
-	Float,
-	Double,
-
-	// Vector types
-	Bool2,
-	Bool3,
-	Bool4,
-
-	Char2,
-	Char3,
-	Char4,
-
-	UChar2,
-	UChar3,
-	UChar4,
-
-	Short2,
-	Short3,
-	Short4,
-
-	UShort,
-	UShort2,
-	UShort3,
-	UShort4,
-
-	Int2,
-	Int3,
-	Int4,
-
-	UInt2,
-	UInt3,
-	UInt4,
-
-	Long2,
-	Long3,
-	Long4,
-
-	ULong2,
-	ULong3,
-	ULong4,
-
-	Float2,
-	Float3,
-	Float4,
-
-	Double2,
-	Double3,
-	Double4,
-
-	// Matrix types
-	Float2x2,
-	Float2x3,
-	Float2x4,
-	Float3x2,
-	Float3x3,
-	Float3x4,
-	Float4x2,
-	Float4x3,
-	Float4x4,
-
-	Double2x2,
-	Double2x3,
-	Double2x4,
-	Double3x2,
-	Double3x3,
-	Double3x4,
-	Double4x2,
-	Double4x3,
-	Double4x4
-};
+//enum class ReflectionPrimitiveType VERA_ENUM
+//{
+//	Unknown,
+//
+//	// Scalar types
+//	Bool,
+//	Char,
+//	UChar,
+//	Short,
+//	Int,
+//	UInt,
+//	Long,
+//	ULong,
+//	Float,
+//	Double,
+//
+//	// Vector types
+//	Bool2,
+//	Bool3,
+//	Bool4,
+//
+//	Char2,
+//	Char3,
+//	Char4,
+//
+//	UChar2,
+//	UChar3,
+//	UChar4,
+//
+//	Short2,
+//	Short3,
+//	Short4,
+//
+//	UShort,
+//	UShort2,
+//	UShort3,
+//	UShort4,
+//
+//	Int2,
+//	Int3,
+//	Int4,
+//
+//	UInt2,
+//	UInt3,
+//	UInt4,
+//
+//	Long2,
+//	Long3,
+//	Long4,
+//
+//	ULong2,
+//	ULong3,
+//	ULong4,
+//
+//	Float2,
+//	Float3,
+//	Float4,
+//
+//	Double2,
+//	Double3,
+//	Double4,
+//
+//	// Row-major matrix types
+//	RFloat2x2,
+//	RFloat2x3,
+//	RFloat2x4,
+//	RFloat3x2,
+//	RFloat3x3,
+//	RFloat3x4,
+//	RFloat4x2,
+//	RFloat4x3,
+//	RFloat4x4,
+//
+//	RDouble2x2,
+//	RDouble2x3,
+//	RDouble2x4,
+//	RDouble3x2,
+//	RDouble3x3,
+//	RDouble3x4,
+//	RDouble4x2,
+//	RDouble4x3,
+//	RDouble4x4,
+//
+//	// Column-major matrix types
+//	CFloat2x2,
+//	CFloat2x3,
+//	CFloat2x4,
+//	CFloat3x2,
+//	CFloat3x3,
+//	CFloat3x4,
+//	CFloat4x2,
+//	CFloat4x3,
+//	CFloat4x4,
+//
+//	CDouble2x2,
+//	CDouble2x3,
+//	CDouble2x4,
+//	CDouble3x2,
+//	CDouble3x3,
+//	CDouble3x4,
+//	CDouble4x2,
+//	CDouble4x3,
+//	CDouble4x4
+//};
 
 VERA_VK_ABI_COMPATIBLE enum class DescriptorSetLayoutCreateFlagBits VERA_FLAG_BITS
 {

@@ -29,7 +29,7 @@ class Sampler : protected CoreObject
 	VERA_CORE_OBJECT_INIT(Sampler)
 public:
 	static obj<Sampler> create(obj<Device> device, const SamplerCreateInfo& info = {});
-	~Sampler();
+	~Sampler() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 

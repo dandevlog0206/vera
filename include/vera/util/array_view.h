@@ -25,10 +25,14 @@ public:
 		m_ptr(nullptr),
 		m_size(0) {}
 
-	template <typename B = T,
-		typename std::enable_if_t<std::is_convertible_v<B, T> &&
-		std::is_lvalue_reference_v<B>, int> = 0>
-	VERA_CONSTEXPR array_view(B&& value) VERA_NOEXCEPT :
+	//template <typename B = T,
+	//	typename std::enable_if_t<std::is_convertible_v<B, T> &&
+	//	std::is_lvalue_reference_v<B>, int> = 0>
+	//VERA_CONSTEXPR array_view(B&& value) VERA_NOEXCEPT :
+	//	m_ptr(std::addressof(value)),
+	//	m_size(1) {}
+
+	VERA_CONSTEXPR array_view(T&& value) VERA_NOEXCEPT :
 		m_ptr(std::addressof(value)),
 		m_size(1) {}
 

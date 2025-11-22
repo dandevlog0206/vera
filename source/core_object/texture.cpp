@@ -188,7 +188,7 @@ obj<Texture> Texture::create(obj<Device> device, const TextureCreateInfo& info)
 	return obj;
 }
 
-Texture::~Texture()
+Texture::~Texture() VERA_NOEXCEPT
 {
 	auto& impl        = getImpl(this);
 	auto& memory_impl = getImpl(impl.deviceMemory);
@@ -381,7 +381,7 @@ obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCrea
 	return obj;
 }
 
-TextureView::~TextureView()
+TextureView::~TextureView() VERA_NOEXCEPT
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);

@@ -13,7 +13,7 @@ public:
 	static bool waitAny(std::span<obj<Semaphore>> semaphores, uint64_t timeout = UINT64_MAX);
 
 	static obj<Semaphore> create(obj<Device> device);
-	~Semaphore();
+	~Semaphore() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 
@@ -28,7 +28,7 @@ public:
 	static bool waitAny(std::span<obj<Semaphore>> semaphores, uint64_t value, uint64_t timeout = UINT64_MAX);
 
 	static obj<TimelineSemaphore> create(obj<Device> device, uint64_t initial_value = 0);
-	~TimelineSemaphore();
+	~TimelineSemaphore() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 

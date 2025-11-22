@@ -43,12 +43,8 @@ static const vk::PipelineViewportStateCreateInfo* get_default_viewport_state_inf
 
 static void check_shader_stage(const obj<Shader>& shader, ShaderStageFlagBits stage)
 {	
-	VERA_NOT_IMPLEMENTED;
-	auto& shader_impl = const_cast<ShaderImpl&>(CoreObject::getImpl(shader));
-	// auto* root_node   = get_reflection_root_node(shader_impl.getOrCreateShaderReflection());
-
-	//if (!root_node->getShaderStageFlags().has(stage))
-	//	throw Exception("shader has no desired stage");
+	if (shader->getStageFlags() != stage)
+		throw Exception("shader stage mismatch");
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const GraphicsPipelineCreateInfo& info)
@@ -56,7 +52,7 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Gr
 	if (info.pipelineLayout)
 		return info.pipelineLayout;
 
-	static_vector<obj<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
+	static_vector<const_ref<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
 	
 	check_shader_stage(info.vertexShader, ShaderStageFlagBits::Vertex);
 	check_shader_stage(info.fragmentShader, ShaderStageFlagBits::Fragment);
@@ -77,8 +73,7 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Gr
 		shaders.push_back(info.geometryShader);
 	}
 
-	return {};
-	// return PipelineLayout::create(device, shaders);
+	return PipelineLayout::create(device, shaders);
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const MeshPipelineCreateInfo& info)
@@ -86,7 +81,7 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Me
 	if (info.pipelineLayout)
 		return info.pipelineLayout;
 
-	static_vector<obj<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
+	static_vector<const_ref<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
 
 	check_shader_stage(info.meshShader, ShaderStageFlagBits::Mesh);
 	check_shader_stage(info.fragmentShader, ShaderStageFlagBits::Fragment);
@@ -99,8 +94,7 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Me
 		shaders.push_back(info.taskShader);
 	}
 
-	return {};
-	// return PipelineLayout::create(device, shaders);
+	return PipelineLayout::create(device, shaders);
 }
 
 static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const ComputePipelineCreateInfo& info)
@@ -110,8 +104,7 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Co
 
 	check_shader_stage(info.computeShader, ShaderStageFlagBits::Compute);
 
-	return {};
-	// return PipelineLayout::create(device, info.computeShader);
+	return PipelineLayout::create(device, info.computeShader.cref());
 }
 
 static void add_shader_stage(
@@ -122,15 +115,12 @@ static void add_shader_stage(
 ) {
 	VERA_ASSERT_MSG(shader, "shader is null");
 
-	vk::PipelineShaderStageCreateInfo shader_info;
-
 	auto& shader_impl = const_cast<ShaderImpl&>(CoreObject::getImpl(shader));
-	auto& refl_impl   = CoreObject::getImpl(shader_impl.shaderReflection);
-	auto* root_node   = refl_impl.requestMinimalReflectionRootNode();
 
+	vk::PipelineShaderStageCreateInfo shader_info;
 	shader_info.stage               = to_vk_shader_stage_flag_bits(stage);
 	shader_info.module              = shader_impl.vkShaderModule;
-	shader_info.pName               = root_node->getEntryPointName(stage);
+	shader_info.pName               = shader_impl.entryPointName.data();
 	shader_info.pSpecializationInfo = nullptr;
 
 	shader_infos.push_back(shader_info);
@@ -439,7 +429,7 @@ static hash_t hash_pipeline_info(const GraphicsPipelineCreateInfo& info)
 
 static hash_t hash_pipeline_info(const MeshPipelineCreateInfo& info)
 {
-	hash_t seed = 0;
+	hash_t seed = 1;
 
 	hash_combine(seed, info.taskShader ? info.taskShader->hash() : 0);
 	hash_combine(seed, info.meshShader->hash());
@@ -450,7 +440,7 @@ static hash_t hash_pipeline_info(const MeshPipelineCreateInfo& info)
 
 static hash_t hash_pipeline_info(const ComputePipelineCreateInfo& info)
 {
-	hash_t seed = 0;
+	hash_t seed = 2;
 	
 	hash_combine(seed, info.computeShader->hash());
 
@@ -477,10 +467,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	auto&  device_impl = getImpl(device);
 	hash_t hash_value  = hash_pipeline_info(info);
 
-	if (auto it = device_impl.pipelineCache.find(hash_value);
-		it != device_impl.pipelineCache.end()) {
-		return obj<Pipeline>(it->second.get());
-	}
+	if (auto cached_obj = device_impl.findCachedObject<Pipeline>(hash_value))
+		return cached_obj;
 
 	// create pipline layout first to check shader stages
 	auto pipeline_layout = register_pipeline_layout(device, info);
@@ -641,7 +629,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const GraphicsPipelineCreateI
 	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
 	impl.hashValue         = hash_value;
 
-	device_impl.registerPipeline(impl.hashValue, obj);
+	device_impl.registerCachedObject<Pipeline>(impl.hashValue, obj);
 
 	return obj;
 }
@@ -656,10 +644,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_pipeline_info(info);
 
-	if (auto it = device_impl.pipelineCache.find(hash_value);
-		it != device_impl.pipelineCache.end()) {
-		return obj<Pipeline>(it->second.get());
-	}
+	if (auto cached_obj = device_impl.findCachedObject<Pipeline>(hash_value))
+		return cached_obj;
 
 	if (info.taskShader && !device_impl.isFeatureEnabled(DeviceFeatureType::TaskShader))
 		throw Exception("task shader feature is not enabled on device");
@@ -758,7 +744,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const MeshPipelineCreateInfo&
 	impl.pipelineBindPoint = PipelineBindPoint::Graphics;
 	impl.hashValue         = hash_value;
 
-	device_impl.registerPipeline(impl.hashValue, obj);
+	device_impl.registerCachedObject<Pipeline>(impl.hashValue, obj);
 
 	return obj;
 }
@@ -771,10 +757,8 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_pipeline_info(info);
 
-	if (auto it = device_impl.pipelineCache.find(hash_value);
-		it != device_impl.pipelineCache.end()) {
-		return obj<Pipeline>(it->second.get());
-	}
+	if (auto cached_obj = device_impl.findCachedObject<Pipeline>(hash_value))
+		return cached_obj;
 
 	// create pipline layout first to check shader stages
 	auto pipeline_layout = register_pipeline_layout(device, info);
@@ -804,17 +788,17 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 	impl.pipelineBindPoint = PipelineBindPoint::Compute;
 	impl.hashValue         = hash_value;
 
-	device_impl.registerPipeline(impl.hashValue, obj);
+	device_impl.registerCachedObject<Pipeline>(impl.hashValue, obj);
 
 	return obj;
 }
 
-Pipeline::~Pipeline()
+Pipeline::~Pipeline() VERA_NOEXCEPT
 {
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 
-	device_impl.unregisterPipeline(impl.hashValue);
+	device_impl.unregisterCachedObject<Pipeline>(impl.hashValue);
 	device_impl.vkDevice.destroy(impl.vkPipeline);
 
 	destroyObjectImpl(this);
@@ -846,8 +830,8 @@ obj<Shader> Pipeline::getShader(ShaderStageFlagBits stage)
 
 	for (auto& [flag, shader] : impl.shaders)
 		if (flag == stage) return shader;
-
-	return obj<Shader>();
+	
+	return {};
 }
 
 VERA_NAMESPACE_END

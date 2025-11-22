@@ -2,7 +2,6 @@
 
 #include "object_impl.h"
 
-#include "../spirv/reflection_desc.h"
 #include "../../include/vera/core/command_buffer_sync.h"
 #include "../../include/vera/core/descriptor_set.h"
 #include "../../include/vera/util/ranged_set.h"
@@ -62,8 +61,6 @@ public:
 	obj<PipelineLayout>                              pipelineLayout;
 	obj<DescriptorPool>                              descriptorPool;
 
-	const ReflectionDesc*                            reflection;
-	std::unordered_map<intptr_t, ShaderStorageFrame> frames;
 	std::vector<ShaderParameterSetState>             setStates;
 	std::map<ShaderStageFlags, ShaderStoragePCRange> pcStates;
 	std::vector<vk::DescriptorImageInfo>             imageInfos;

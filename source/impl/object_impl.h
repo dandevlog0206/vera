@@ -19,6 +19,7 @@ class Context;
 		// Shader
 		class Shader;
 		class ShaderReflection;
+		class ProgramReflection;
 		class ShaderParameter;
 		
 		// Resource Management
@@ -479,15 +480,15 @@ static vk::Format to_vk_format(Format format) VERA_NOEXCEPT
 	case Format::A2BGR10UintPack32:    return vk::Format::eA2B10G10R10UintPack32;
 	case Format::A2BGR10SintPack32:    return vk::Format::eA2B10G10R10SintPack32;
 
-	// Depth
+	// Depth only
 	case Format::D16Unorm:             return vk::Format::eD16Unorm;
 	case Format::X8D24Unorm:           return vk::Format::eX8D24UnormPack32;
 	case Format::D32Float:             return vk::Format::eD32Sfloat;
 	
-	// Stencil 
+	// Stencil only
 	case Format::S8Uint:               return vk::Format::eS8Uint;
 	
-	// Depth Stencil
+	// Depth and Stencil
 	case Format::D16UnormS8Uint:       return vk::Format::eD16UnormS8Uint;
 	case Format::D24UnormS8Uint:       return vk::Format::eD24UnormS8Uint;
 	case Format::D32FloatS8Uint:       return vk::Format::eD32SfloatS8Uint;

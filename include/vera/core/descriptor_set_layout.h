@@ -24,7 +24,7 @@ class DescriptorSetLayout : protected CoreObject
 	VERA_CORE_OBJECT_INIT(DescriptorSetLayout)
 public:
 	static obj<DescriptorSetLayout> create(obj<Device> device, const DescriptorSetLayoutCreateInfo& info);
-	~DescriptorSetLayout();
+	~DescriptorSetLayout() VERA_NOEXCEPT override;
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 

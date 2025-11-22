@@ -59,10 +59,8 @@ obj<Sampler> Sampler::create(obj<Device> device, const SamplerCreateInfo& info)
 	auto&  device_impl = getImpl(device);
 	size_t hash_value  = hash_sampler(info);
 
-	if (auto it = device_impl.samplerCache.find(hash_value);
-		it != device_impl.samplerCache.end()) {
-		return unsafe_obj_cast<Sampler>(it->second);
-	}
+	if (auto cached_obj = device_impl.findCachedObject<Sampler>(hash_value))
+		return cached_obj;
 
 	auto   obj         = createNewCoreObject<Sampler>();
 	auto&  impl        = getImpl(obj);
@@ -103,17 +101,17 @@ obj<Sampler> Sampler::create(obj<Device> device, const SamplerCreateInfo& info)
 	impl.hashValue = hash_value;
 	impl.info      = info;
 
-	device_impl.registerSampler(impl.hashValue, obj);
+	device_impl.registerCachedObject<Sampler>(impl.hashValue, obj);
 	
 	return obj;
 }
 
-Sampler::~Sampler()
+Sampler::~Sampler() VERA_NOEXCEPT
 {
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
 	
-	device_impl.unregisterSampler(impl.hashValue);
+	device_impl.unregisterCachedObject<Sampler>(impl.hashValue);
 	device_impl.vkDevice.destroy(impl.vkSampler);
 	
 	destroyObjectImpl(this);

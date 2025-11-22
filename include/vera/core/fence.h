@@ -13,7 +13,7 @@ public:
 	static bool waitAny(std::span<obj<Fence>> fences, uint64_t timeout = UINT64_MAX);
 
 	static obj<Fence> create(obj<Device> device, bool signaled = false);
-	~Fence();
+	~Fence() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 

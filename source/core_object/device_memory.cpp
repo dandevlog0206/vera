@@ -42,7 +42,7 @@ obj<DeviceMemory> DeviceMemory::create(obj<Device> device, const DeviceMemoryCre
 	return obj;
 }
 
-DeviceMemory::~DeviceMemory()
+DeviceMemory::~DeviceMemory() VERA_NOEXCEPT
 {
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);

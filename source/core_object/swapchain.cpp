@@ -232,7 +232,7 @@ obj<Swapchain> Swapchain::create(obj<Device> device, os::Window& window, const S
 	return obj;
 }
 
-Swapchain::~Swapchain()
+Swapchain::~Swapchain() VERA_NOEXCEPT
 {
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);

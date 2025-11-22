@@ -1,20 +1,25 @@
 #pragma once
 
 #include "intrusive_ptr.h"
+#include "enum_types.h"
 #include "../util/hash.h"
 #include <type_traits>
 #include <utility>
 #include <memory>
 #include <atomic>
 
-#define VERA_CORE_OBJECT_INIT(obj_name)                                        \
-	using impl_type = class obj_name ## Impl;                                 \
-	using pair_type = ::vr::priv::compressed_pair<obj_name, obj_name ## Impl>; \
-	friend class CoreObject;                                                   \
-	friend class obj<obj_name>;                                                \
-	friend pair_type;                                                          \
-	template <class Target, class T>                                           \
-	friend VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT;   \
+#define VERA_CORE_OBJECT_INIT(obj_name)                                            \
+	using impl_type = class obj_name ## Impl;                                      \
+	using pair_type = ::vr::priv::compressed_pair<obj_name, obj_name ## Impl>;     \
+	friend class CoreObject;                                                       \
+	friend class obj<obj_name>;                                                    \
+	friend pair_type;                                                              \
+	template <class Target, class T>                                               \
+	friend VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT;       \
+	VERA_NODISCARD CoreObjectType getCoreObjectType() const VERA_NOEXCEPT override \
+	{                                                                              \
+		return CoreObjectType::obj_name;                                           \
+	}                                                                              \
 	obj_name() = default;
 
 VERA_NAMESPACE_BEGIN
@@ -35,6 +40,11 @@ class CoreObject : public ManagedObject
 	VERA_NOCOPY(CoreObject)
 	VERA_NOMOVE(CoreObject)
 public:
+	VERA_NODISCARD virtual CoreObjectType getCoreObjectType() const VERA_NOEXCEPT
+	{
+		return CoreObjectType::Unknown;
+	}
+
 	template <class Object>
 	VERA_NODISCARD VERA_INLINE static typename Object::impl_type& getImpl(obj<Object>& obj) VERA_NOEXCEPT
 	{

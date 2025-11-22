@@ -103,7 +103,7 @@ obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 	return obj;
 }
 
-CommandBuffer::~CommandBuffer()
+CommandBuffer::~CommandBuffer() VERA_NOEXCEPT
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
@@ -200,7 +200,7 @@ void CommandBuffer::copyBufferToTexture(
 
 	impl.vkCommandBuffer.copyBufferToImage(
 		buffer_impl.vkBuffer,
-		texture_impl.image,
+		texture_impl.vkImage,
 		vk::ImageLayout::eTransferDstOptimal,
 		copy_info);
 }
@@ -307,7 +307,7 @@ void CommandBuffer::bindPipeline(obj<Pipeline> pipeline)
 
 	impl.vkCommandBuffer.bindPipeline(
 		to_vk_pipeline_bind_point(pipeline_impl.pipelineBindPoint),
-		pipeline_impl.pipeline);
+		pipeline_impl.vkPipeline);
 	impl.currentPipeline = pipeline;
 	impl.boundObjects.push_back(obj_cast<CoreObject>(std::move(pipeline)));
 }

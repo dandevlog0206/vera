@@ -1,0 +1,589 @@
+#pragma once
+
+#include "../../../include/vera/core/enum_types.h"
+#include "../../../include/vera/core/pipeline_layout.h"
+#include "../../../include/vera/util/flat_hash_map.h"
+#include "../../../include/vera/util/array_view.h"
+#include "../../../include/vera/util/range.h"
+#include "../../../include/vera/util/flag.h"
+#include <memory_resource>
+#include <string_view>
+
+namespace spv_reflect
+{
+	struct ShaderModule;
+}
+
+VERA_NAMESPACE_BEGIN
+
+class ReflectionNode;
+class ReflectionResourceNode;
+class ReflectionBlockNode;
+class ReflectionRootNode;
+class ReflectionDescriptorNode;
+class ReflectionDescriptorArrayNode;
+class ReflectionDescriptorBlockNode;
+class ReflectionPushConstantNode;
+class ReflectionStructNode;
+class ReflectionArrayNode;
+class ReflectionPrimitiveNode;
+
+// Node offset layout for x64 architecture
+/*
+ * offset0  - type
+ * offset4  - stageFlags / offset
+ * offset8  - name
+ * offset16 - descriptorType / paddedSize
+ * offset20 - set
+ * offset24 - memberNodes / binding / primitiveType
+ * offset32 - nameMap / block / elementNode
+ * offset40 - elementCount
+ * offset44 - stride
+ */
+
+enum class ReflectionTargetFlagBits VERA_ENUM
+{
+	None                = 0,
+	DescriptorSetLayout = 1 << 0,
+	Shader              = 1 << 1,
+	PipelineLayout      = 1 << 2
+} VERA_ENUM_FLAGS(ReflectionTargetFlagBits, ReflectionTargetFlags)
+
+enum class ReflectionPropertyFlagBits VERA_FLAG_BITS
+{
+	None           = 0,
+	Type           = 1 << 0,
+	StageFlags     = 1 << 1,
+	Offset         = 1 << 2,
+	Name           = 1 << 3,
+	DescriptorType = 1 << 5,
+	PaddedSize     = 1 << 6,
+	Set            = 1 << 7,
+	MemberNodes    = 1 << 4,
+	Binding        = 1 << 9,
+	PrimitiveType  = 1 << 8,
+	NameMap        = 1 << 10,
+	Block          = 1 << 11,
+	ElementNode    = 1 << 12,
+	ElementCount   = 1 << 13,
+	Stride         = 1 << 14
+} VERA_ENUM_FLAGS(ReflectionPropertyFlagBits, ReflectionPropertyFlags)
+
+// enum value has propery bits
+enum class ReflectionDescType VERA_ENUM
+{
+	Unknown         = 0,
+
+	Root            = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::StageFlags |
+		ReflectionPropertyFlagBits::MemberNodes |
+		ReflectionPropertyFlagBits::NameMap),
+
+	Descriptor      = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::StageFlags |
+		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::DescriptorType |
+		ReflectionPropertyFlagBits::Set |
+		ReflectionPropertyFlagBits::Binding),
+
+	DescriptorArray = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::StageFlags |
+		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::DescriptorType |
+		ReflectionPropertyFlagBits::Set |
+		ReflectionPropertyFlagBits::Binding |
+		ReflectionPropertyFlagBits::ElementNode |
+		ReflectionPropertyFlagBits::ElementCount |
+		ReflectionPropertyFlagBits::Stride),
+
+	DescriptorBlock = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::StageFlags |
+		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::DescriptorType |
+		ReflectionPropertyFlagBits::Set |
+		ReflectionPropertyFlagBits::Binding |
+		ReflectionPropertyFlagBits::Block),
+
+	PushConstant    = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::StageFlags |
+		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::Block),
+
+	Struct          = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::Offset |
+		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::PaddedSize |
+		ReflectionPropertyFlagBits::MemberNodes |
+		ReflectionPropertyFlagBits::NameMap),
+
+	Array           = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::Offset |
+		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::PaddedSize |
+		ReflectionPropertyFlagBits::ElementNode |
+		ReflectionPropertyFlagBits::ElementCount |
+		ReflectionPropertyFlagBits::Stride),
+
+	Primitive       = static_cast<uint32_t>(
+		ReflectionPropertyFlagBits::Type |
+		ReflectionPropertyFlagBits::Offset |
+		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::PaddedSize |
+		ReflectionPropertyFlagBits::PrimitiveType)
+};
+
+typedef array_view<const ReflectionDescriptorNode*> ReflectionSetRange;
+
+typedef std::pmr::polymorphic_allocator<std::pair<std::string_view,
+	const ReflectionNode*>> ReflectionNameMapAllocator;
+
+typedef std::pmr::polymorphic_allocator<std::pair<uint64_t, const ReflectionDescriptorNode*>>
+	ReflectionDescriptorBindingAllocator;
+
+typedef ska::flat_hash_map<std::string_view, const ReflectionNode*, std::hash<std::string_view>,
+	std::equal_to<std::string_view>, ReflectionNameMapAllocator> ReflectionNameMap;
+
+typedef ska::flat_hash_map<uint64_t, const ReflectionDescriptorNode*, std::hash<uint64_t>, std::equal_to<uint64_t>,
+	ReflectionDescriptorBindingAllocator> ReflectionBindingMap;
+
+class ReflectionNode
+{
+public:
+	template <ReflectionPropertyFlagBits FlagBit>
+	static VERA_CONSTEXPR size_t prop_off_v = UINT64_MAX;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Type>           = 0;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::StageFlags>     = 4;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Offset>         = 4;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Name>           = 8;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::DescriptorType> = 16;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::PaddedSize>     = 16;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Set>            = 20;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::MemberNodes>    = 24;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Binding>        = 24;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::PrimitiveType>  = 24;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::NameMap>        = 40;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Block>          = 32;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::ElementNode>    = 32;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::ElementCount>   = 40;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Stride>         = 44;
+
+	ReflectionDescType type;
+
+	template <class NodeType>
+	VERA_NODISCARD VERA_INLINE const NodeType* as() const VERA_NOEXCEPT;
+
+	template <class NodeType>
+	VERA_NODISCARD VERA_INLINE NodeType* as() VERA_NOEXCEPT
+	{
+		return const_cast<NodeType*>(static_cast<const ReflectionNode*>(this)->as<NodeType>());
+	}
+
+	VERA_NODISCARD VERA_INLINE ReflectionDescType getType() const VERA_NOEXCEPT
+	{
+		return type;
+	}
+
+	VERA_NODISCARD VERA_INLINE ReflectionPropertyFlags getPropertyFlags() const VERA_NOEXCEPT
+	{
+		return std::bit_cast<ReflectionPropertyFlags>(type);
+	}
+
+	VERA_NODISCARD VERA_INLINE bool hasProperty(ReflectionPropertyFlags flags) const VERA_NOEXCEPT
+	{
+		return getPropertyFlags().has(flags);
+	}
+
+	VERA_NODISCARD VERA_INLINE ShaderStageFlags getStageFlags() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::StageFlags),
+			"stage flags property is not available for this node type");
+
+		return *reinterpret_cast<const ShaderStageFlags*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::StageFlags>);
+	}
+
+	VERA_NODISCARD VERA_INLINE uint32_t getOffset() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::Offset),
+			"offset property is not available for this node type");
+	
+		return *reinterpret_cast<const uint32_t*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::Offset>);
+	}
+
+	VERA_NODISCARD VERA_INLINE const char* getName() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::Name),
+			"name property is not available for this node type");
+
+		return *reinterpret_cast<const char* const*>(
+			reinterpret_cast<const std::byte*>(this) + 
+			prop_off_v<ReflectionPropertyFlagBits::Name>);
+	}
+
+	VERA_NODISCARD VERA_INLINE DescriptorType getDescriptorType() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::DescriptorType),
+			"descriptor type property is not available for this node type");
+
+		return *reinterpret_cast<const DescriptorType*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::DescriptorType>);
+	}
+
+	VERA_NODISCARD VERA_INLINE uint32_t getPaddedSize() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::PaddedSize),
+			"padded size property is not available for this node type");
+
+		return *reinterpret_cast<const uint32_t*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::PaddedSize>);
+	}
+	
+	VERA_NODISCARD VERA_INLINE uint32_t getSet() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::Set),
+			"set property is not available for this node type");
+
+		return *reinterpret_cast<const uint32_t*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::Set>);
+	}
+
+	VERA_NODISCARD VERA_INLINE ReflectionPrimitiveType getPrimitiveType() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::PrimitiveType),
+			"primitive type property is not available for this node type");
+
+		return *reinterpret_cast<const ReflectionPrimitiveType*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::PrimitiveType>);
+	}
+
+	VERA_NODISCARD VERA_INLINE uint32_t getBinding() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::Binding),
+			"binding property is not available for this node type");
+
+		return *reinterpret_cast<const uint32_t*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::Binding>);
+	}
+
+	VERA_NODISCARD VERA_INLINE array_view<const ReflectionNode*> getMemberNodes() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::MemberNodes),
+			"member nodes property is not available for this node type");
+
+		return *reinterpret_cast<const array_view<const ReflectionNode*>*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::MemberNodes>);
+	}
+
+	VERA_NODISCARD VERA_INLINE array_view<const ReflectionResourceNode*> getRootMemberNodes() VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			type == ReflectionDescType::Root,
+			"root member nodes is not available for this node type");
+
+		return *reinterpret_cast<const array_view<const ReflectionResourceNode*>*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::MemberNodes>);
+	}
+
+	VERA_NODISCARD VERA_INLINE array_view<const ReflectionBlockNode*> getBlockMemberNodes() VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			type == ReflectionDescType::DescriptorBlock ||
+			type == ReflectionDescType::PushConstant ||
+			type == ReflectionDescType::Struct,
+			"block member nodes is not available for this node type");
+
+		return *reinterpret_cast<const array_view<const ReflectionBlockNode*>*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::MemberNodes>);
+	}
+
+	VERA_NODISCARD VERA_INLINE array_view<const ReflectionNode*> getRootMemberNodes() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			type == ReflectionDescType::Root,
+			"root member nodes is not available for this node type");
+
+		return *reinterpret_cast<const array_view<const ReflectionNode*>*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::MemberNodes>);
+	}
+
+	VERA_NODISCARD VERA_INLINE array_view<const ReflectionBlockNode*> getBlockMemberNodes() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			type == ReflectionDescType::DescriptorBlock ||
+			type == ReflectionDescType::PushConstant ||
+			type == ReflectionDescType::Struct,
+			"block member nodes is not available for this node type");
+
+		return *reinterpret_cast<const array_view<const ReflectionBlockNode*>*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::MemberNodes>);
+	}
+
+	VERA_NODISCARD VERA_INLINE const ReflectionNode* getElementNode() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::ElementNode),
+			"element node property is not available for this node type");
+
+		return *reinterpret_cast<const ReflectionNode* const*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::ElementNode>);
+	}
+
+	VERA_NODISCARD VERA_INLINE uint32_t getElementCount() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::ElementCount),
+			"element count property is not available for this node type");
+
+		return *reinterpret_cast<const uint32_t*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::ElementCount>);
+	}
+
+	VERA_NODISCARD VERA_INLINE uint32_t getStride() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::Stride),
+			"stride property is not available for this node type");
+
+		return *reinterpret_cast<const uint32_t*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::Stride>);
+	}
+
+	VERA_NODISCARD VERA_INLINE const ReflectionNameMap& getNameMap() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::NameMap),
+			"name map property is not available for this node type");
+
+		return *reinterpret_cast<const ReflectionNameMap*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::NameMap>);
+	}
+};
+
+class ReflectionResourceNode abstract : public ReflectionNode
+{
+public:
+//	ReflectionDescType   type;
+	ShaderStageFlags stageFlags;
+	const char*      name;
+};
+
+class ReflectionBlockNode abstract : public ReflectionNode
+{
+public:
+//	ReflectionDescType type;
+	uint32_t           offset;
+	const char*        name;
+	uint32_t           paddedSize;
+};
+
+//// DO NOT MODIFY BELOW THIS LINE ////
+
+class ReflectionRootNode : public ReflectionNode
+{
+public:
+	static const ReflectionRootNode* create(
+		const spv_reflect::ShaderModule& shader_module,
+		std::pmr::memory_resource*       memory
+	);
+	
+	static const ReflectionRootNode* merge(
+		array_view<const ReflectionRootNode*> roots,
+		std::pmr::memory_resource*            memory
+	);
+
+//	ReflectionDescType                            type;
+	ShaderStageFlags                          stageFlags;
+	ReflectionTargetFlags                     targetFlags;
+	VERA_MEMBER_PADDING(uint32_t)
+	VERA_MEMBER_PADDING(uint32_t)
+	VERA_MEMBER_PADDING(uint32_t)
+	array_view<const ReflectionResourceNode*> memberNodes;
+	ReflectionNameMap                         nameMap;
+	uint32_t                                  descriptorCount;
+	uint32_t                                  pushConstantCount;
+	uint32_t                                  minSet;
+	uint32_t                                  maxSet;
+	array_view<ReflectionSetRange>            setRanges;
+	ReflectionBindingMap                      bindingMap;
+
+	VERA_NODISCARD ShaderStageFlags getShaderStageFlags() const VERA_NOEXCEPT;
+
+	VERA_NODISCARD const char* getEntryPointName(ShaderStageFlagBits stage = {}) const VERA_NOEXCEPT;
+
+	VERA_NODISCARD uint32_t getSetCount() const VERA_NOEXCEPT;
+	VERA_NODISCARD uint32_t getMinSet() const VERA_NOEXCEPT;
+	VERA_NODISCARD uint32_t getMaxSet() const VERA_NOEXCEPT;
+
+	VERA_NODISCARD array_view<const ReflectionDescriptorNode*> enumerateDescriptor() const VERA_NOEXCEPT;
+	VERA_NODISCARD array_view<const ReflectionDescriptorNode*> enumerateDescriptorSet(uint32_t set) const VERA_NOEXCEPT;
+	VERA_NODISCARD array_view<const ReflectionPushConstantNode*> enumeratePushConstant() const VERA_NOEXCEPT;
+	
+	VERA_NODISCARD const ReflectionDescriptorNode* findDescriptor(uint32_t set, uint32_t binding) const VERA_NOEXCEPT;
+	VERA_NODISCARD const ReflectionPushConstantNode* findPushConstant(ShaderStageFlags stage_flags = {}) const VERA_NOEXCEPT;
+};
+
+class ReflectionDescriptorNode : public ReflectionResourceNode
+{
+public:
+//	ReflectionDescType type;
+//	ShaderStageFlags   stageFlags;
+//	const char*        name;
+	DescriptorType     descriptorType;
+	uint32_t           set;
+	uint32_t           binding;
+	VERA_MEMBER_PADDING(uint32_t)
+};
+
+class ReflectionDescriptorArrayNode : public ReflectionDescriptorNode
+{
+public:
+//	ReflectionDescType    type;
+//	ShaderStageFlags      stageFlags;
+//	const char*           name;
+//	DescriptorType        descriptorType;
+//	uint32_t              set;
+//	uint32_t              binding;
+//	VERA_MEMBER_PADDING(uint32_t)
+	const ReflectionNode* elementNode;
+	uint32_t              elementCount;
+	uint32_t              stride;
+};
+
+class ReflectionDescriptorBlockNode : public ReflectionDescriptorNode
+{
+public:
+//	ReflectionDescType          type;
+//	ShaderStageFlags            stageFlags;
+//	const char*                 name;
+//	DescriptorType              descriptorType;
+//	uint32_t                    set;
+//	uint32_t                    binding;
+//	VERA_MEMBER_PADDING(uint32_t)
+	const ReflectionStructNode* block;
+};
+
+class ReflectionPushConstantNode : public ReflectionResourceNode
+{
+public:
+//	ReflectionDescType          type;
+//	ShaderStageFlags            stageFlags;
+//	const char*                 name;
+	basic_range<uint32_t>       range;
+	VERA_MEMBER_PADDING(uint32_t)
+	VERA_MEMBER_PADDING(uint32_t)
+	const ReflectionStructNode* block;
+};
+
+class ReflectionStructNode : public ReflectionBlockNode
+{
+public:
+//	ReflectionDescType                     type;
+//	uint32_t                               offset;
+//	const char*                            name;
+//	uint32_t                               paddedSize;
+//	VERA_MEMBER_PADDING(uint32_t)
+	array_view<const ReflectionBlockNode*> memberNodes;
+	ReflectionNameMap                      nameMap;
+};
+
+class ReflectionArrayNode : public ReflectionBlockNode
+{
+public:
+//	ReflectionDescType         type;
+//	uint32_t                   offset;
+//	const char*                name;
+//	uint32_t                   paddedSize;
+//	VERA_MEMBER_PADDING(uint32_t)
+	VERA_MEMBER_PADDING(uint32_t)
+	VERA_MEMBER_PADDING(uint32_t)
+	const ReflectionBlockNode* elementNode;
+	uint32_t                   elementCount;
+	uint32_t                   stride;
+};
+
+class ReflectionPrimitiveNode : public ReflectionBlockNode
+{
+public:
+//	ReflectionDescType      type;
+//	uint32_t                offset;
+//	const char*             name;
+//	uint32_t                paddedSize;
+	ReflectionPrimitiveType primitiveType;
+};
+
+template <class NodeType>
+VERA_NODISCARD VERA_INLINE const NodeType* ReflectionNode::as() const VERA_NOEXCEPT
+{
+#ifdef _DEBUG
+	if constexpr (std::is_same_v<NodeType, ReflectionBlockNode>) {
+		VERA_ASSERT_MSG(
+			type == ReflectionDescType::Struct ||
+			type == ReflectionDescType::Array ||
+			type == ReflectionDescType::Primitive, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionResourceNode>) {
+		VERA_ASSERT_MSG(
+			type == ReflectionDescType::Descriptor ||
+			type == ReflectionDescType::DescriptorBlock ||
+			type == ReflectionDescType::DescriptorArray ||
+			type == ReflectionDescType::PushConstant, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionRootNode>) {
+		VERA_ASSERT_MSG(type == ReflectionDescType::Root, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionDescriptorNode>) {
+		VERA_ASSERT_MSG(
+			type == ReflectionDescType::Descriptor ||
+			type == ReflectionDescType::DescriptorBlock ||
+			type == ReflectionDescType::DescriptorArray, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionDescriptorBlockNode>) {
+		VERA_ASSERT_MSG(type == ReflectionDescType::DescriptorBlock, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionDescriptorArrayNode>) {
+		VERA_ASSERT_MSG(type == ReflectionDescType::DescriptorArray, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionPushConstantNode>) {
+		VERA_ASSERT_MSG(type == ReflectionDescType::PushConstant, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionStructNode>) {
+		VERA_ASSERT_MSG(type == ReflectionDescType::Struct, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionArrayNode>) {
+		VERA_ASSERT_MSG(type == ReflectionDescType::Array, "invalid node type cast");
+	} else if constexpr (std::is_same_v<NodeType, ReflectionPrimitiveNode>) {
+		VERA_ASSERT_MSG(type == ReflectionDescType::Primitive, "invalid node type cast");
+	}
+#endif // _DEBUG
+
+	return reinterpret_cast<const NodeType*>(this);
+}
+
+//// DO NOT MODIFY ABOVE THIS LINE ////
+
+VERA_NAMESPACE_END

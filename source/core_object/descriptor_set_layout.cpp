@@ -40,18 +40,6 @@ static uint32_t get_max_resource_count(const DeviceImpl& impl, DescriptorType re
 	return {};
 }
 
-static bool check_contiguous(array_view<DescriptorSetLayoutBinding> ordered_bindings)
-{
-	if (ordered_bindings.front().binding != 0)
-		return false;
-
-	for (size_t i = 1; i < ordered_bindings.size(); ++i)
-		if (ordered_bindings[i].binding != ordered_bindings[i - 1].binding + 1)
-			return false;
-
-	return true;
-}
-
 static hash_t hash_descriptor_set_layout(const DescriptorSetLayoutCreateInfo& info)
 {
 	hash_t seed = 0;
@@ -92,10 +80,8 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 	auto&  device_impl = getImpl(device);
 	hash_t hash_value  = hash_descriptor_set_layout(info);
 
-	if (auto it = device_impl.descriptorSetLayoutCache.find(hash_value);
-		it != device_impl.descriptorSetLayoutCache.end()) {
-		return unsafe_obj_cast<DescriptorSetLayout>(it->second);
-	}
+	if (auto cached_obj = device_impl.findCachedObject<DescriptorSetLayout>(hash_value))
+		return cached_obj;
 
 	auto  obj  = createNewCoreObject<DescriptorSetLayout>();
 	auto& impl = getImpl(obj);
@@ -107,7 +93,11 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 			return lhs.binding < rhs.binding;
 		});
 
-	VERA_ASSERT_MSG(check_contiguous(impl.bindings), "resource layout bindings can not be sparse");
+	for (const auto& binding : impl.bindings) {
+		if (&binding == &impl.bindings.back()) break;
+		if (binding.flags.has(DescriptorSetLayoutBindingFlagBits::VariableDescriptorCount))
+			throw Exception("only the last binding can have VariableDescriptorCount flag set");
+	}
 
 	static_vector<vk::DescriptorSetLayoutBinding, 32> bindings;
 	static_vector<vk::DescriptorBindingFlags, 32>     binding_flags;
@@ -142,17 +132,17 @@ obj<DescriptorSetLayout> DescriptorSetLayout::create(obj<Device> device, const D
 	impl.vkDescriptorSetLayout = device_impl.vkDevice.createDescriptorSetLayout(desc_info);
 	impl.hashValue             = hash_value;
 	
-	device_impl.registerDescriptorSetLayout(hash_value, obj);
+	device_impl.registerCachedObject<DescriptorSetLayout>(hash_value, obj);
 	
 	return obj;
 }
 
-DescriptorSetLayout::~DescriptorSetLayout()
+DescriptorSetLayout::~DescriptorSetLayout() VERA_NOEXCEPT
 {
 	auto& impl        = getImpl(this);
 	auto& device_impl = getImpl(impl.device);
-	
-	device_impl.unregisterDescriptorSetLayout(impl.hashValue);
+
+	device_impl.unregisterCachedObject<DescriptorSetLayout>(impl.hashValue);
 	device_impl.vkDevice.destroy(impl.vkDescriptorSetLayout);
 
 	destroyObjectImpl(this);

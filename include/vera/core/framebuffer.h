@@ -22,7 +22,7 @@ class FrameBuffer : protected CoreObject
 	VERA_CORE_OBJECT_INIT(FrameBuffer)
 public:
 	static obj<FrameBuffer> create(obj<Device> device, const FrameBufferCreateInfo& info);
-	~FrameBuffer();
+	~FrameBuffer() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 	ref<Texture> getTexture();

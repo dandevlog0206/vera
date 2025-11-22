@@ -29,26 +29,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -150,7 +150,7 @@
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\spirv-reflect\lib\$(Configuration)\spirv-reflect.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib;$(VULKAN_SDK)\Lib\spirv-cross-core.lib;$(VULKAN_SDK)\Lib\spirv-cross-reflect.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\thirdparty\glfw\lib\$(Configuration)\glfw3.lib;$(SolutionDir)\thirdparty\zlib\lib\$(Configuration)\zlib.lib;$(VULKAN_SDK)\Lib\spirv-cross-core.lib;$(VULKAN_SDK)\Lib\spirv-cross-reflect.lib</AdditionalDependencies>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -158,13 +158,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\core\shader_variable.cpp" />
+    <ClCompile Include="source\core_object\program_reflection.cpp" />
     <ClCompile Include="source\core_object\shader_reflection.cpp" />
+    <ClCompile Include="source\spirv\reflection_node.cpp" />
+    <ClCompile Include="source\spirv\spirv_reflect.c" />
+    <ClCompile Include="source\spirv\spirv_reflect.cpp" />
     <ClCompile Include="source\util\rect_packer.cpp" />
     <ClCompile Include="source\util\renderdoc.cpp" />
     <ClInclude Include="include\vera\core\assertion.h" />
     <ClInclude Include="include\vera\core\buffer_view.h" />
     <ClInclude Include="include\vera\core\enum_types.h" />
     <ClInclude Include="include\vera\core\framebuffer.h" />
+    <ClInclude Include="include\vera\core\program_reflection.h" />
+    <ClInclude Include="include\vera\core\reflection.h" />
     <ClInclude Include="include\vera\core\render_frame.h" />
     <ClInclude Include="include\vera\core\descriptor_set.h" />
     <ClInclude Include="include\vera\core\descriptor_pool.h" />
@@ -251,7 +257,10 @@
     <ClInclude Include="include\vera\util\timer.h" />
     <ClInclude Include="source\asset\detail\fbx_loader.h" />
     <ClInclude Include="source\asset\detail\gltf_loader.h" />
+    <ClInclude Include="source\impl\program_reflection_impl.h" />
     <ClInclude Include="source\impl\shader_reflection_impl.h" />
+    <ClInclude Include="source\spirv\reflection_node.h" />
+    <ClInclude Include="source\spirv\spirv_reflect.h" />
     <ClInclude Include="source\util\renderdoc_app.h" />
     <ClInclude Include="source\typography\font_impl_base.h" />
     <ClInclude Include="source\typography\open_type.h" />

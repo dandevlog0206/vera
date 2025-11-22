@@ -84,7 +84,7 @@ obj<RenderContext> RenderContext::create(obj<Device> device, const RenderContext
 	return obj;
 }
 
-RenderContext::~RenderContext()
+RenderContext::~RenderContext() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 

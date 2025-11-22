@@ -96,7 +96,7 @@ obj<DescriptorPool> DescriptorPool::create(obj<Device> device, const DescriptorP
 	return obj;
 }
 
-DescriptorPool::~DescriptorPool()
+DescriptorPool::~DescriptorPool() VERA_NOEXCEPT
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);

@@ -24,7 +24,7 @@ class Swapchain : protected CoreObject
 	VERA_CORE_OBJECT_INIT(Swapchain)
 public:
 	static obj<Swapchain> create(obj<Device> device, os::Window& window, const SwapchainCreateInfo& info = {});
-	~Swapchain();
+	~Swapchain() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 

@@ -14,9 +14,12 @@ public:
 	static obj<Shader> create(obj<Device> device, std::string_view path);
 	static obj<Shader> create(obj<Device> device, std::vector<uint32_t>&& spirv_code);
 	static obj<Shader> create(obj<Device> device, array_view<uint32_t> spirv_code);
-	~Shader();
+	~Shader() VERA_NOEXCEPT override;
 
 	VERA_NODISCARD obj<Device> getDevice() const VERA_NOEXCEPT;
+
+	VERA_NODISCARD ShaderStageFlags getStageFlags() const VERA_NOEXCEPT;
+	VERA_NODISCARD std::string_view getEntryPointName() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD size_t hash() const;
 };

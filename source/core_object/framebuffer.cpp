@@ -43,7 +43,7 @@ obj<FrameBuffer> FrameBuffer::create(obj<Device> device, const FrameBufferCreate
 	return obj;
 }
 
-FrameBuffer::~FrameBuffer()
+FrameBuffer::~FrameBuffer() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 

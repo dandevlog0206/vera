@@ -130,7 +130,7 @@ public:
 	static obj<Pipeline> create(obj<Device> device, const GraphicsPipelineCreateInfo& info);
 	static obj<Pipeline> create(obj<Device> device, const MeshPipelineCreateInfo& info);
 	static obj<Pipeline> create(obj<Device> device, const ComputePipelineCreateInfo& info);
-	~Pipeline();
+	~Pipeline() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 	obj<PipelineLayout> getPipelineLayout();

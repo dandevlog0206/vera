@@ -87,7 +87,7 @@ vk::DescriptorSet& get_vk_descriptor_set(ref<DescriptorSet> descriptor_set) VERA
 	return CoreObject::getImpl(descriptor_set).vkDescriptorSet;
 }
 
-DescriptorSet::~DescriptorSet()
+DescriptorSet::~DescriptorSet() VERA_NOEXCEPT
 {
 	auto& impl      = getImpl(this);
 	auto& pool_impl = getImpl(impl.descriptorPool);
@@ -99,7 +99,7 @@ DescriptorSet::~DescriptorSet()
 
 	if (pool_impl.flags.has(DescriptorPoolCreateFlagBits::FreeDescriptorSet)) {
 		auto vk_device = get_vk_device(impl.device);
-		vk_device.freeDescriptorSets(pool_impl.descriptorPool, 1, &impl.vkDescriptorSet);
+		vk_device.freeDescriptorSets(pool_impl.vkDescriptorPool, 1, &impl.vkDescriptorSet);
 	}
 
 	destroyObjectImpl(this);

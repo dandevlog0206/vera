@@ -58,7 +58,7 @@ public:
 	static std::vector<InstanceExtensionInfo> enumerateInstanceExtensions();
 
 	static obj<Context> create(const ContextCreateInfo& info = {});
-	~Context();
+	~Context() VERA_NOEXCEPT override;
 
 	uint32_t findDeviceByType(DeviceType type) const;
 };

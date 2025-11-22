@@ -66,7 +66,7 @@ class CommandBuffer : protected CoreObject // TODO: consider rename to command b
 	VERA_CORE_OBJECT_INIT(CommandBuffer)
 public:
 	static obj<CommandBuffer> create(obj<Device> device);
-	~CommandBuffer();
+	~CommandBuffer() VERA_NOEXCEPT override;
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 

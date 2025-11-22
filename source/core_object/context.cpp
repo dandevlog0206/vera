@@ -155,7 +155,7 @@ obj<Context> Context::create(const ContextCreateInfo& info)
 	return obj;
 }
 
-Context::~Context()
+Context::~Context() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 

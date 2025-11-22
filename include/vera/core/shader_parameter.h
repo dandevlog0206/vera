@@ -24,7 +24,7 @@ class ShaderParameter : protected CoreObject
 	VERA_CORE_OBJECT_INIT(ShaderParameter)
 public:
 	static obj<ShaderParameter> create(obj<PipelineLayout> pipeline_layout, obj<DescriptorPool> descriptor_pool = {});
-	~ShaderParameter();
+	~ShaderParameter() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice() VERA_NOEXCEPT;
 	obj<PipelineLayout> getPipelineLayout() VERA_NOEXCEPT;

@@ -24,7 +24,7 @@ public:
 	static obj<Buffer> createStaging(obj<Device> device, size_t size);
 	static obj<Buffer> create(obj<Device> device, const BufferCreateInfo& info);
 	static obj<Buffer> create(obj<DeviceMemory> memory, size_t offset, const BufferCreateInfo& info);
-	~Buffer();
+	~Buffer() VERA_NOEXCEPT override;
 
 	void resize(size_t new_size);
 

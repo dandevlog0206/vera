@@ -12,11 +12,13 @@ public:
 	using ShaderParseInfoUnique = std::unique_ptr<ShaderParserInfo>;
 
 	obj<Device>           device           = {};
-	ref<ShaderReflection> shaderReflection = {};
+	obj<ShaderReflection> shaderReflection = {};
 
 	vk::ShaderModule      vkShaderModule   = {};
 
 	std::vector<uint32_t> spirvCode        = {};
+	std::string_view      entryPointName   = {};
+	ShaderStageFlags      stageFlags       = {};
 	size_t                hashValue        = {};
 };
 

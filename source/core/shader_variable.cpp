@@ -1,10 +1,10 @@
 #include "../../include/vera/core/shader_variable.h"
-#include "../spirv/reflection_desc.h"
 #include "../impl/shader_parameter_impl.h"
 
 #include "../../include/vera/core/sampler.h"
 #include "../../include/vera/core/buffer.h"
 #include "../../include/vera/core/buffer_view.h"
+#include "../../include/vera/core/reflection.h"
 #include "../../include/vera/core/texture.h"
 #include "../../include/vera/core/texture_view.h"
 
@@ -42,27 +42,45 @@ template <> static constexpr auto primitive_type_v<ulong4>    = ReflectionPrimit
 template <> static constexpr auto primitive_type_v<float2>    = ReflectionPrimitiveType::Float2;
 template <> static constexpr auto primitive_type_v<float3>    = ReflectionPrimitiveType::Float3;
 template <> static constexpr auto primitive_type_v<float4>    = ReflectionPrimitiveType::Float4;
-template <> static constexpr auto primitive_type_v<float2x2>  = ReflectionPrimitiveType::Float2x2;
-template <> static constexpr auto primitive_type_v<float2x3>  = ReflectionPrimitiveType::Float2x3;
-template <> static constexpr auto primitive_type_v<float2x4>  = ReflectionPrimitiveType::Float2x4;
-template <> static constexpr auto primitive_type_v<float3x2>  = ReflectionPrimitiveType::Float3x2;
-template <> static constexpr auto primitive_type_v<float3x3>  = ReflectionPrimitiveType::Float3x3;
-template <> static constexpr auto primitive_type_v<float3x4>  = ReflectionPrimitiveType::Float3x4;
-template <> static constexpr auto primitive_type_v<float4x2>  = ReflectionPrimitiveType::Float4x2;
-template <> static constexpr auto primitive_type_v<float4x3>  = ReflectionPrimitiveType::Float4x3;
-template <> static constexpr auto primitive_type_v<float4x4>  = ReflectionPrimitiveType::Float4x4;
 template <> static constexpr auto primitive_type_v<double2>   = ReflectionPrimitiveType::Double2;
 template <> static constexpr auto primitive_type_v<double3>   = ReflectionPrimitiveType::Double3;
 template <> static constexpr auto primitive_type_v<double4>   = ReflectionPrimitiveType::Double4;
-template <> static constexpr auto primitive_type_v<double2x2> = ReflectionPrimitiveType::Double2x2;
-template <> static constexpr auto primitive_type_v<double2x3> = ReflectionPrimitiveType::Double2x3;
-template <> static constexpr auto primitive_type_v<double2x4> = ReflectionPrimitiveType::Double2x4;
-template <> static constexpr auto primitive_type_v<double3x2> = ReflectionPrimitiveType::Double3x2;
-template <> static constexpr auto primitive_type_v<double3x3> = ReflectionPrimitiveType::Double3x3;
-template <> static constexpr auto primitive_type_v<double3x4> = ReflectionPrimitiveType::Double3x4;
-template <> static constexpr auto primitive_type_v<double4x2> = ReflectionPrimitiveType::Double4x2;
-template <> static constexpr auto primitive_type_v<double4x3> = ReflectionPrimitiveType::Double4x3;
-template <> static constexpr auto primitive_type_v<double4x4> = ReflectionPrimitiveType::Double4x4;
+template <> static constexpr auto primitive_type_v<rfloat2x2>  = ReflectionPrimitiveType::RFloat2x2;
+template <> static constexpr auto primitive_type_v<rfloat2x3>  = ReflectionPrimitiveType::RFloat2x3;
+template <> static constexpr auto primitive_type_v<rfloat2x4>  = ReflectionPrimitiveType::RFloat2x4;
+template <> static constexpr auto primitive_type_v<rfloat3x2>  = ReflectionPrimitiveType::RFloat3x2;
+template <> static constexpr auto primitive_type_v<rfloat3x3>  = ReflectionPrimitiveType::RFloat3x3;
+template <> static constexpr auto primitive_type_v<rfloat3x4>  = ReflectionPrimitiveType::RFloat3x4;
+template <> static constexpr auto primitive_type_v<rfloat4x2>  = ReflectionPrimitiveType::RFloat4x2;
+template <> static constexpr auto primitive_type_v<rfloat4x3>  = ReflectionPrimitiveType::RFloat4x3;
+template <> static constexpr auto primitive_type_v<rfloat4x4>  = ReflectionPrimitiveType::RFloat4x4;
+template <> static constexpr auto primitive_type_v<rdouble2x2> = ReflectionPrimitiveType::RDouble2x2;
+template <> static constexpr auto primitive_type_v<rdouble2x3> = ReflectionPrimitiveType::RDouble2x3;
+template <> static constexpr auto primitive_type_v<rdouble2x4> = ReflectionPrimitiveType::RDouble2x4;
+template <> static constexpr auto primitive_type_v<rdouble3x2> = ReflectionPrimitiveType::RDouble3x2;
+template <> static constexpr auto primitive_type_v<rdouble3x3> = ReflectionPrimitiveType::RDouble3x3;
+template <> static constexpr auto primitive_type_v<rdouble3x4> = ReflectionPrimitiveType::RDouble3x4;
+template <> static constexpr auto primitive_type_v<rdouble4x2> = ReflectionPrimitiveType::RDouble4x2;
+template <> static constexpr auto primitive_type_v<rdouble4x3> = ReflectionPrimitiveType::RDouble4x3;
+template <> static constexpr auto primitive_type_v<rdouble4x4> = ReflectionPrimitiveType::RDouble4x4;
+template <> static constexpr auto primitive_type_v<cfloat2x2>  = ReflectionPrimitiveType::CFloat2x2;
+template <> static constexpr auto primitive_type_v<cfloat2x3>  = ReflectionPrimitiveType::CFloat2x3;
+template <> static constexpr auto primitive_type_v<cfloat2x4>  = ReflectionPrimitiveType::CFloat2x4;
+template <> static constexpr auto primitive_type_v<cfloat3x2>  = ReflectionPrimitiveType::CFloat3x2;
+template <> static constexpr auto primitive_type_v<cfloat3x3>  = ReflectionPrimitiveType::CFloat3x3;
+template <> static constexpr auto primitive_type_v<cfloat3x4>  = ReflectionPrimitiveType::CFloat3x4;
+template <> static constexpr auto primitive_type_v<cfloat4x2>  = ReflectionPrimitiveType::CFloat4x2;
+template <> static constexpr auto primitive_type_v<cfloat4x3>  = ReflectionPrimitiveType::CFloat4x3;
+template <> static constexpr auto primitive_type_v<cfloat4x4>  = ReflectionPrimitiveType::CFloat4x4;
+template <> static constexpr auto primitive_type_v<cdouble2x2> = ReflectionPrimitiveType::CDouble2x2;
+template <> static constexpr auto primitive_type_v<cdouble2x3> = ReflectionPrimitiveType::CDouble2x3;
+template <> static constexpr auto primitive_type_v<cdouble2x4> = ReflectionPrimitiveType::CDouble2x4;
+template <> static constexpr auto primitive_type_v<cdouble3x2> = ReflectionPrimitiveType::CDouble3x2;
+template <> static constexpr auto primitive_type_v<cdouble3x3> = ReflectionPrimitiveType::CDouble3x3;
+template <> static constexpr auto primitive_type_v<cdouble3x4> = ReflectionPrimitiveType::CDouble3x4;
+template <> static constexpr auto primitive_type_v<cdouble4x2> = ReflectionPrimitiveType::CDouble4x2;
+template <> static constexpr auto primitive_type_v<cdouble4x3> = ReflectionPrimitiveType::CDouble4x3;
+template <> static constexpr auto primitive_type_v<cdouble4x4> = ReflectionPrimitiveType::CDouble4x4;
 
 ShaderVariable::ShaderVariable(ShaderParameterImpl* impl) :
 	m_impl(impl),
@@ -100,50 +118,50 @@ ShaderVariable::ShaderVariable(
 	m_array_idx(array_idx),
 	m_offset(offset) {}
 
-bool ShaderVariable::isRoot() const VERA_NOEXCEPT
-{
-	return m_node && m_node->getType() == ReflectionType::Root;
-}
-
-bool ShaderVariable::isPushConstant() const VERA_NOEXCEPT
-{
-	return m_node && m_node->getType() == ReflectionType::PushConstant;
-}
-
-bool ShaderVariable::isDescriptor() const VERA_NOEXCEPT
-{
-	return
-		m_node && m_node->getPropertyFlags().has(ReflectionPropertyFlagBits::DescriptorType);
-}
-
-DescriptorType ShaderVariable::getDescriptorType() const VERA_NOEXCEPT
-{
-	if (isDescriptor())
-		return m_node->getDescriptorType();
-
-	return DescriptorType::Unknown;
-}
-
-ShaderVariable ShaderVariable::operator[](std::string_view name) VERA_NOEXCEPT
-{
-	if (m_node->getPropertyFlags().has(ReflectionPropertyFlagBits::NameMap)) {
-		
-	}
-	
-	VERA_ERROR_MSG("variable is not subscriptable with name");
-}
-
-ShaderVariable ShaderVariable::operator[](uint32_t idx) VERA_NOEXCEPT
-{
-	VERA_ASSERT_MSG(!isRoot(), "root variable is not subscriptable");
-
-	if (m_node->getType() == ReflectionType::DescriptorArray) {
-
-	} else if (m_node->getType() == ReflectionType::Array) {
-	}
-
-	VERA_ERROR_MSG("variable is not subscriptable");
-}
+//bool ShaderVariable::isRoot() const VERA_NOEXCEPT
+//{
+//	return m_node && m_node->getType() == ReflectionType::Root;
+//}
+//
+//bool ShaderVariable::isPushConstant() const VERA_NOEXCEPT
+//{
+//	return m_node && m_node->getType() == ReflectionType::PushConstant;
+//}
+//
+//bool ShaderVariable::isDescriptor() const VERA_NOEXCEPT
+//{
+//	return
+//		m_node && m_node->getPropertyFlags().has(ReflectionPropertyFlagBits::DescriptorType);
+//}
+//
+//DescriptorType ShaderVariable::getDescriptorType() const VERA_NOEXCEPT
+//{
+//	if (isDescriptor())
+//		return m_node->getDescriptorType();
+//
+//	return DescriptorType::Unknown;
+//}
+//
+//ShaderVariable ShaderVariable::operator[](std::string_view name) VERA_NOEXCEPT
+//{
+//	if (m_node->getPropertyFlags().has(ReflectionPropertyFlagBits::NameMap)) {
+//		
+//	}
+//	
+//	VERA_ERROR_MSG("variable is not subscriptable with name");
+//}
+//
+//ShaderVariable ShaderVariable::operator[](uint32_t idx) VERA_NOEXCEPT
+//{
+//	VERA_ASSERT_MSG(!isRoot(), "root variable is not subscriptable");
+//
+//	if (m_node->getType() == ReflectionType::DescriptorArray) {
+//
+//	} else if (m_node->getType() == ReflectionType::Array) {
+//	}
+//
+//	VERA_ERROR_MSG("variable is not subscriptable");
+//}
 
 void ShaderVariable::setTextureView(obj<TextureView> texture_view, TextureLayout layout)
 {

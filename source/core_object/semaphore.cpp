@@ -122,7 +122,7 @@ obj<Semaphore> Semaphore::create(obj<Device> device)
 	return obj;
 }
 
-Semaphore::~Semaphore()
+Semaphore::~Semaphore() VERA_NOEXCEPT
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
@@ -199,7 +199,7 @@ obj<TimelineSemaphore> TimelineSemaphore::create(obj<Device> device, uint64_t in
 	return obj;
 }
 
-TimelineSemaphore::~TimelineSemaphore()
+TimelineSemaphore::~TimelineSemaphore() VERA_NOEXCEPT
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);

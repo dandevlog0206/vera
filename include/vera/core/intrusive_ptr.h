@@ -113,6 +113,8 @@ protected:
 		m_atomic(0),
 		m_weak_chain(nullptr) {}
 
+	virtual VERA_INLINE ~ManagedObject() VERA_NOEXCEPT {}
+
 private:
 	std::atomic<uint64_t> m_atomic;
 	priv::WeakNodeLink    m_weak_chain;
@@ -123,7 +125,6 @@ class obj
 {
 	template <class Target, class T>
 	friend VERA_CONSTEXPR obj<Target> obj_cast(obj<T>) VERA_NOEXCEPT;
-
 public:
 	VERA_INLINE obj() VERA_NOEXCEPT :
 		m_ptr(nullptr) {}
@@ -132,7 +133,7 @@ public:
 		m_ptr(nullptr) {}
 
 	VERA_INLINE obj(Object* ptr) VERA_NOEXCEPT :
-		m_ptr(ptr)
+		m_ptr(static_cast<ManagedObject*>(ptr))
 	{
 		increase();
 	}
@@ -179,42 +180,42 @@ public:
 
 	VERA_NODISCARD VERA_INLINE const Object* get() const VERA_NOEXCEPT
 	{
-		return m_ptr;
+		return static_cast<const Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* get() VERA_NOEXCEPT
 	{
-		return m_ptr;
+		return static_cast<Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE const Object& unwrap() const VERA_NOEXCEPT
 	{
-		return *reinterpret_cast<const Object*>(m_ptr);
+		return *static_cast<const Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE Object& unwrap() VERA_NOEXCEPT
 	{
-		return *reinterpret_cast<Object*>(m_ptr);
+		return *static_cast<Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* operator*() VERA_NOEXCEPT
 	{
-		return m_ptr;
+		return static_cast<Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE const Object* operator*() const VERA_NOEXCEPT
 	{
-		return m_ptr;
+		return static_cast<const Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE Object* operator->() VERA_NOEXCEPT
 	{
-		return m_ptr;
+		return static_cast<Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE const Object* operator->() const VERA_NOEXCEPT
 	{
-		return m_ptr;
+		return static_cast<const Object*>(m_ptr);
 	}
 
 	VERA_NODISCARD VERA_INLINE bool operator==(const obj& rhs) const VERA_NOEXCEPT
@@ -234,14 +235,12 @@ public:
 
 	VERA_NODISCARD VERA_INLINE const_ref<Object> cref() const VERA_NOEXCEPT
 	{
-		VERA_ASSERT_MSG(m_ptr, "dereferencing null obj<>");
-		return const_ref<Object>(m_ptr);
+		return const_ref<Object>(get());
 	}
 
 	VERA_NODISCARD VERA_INLINE ref<Object> ref() VERA_NOEXCEPT
 	{
-		VERA_ASSERT_MSG(m_ptr, "dereferencing null obj<>");
-		return ::vr::ref<Object>(m_ptr);
+		return ::vr::ref<Object>(get());
 	}
 
 	VERA_NODISCARD VERA_INLINE operator const_ref<Object>() const VERA_NOEXCEPT
@@ -290,7 +289,7 @@ private:
 	}
 
 private:
-	Object* m_ptr;
+	ManagedObject* m_ptr;
 };
 
 template <class Object>

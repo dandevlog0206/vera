@@ -66,7 +66,7 @@ class DescriptorSet : protected CoreObject
 	VERA_CORE_OBJECT_INIT(DescriptorSet)
 	friend class DescriptorPool;
 public:
-	~DescriptorSet();
+	~DescriptorSet() VERA_NOEXCEPT override;
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 	VERA_NODISCARD obj<DescriptorPool> getDescriptorPool() VERA_NOEXCEPT;

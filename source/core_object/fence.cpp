@@ -84,7 +84,7 @@ obj<Fence> Fence::create(obj<Device> device, bool signaled)
 	return obj;
 }
 
-Fence::~Fence()
+Fence::~Fence() VERA_NOEXCEPT
 {
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);

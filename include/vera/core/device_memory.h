@@ -21,7 +21,7 @@ class DeviceMemory : protected CoreObject
 	VERA_CORE_OBJECT_INIT(DeviceMemory)
 public:
 	static obj<DeviceMemory> create(obj<Device> device, const DeviceMemoryCreateInfo& info);
-	~DeviceMemory();
+	~DeviceMemory() VERA_NOEXCEPT override;
 
 	void resize(size_t new_size, bool keep_contents = false);
 

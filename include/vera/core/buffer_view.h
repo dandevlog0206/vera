@@ -19,7 +19,7 @@ class BufferView : protected CoreObject
 	VERA_CORE_OBJECT_INIT(BufferView)
 public:
 	obj<BufferView> create(obj<Buffer> buffer, const BufferViewCreateInfo& info);
-	~BufferView();
+	~BufferView() VERA_NOEXCEPT override;
 
 	obj<Device> getDevice();
 	obj<Buffer> getBuffer();

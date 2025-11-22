@@ -26,7 +26,7 @@ class DescriptorPool : protected CoreObject
 	VERA_CORE_OBJECT_INIT(DescriptorPool)
 public:
 	static obj<DescriptorPool> create(obj<Device> device, const DescriptorPoolCreateInfo& info = {});
-	~DescriptorPool();
+	~DescriptorPool() VERA_NOEXCEPT override;
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 

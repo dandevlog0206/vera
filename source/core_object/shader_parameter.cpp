@@ -1,5 +1,4 @@
 #include "../../include/vera/core/shader_parameter.h"
-#include "../spirv/reflection_desc.h"
 #include "../impl/shader_parameter_impl.h"
 #include "../impl/pipeline_layout_impl.h"
 
@@ -15,15 +14,15 @@
 
 VERA_NAMESPACE_BEGIN
 
-static uint32_t get_element_count(const ReflectionDescriptorNode* node)
-{
-	if (node->getType() == ReflectionType::DescriptorArray) {
-		uint32_t elem_count = node->getElementCount();
-		return elem_count == UINT32_MAX ? 4096 : elem_count;
-	}
-
-	return 1;
-}
+//static uint32_t get_element_count(const ReflectionDescriptorNode* node)
+//{
+//	if (node->getType() == ReflectionType::DescriptorArray) {
+//		uint32_t elem_count = node->getElementCount();
+//		return elem_count == UINT32_MAX ? 4096 : elem_count;
+//	}
+//
+//	return 1;
+//}
 
 obj<ShaderParameter> ShaderParameter::create(obj<PipelineLayout> pipeline_layout, obj<DescriptorPool> descriptor_pool)
 {
@@ -101,7 +100,7 @@ obj<ShaderParameter> ShaderParameter::create(obj<PipelineLayout> pipeline_layout
 	//return obj;
 }
 
-ShaderParameter::~ShaderParameter()
+ShaderParameter::~ShaderParameter() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 
