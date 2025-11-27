@@ -24,7 +24,7 @@ struct SamplerCreateInfo
 	bool               unnormalizedCoordinates = false;
 };
 
-class Sampler : protected CoreObject
+class Sampler : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Sampler)
 public:

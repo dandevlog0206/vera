@@ -17,7 +17,7 @@ struct FrameBufferCreateInfo
 	StencilFormat stencilFormat = StencilFormat::Unknown;
 };
 
-class FrameBuffer : protected CoreObject
+class FrameBuffer : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(FrameBuffer)
 public:

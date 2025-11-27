@@ -19,7 +19,7 @@ struct DescriptorSetLayoutCreateInfo
 	std::vector<DescriptorSetLayoutBinding> bindings = {};
 };
 
-class DescriptorSetLayout : protected CoreObject
+class DescriptorSetLayout : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(DescriptorSetLayout)
 public:

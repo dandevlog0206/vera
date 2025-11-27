@@ -61,7 +61,7 @@ struct DescriptorWrite
 	DescriptorWriteInfo info;
 };
 
-class DescriptorSet : protected CoreObject
+class DescriptorSet : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(DescriptorSet)
 	friend class DescriptorPool;

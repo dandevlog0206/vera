@@ -18,7 +18,7 @@ struct RenderContextCreateInfo
 	bool     dynamicFrameCount = true;
 };
 
-class RenderContext : protected CoreObject
+class RenderContext : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(RenderContext)
 public:

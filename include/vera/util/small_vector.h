@@ -1,95 +1,123 @@
 #pragma once
 
+#include "../core/coredefs.h"
 #include "../core/exception.h"
 #include "../core/assertion.h"
-#include <iterator>
+#include "static_vector.h"
+
 #include <memory>
-#include <bit>
+#include <utility>
+#include <iterator>
+#include <algorithm>
+#include <new>
 
 VERA_NAMESPACE_BEGIN
 VERA_PRIV_NAMESPACE_BEGIN
 
-template <class T>
-struct compressed_ptr
+template <size_t N, class Allocator>
+class small_vector_storage : public Allocator
 {
-	static_assert(sizeof(intptr_t) == 8);
+public:
+	using alloc_traits = std::allocator_traits<Allocator>;
 
-	static constexpr size_t MAX_SIZE = UINT16_MAX;
+	using value_type      = typename alloc_traits::value_type;
+	using pointer         = typename alloc_traits::pointer;
+	using const_pointer   = typename alloc_traits::const_pointer;
+	using reference       = typename alloc_traits::reference;
+	using const_reference = typename alloc_traits::const_reference;
+	using size_type       = typename alloc_traits::size_type;
+	using difference_type = typename alloc_traits::difference_type;
 
-	compressed_ptr() :
-		m_ptr(0),
-		m_size(0) {}
+	small_vector_storage() VERA_NOEXCEPT :
+		m_size(0),
+		m_capacity(N) {}
 
-	compressed_ptr(T* ptr, size_t size) :
-		m_ptr(reinterpret_cast<intptr_t>(ptr)),
-		m_size(size) {}
-
-	void swap(compressed_ptr& rhs) noexcept
+	~small_vector_storage()
 	{
-		std::swap(
-			reinterpret_cast<intptr_t&>(*this),
-			reinterpret_cast<intptr_t&>(rhs));
+		if (!is_using_inline_storage())
+			alloc_traits::deallocate(*this, m_storage.ptr, m_capacity);
 	}
 
-	void set_ptr(T* ptr)
+	template <class Allocator2>
+	VERA_CONSTEXPR void copy_from(hybrid_vector_storage<Allocator2> rhs)
 	{
-		m_ptr = reinterpret_cast<intptr_t>(ptr);
+		if (rhs.is_using_inline_storage()) {
+			// copy inline storage
+			m_storage = rhs.m_storage;
+		} else {
+			// allocate and copy heap storage
+			m_size        = rhs.size();
+			m_capacity    = rhs.capacity();
+			m_storage.ptr = std::allocator_traits<Allocator>::allocate(
+				static_cast<Allocator&>(m_storage),
+				other_capacity);
+			
+			std::uninitialized_copy_n(
+				rhs.m_storage.ptr,
+				m_size,
+				m_storage.ptr);
+		}
 	}
 
-	void set_size(size_t size)
+	VERA_NODISCARD VERA_CONSTEXPR const_pointer data() const VERA_NOEXCEPT
 	{
-		VERA_ASSERT(size < 0x10000);
-		m_size = size;
+		if (is_using_inline_storage())
+			return reinterpret_cast<const_pointer>(m_storage.buf);
+		else
+			return m_storage.ptr;
 	}
 
-	T* get_ptr()
+	VERA_NODISCARD VERA_CONSTEXPR pointer data() VERA_NOEXCEPT
 	{
-		return reinterpret_cast<T*>(m_ptr);
+		if (is_using_inline_storage())
+			return reinterpret_cast<pointer>(m_storage.buf);
+		else
+			return m_storage.ptr;
 	}
 
-	const T* get_ptr() const
+	VERA_NODISCARD VERA_CONSTEXPR size_type capacity() const VERA_NOEXCEPT
 	{
-		return reinterpret_cast<const T*>(m_ptr);
+		if (is_using_inline_storage())
+			return N;
+		else
+			return m_capacity;
 	}
 
-	size_t get_size() const
+	VERA_NODISCARD VERA_CONSTEXPR size_type size() const VERA_NOEXCEPT
 	{
 		return m_size;
 	}
 
-	T* reset()
+	VERA_NODISCARD bool is_using_inline_storage() const VERA_NOEXCEPT
 	{
-		T* old_ptr = get_ptr();
-
-		reinterpret_cast<intptr_t&>(*this) = 0;
-
-		return old_ptr;
-	}
-
-	T* reset(T* ptr, size_t new_size)
-	{
-		T* old_ptr = get_ptr();
-		
-		m_ptr  = reinterpret_cast<intptr_t>(ptr);
-		m_size = new_size;
-		
-		return old_ptr;
+		return m_capacity <= N;
 	}
 
 private:
-	intptr_t m_ptr  : 48;
-	size_t   m_size : 16;
+	union storage_t
+	{
+		alignas(alignof(value_type)) std::byte buf[sizeof(value_type) * N];
+		pointer ptr;
+	};
+
+	storage_t m_storage;
+	size_type m_size;
+	size_type m_capacity;
 };
 
 VERA_PRIV_NAMESPACE_END
 
-template <class T>
+template <class T, size_t N, class Allocator = std::allocator<T>>
 class small_vector
 {
+	using storage_type = priv::small_vector_storage<N, Allocator>;
+	using alloc_traits = std::allocator_traits<Allocator>;
+
 public:
 	using value_type      = T;
-	using pointer         = T*;
-	using const_pointer   = const T*;
+	using allocator_type  = Allocator;
+	using pointer         = typename alloc_traits::pointer;
+	using const_pointer   = typename alloc_traits::const_pointer;
 	using reference       = T&;
 	using const_reference = const T&;
 	using size_type       = size_t;
@@ -100,700 +128,195 @@ public:
 	using reverse_iterator       = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-	small_vector() :
-		m_storage() {}
+	VERA_CONSTEXPR small_vector() VERA_NOEXCEPT = default;
 
-	small_vector(size_t count) :
-		m_storage()
+	VERA_CONSTEXPR small_vector(const small_vector& other)
 	{
-		size_t capacity   = calc_capacity(count);
-		T*     new_memory = allocate_uninitialized(capacity);
+		m_storage.copy_from(other.m_storage);
+		std::uninitialized_copy(other.begin(), other.end(), begin());
+	}
 
-		std::uninitialized_default_construct_n(new_memory, count);
-		m_storage.set_ptr(new_memory);
+	VERA_CONSTEXPR ~small_vector()
+	{
+		clear();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR reference operator[](size_type pos)
+	{
+		VERA_ASSERT(pos < size());
+		return data()[pos];
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_reference operator[](size_type pos) const
+	{
+		VERA_ASSERT(pos < size());
+		return data()[pos];
 	}
 	
-	small_vector(size_t count, const T& value) :
-		m_storage()
+	VERA_NODISCARD VERA_CONSTEXPR reference at(size_type pos)
 	{
-		size_t capacity   = calc_capacity(count);
-		T*     new_memory = allocate_uninitialized(capacity);
-
-		std::uninitialized_fill_n(new_memory, count, value);
-		m_storage.set_ptr(new_memory);
-		m_storage.set_size(count);
-	}
-
-	template <class Iter>
-	small_vector(Iter first, Iter last) :
-		m_storage()
-	{
-		size_t count      = std::distance(first, last);
-		size_t capacity   = calc_capacity(count);
-		T*     new_memory = allocate_uninitialized(capacity);
-		
-		std::uninitialized_copy_n(first, count, new_memory);
-		m_storage.set_ptr(new_memory);
-		m_storage.set_size(count);
-	}
-
-	small_vector(std::initializer_list<T> ilist) :
-		small_vector(ilist.begin(), ilist.end()) {}
-	
-	small_vector(const small_vector& rhs) :
-		m_storage()
-	{
-		size_t count      = rhs.m_storage.get_size();
-		size_t capacity   = calc_capacity(count);
-		T*     new_memory = allocate_uninitialized(capacity);
-		
-		std::uninitialized_copy_n(rhs.m_storage.get_ptr(), count, new_memory);
-		m_storage.set_ptr(new_memory);
-		m_storage.set_size(count);
-	}
-
-	small_vector(small_vector&& rhs) noexcept :
-		m_storage()
-	{
-		m_storage.swap(rhs.m_storage);
-	}
-	
-	~small_vector()
-	{
-		deallocate_uninitialized(m_storage.get_ptr(), m_storage.get_size());
-	}
-	
-	small_vector& operator=(const small_vector& rhs)
-	{
-		if (this == std::addressof(rhs)) return *this;
-
-		size_t   my_size      = m_storage.get_size();
-		size_t   rhs_size     = rhs.m_storage.get_size();
-		size_t   my_capacity  = calc_capacity(my_size);
-		size_t   rhs_capacity = calc_capacity(rhs_size);
-		T*       my_ptr       = m_storage.get_ptr();
-		const T* rhs_ptr      = rhs.m_storage.get_ptr();
-
-		if (my_capacity == rhs_capacity) {
-			if (rhs_size < my_size) {
-				std::copy_n(rhs_ptr, rhs_size, my_ptr);
-				std::destroy_n(my_ptr + rhs_size, my_size - rhs_size);
-			} else if (my_size < rhs_size) {
-				std::copy_n(rhs_ptr, my_size, my_ptr);
-				std::uninitialized_copy_n(rhs_ptr + my_size, rhs_size - my_size, my_ptr + my_size);
-			} else /* rhs_size == my_size */ {
-				std::copy_n(rhs_ptr, my_size, my_ptr);
-				return *this;
-			}
-			m_storage.set_size(rhs_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(rhs_capacity);
-
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			std::uninitialized_copy_n(rhs_ptr, rhs_size, new_memory);
-			m_storage.reset(new_memory, rhs_size);
+		if (pos >= size()) {
+			throw std::out_of_range("small_vector::at");
 		}
-
-		return *this;
+		return data()[pos];
 	}
-	
-	small_vector& operator=(small_vector&& rhs) noexcept
-	{
-		if (this == std::addressof(rhs)) return *this;
 
-		deallocate_uninitialized(m_storage.get_ptr(), m_storage.get_size());
-		m_storage = rhs.m_storage;
-		rhs.m_storage.reset();
-		
-		return *this;
+	VERA_NODISCARD VERA_CONSTEXPR const_reference at(size_type pos) const
+	{
+		if (pos >= size()) {
+			throw std::out_of_range("small_vector::at");
+		}
+		return data()[pos];
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR reference front()
+	{
+		VERA_ASSERT(!empty());
+		return data()[0];
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_reference front() const
+	{
+		VERA_ASSERT(!empty());
+		return data()[0];
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR reference back()
+	{
+		VERA_ASSERT(!empty());
+		return data()[size() - 1];
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_reference back() const
+	{
+		VERA_ASSERT(!empty());
+		return data()[size() - 1];
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR pointer data() VERA_NOEXCEPT
+	{
+		return m_storage.data();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_pointer data() const VERA_NOEXCEPT
+	{
+		return m_storage.data();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR iterator begin() VERA_NOEXCEPT
+	{
+		return data();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_iterator begin() const VERA_NOEXCEPT
+	{
+		return data();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_iterator cbegin() const VERA_NOEXCEPT
+	{
+		return data();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR iterator end() VERA_NOEXCEPT
+	{
+		return data() + size();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_iterator end() const VERA_NOEXCEPT
+	{
+		return data() + size();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR const_iterator cend() const VERA_NOEXCEPT
+	{
+		return data() + size();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR bool empty() const VERA_NOEXCEPT
+	{
+		return m_storage.size() == 0;
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR size_type size() const VERA_NOEXCEPT
+	{
+		return m_storage.size();
+	}
+
+	VERA_NODISCARD VERA_CONSTEXPR size_type capacity() const VERA_NOEXCEPT
+	{
+		return m_storage.capacity();
+	}
+
+	VERA_CONSTEXPR void clear() VERA_NOEXCEPT
+	{
+		std::destroy(begin(), end());
+		m_storage.m_size = 0;
 	}
 
 	template <class... Args>
-	T& emplace_back(Args&&... params)
+	VERA_CONSTEXPR reference emplace_back(Args&&... args)
 	{
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = size + 1;
-		size_t my_capacity  = calc_capacity(size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-
-		if (my_capacity == new_capacity) {
-			new (my_ptr + my_size) T(std::forward<Args>(params)...);
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(my_ptr, my_size, new_memory);
-			new (new_memory + my_size) T(std::forward<Args>(params)...);
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
+		if (size() == capacity()) {
+			grow(size() + 1);
 		}
-
-		return m_storage.get_ptr() + new_size;
+		alloc_traits::construct(get_allocator(), data() + size(), std::forward<Args>(args)...);
+		return data()[m_storage.m_size++];
 	}
 
-	void push_back(const T& value)
+	VERA_CONSTEXPR void push_back(const T& value)
 	{
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size + 1;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-
-		if (my_capacity == new_capacity) {
-			new (my_ptr + my_size) T(value);
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(my_ptr, my_size, new_memory);
-			new (new_memory + my_size) T(value);
-			std::destroy_n(my_ptr, size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
+		emplace_back(value);
 	}
 
-	void push_back(T&& value)
+	VERA_CONSTEXPR void push_back(T&& value)
 	{
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size + 1;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-
-		if (my_capacity == new_capacity) {
-			new (my_ptr + my_size) T(std::move(value));
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(my_ptr, my_size, new_memory);
-			new (new_memory + my_size) T(std::move(value));
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
+		emplace_back(std::move(value));
 	}
 
-	void pop_back()
+	VERA_CONSTEXPR void pop_back()
 	{
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size - 1;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-
-		if (my_capacity == new_capacity) {
-			std::destroy_at(my_ptr + new_size);
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-			
-			std::uninitialized_move_n(my_ptr, new_size, new_memory);
-			std::destroy_at(my_ptr + new_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-	}
-
-	template <class... Args>
-	T& emplace(const_iterator where, Args&&... params)
-	{
-		VERA_ASSERT_MSG(cbegin() <= where && where <= cend(), "invalid small_vector position");
-		
-		size_t pos          = std::distance(cbegin(), where);
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size + 1;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-		
-		if (my_capacity == new_capacity) {
-			std::move_backward(my_ptr + pos, my_ptr + my_size, my_ptr + new_size);
-			std::destroy_at(my_ptr + pos);
-			new (my_ptr + pos) T(std::forward<Args>(params)...);
-			m_storage.set_size(new_size);
-		} else {
-			T* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(my_ptr, pos, new_memory);
-			new (new_memory + pos) T(std::forward<Args>(params)...);
-			std::uninitialized_move_n(my_ptr + pos, my_size - pos, new_memory + pos + 1);
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return m_storage.get_ptr()[pos];
-	}
-
-	iterator insert(const_iterator where, const T& value)
-	{
-		VERA_ASSERT_MSG(cbegin() <= where && where <= cend(), "invalid small_vector position");
-
-		size_t pos          = std::distance(cbegin(), where);
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size + 1;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-		
-		if (my_capacity == new_capacity) {
-			std::move_backward(my_ptr + pos, my_ptr + my_size, my_ptr + new_size);
-			std::destroy_at(my_ptr + pos);
-			new (my_ptr + pos) T(value);
-			m_storage.set_size(new_size);
-		} else {
-			T* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(my_ptr, pos, new_memory);
-			new (new_memory + pos) T(value);
-			std::uninitialized_move_n(my_ptr + pos, my_size - pos, new_memory + pos + 1);
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return m_storage.get_ptr() + pos;
-	}
-	
-	iterator insert(const_iterator where, T&& value)
-	{
-		VERA_ASSERT_MSG(cbegin() <= where && where <= cend(), "invalid small_vector position");
-
-		size_t pos          = std::distance(cbegin(), where);
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size + 1;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-		
-		if (my_capacity == new_capacity) {
-			std::move_backward(my_ptr + pos, my_ptr + my_size, my_ptr + new_size);
-			std::destroy_at(my_ptr + pos);
-			new (my_ptr + pos) T(std::move(value));
-			m_storage.set_size(new_size);
-		} else {
-			T* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(my_ptr, pos, new_memory);
-			new (new_memory + pos) T(std::move(value));
-			std::uninitialized_move_n(my_ptr + pos, my_size - pos, new_memory + pos + 1);
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return m_storage.get_ptr() + pos;
-	}
-
-	iterator insert(const_iterator where, size_t count, const T& value)
-	{
-		VERA_ASSERT_MSG(cbegin() <= where && where <= cend(), "invalid small_vector position");
-
-		size_t pos          = std::distance(cbegin(), where);
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size + count;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     my_ptr       = m_storage.get_ptr();
-		
-		if (my_capacity == new_capacity) {
-			std::move_backward(my_ptr + pos, my_ptr + my_size, my_ptr + new_size);
-			std::destroy_n(my_ptr + pos, count);
-			std::uninitialized_fill_n(my_ptr + pos, count, value);
-			m_storage.set_size(new_size);
-		} else {
-			T* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(my_ptr, pos, new_memory);
-			std::uninitialized_fill_n(new_memory + pos, count, value);
-			std::uninitialized_move_n(my_ptr + pos, my_size - pos, new_memory + pos + 1);
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return m_storage.get_ptr() + pos;
-	}
-	
-	template <class Iter>
-	iterator insert(const_iterator where, Iter first, Iter last)
-	{
-		VERA_ASSERT_MSG(cbegin() <= where && where < cend(), "invalid small_vector position");
-
-		size_t pos          = std::distance(cbegin(), where);
-		size_t count        = std::distance(first, last);
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size + count;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     ptr          = m_storage.get_ptr();
-
-		if (my_capacity == new_capacity) {
-			std::move_backward(ptr + pos, ptr + my_size, ptr + new_size);
-			std::destroy_n(ptr + pos, count);
-			std::uninitialized_copy_n(first, count, ptr + pos);
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(ptr, pos, new_memory);
-			std::uninitialized_copy_n(first, count, new_memory + pos);
-			std::uninitialized_move_n(ptr + pos, my_size - pos, new_memory + pos + count);
-			std::destroy_n(ptr, my_size);
-			deallocate_uninitialized(ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return m_storage.get_ptr() + pos;
-	}
-
-	iterator insert(std::initializer_list<T> ilist)
-	{
-		return insert(cbegin(), ilist.begin(), ilist.end());
-	}
-
-	iterator erase(const_iterator where)
-	{
-		VERA_ASSERT_MSG(cbegin() <= where && where < cend(), "invalid small_vector position");
-
-		size_t pos          = std::distance(cbegin(), where);
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size - 1;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     ptr          = m_storage.get_ptr();
-		T*     target;
-
-		if (my_capacity == new_capacity) {
-			std::move(ptr + pos + 1, ptr + my_size, ptr + pos);
-			std::destroy_at(ptr + new_size);
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(ptr, pos, new_memory);
-			std::uninitialized_move_n(ptr + pos + 1, my_size - pos - 1, new_memory + pos);
-			std::destroy_n(ptr, my_size);
-			deallocate_uninitialized(ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return m_storage.get_ptr() + pos;
-	}
-
-	iterator erase(const_iterator first, const_iterator last)
-	{
-		VERA_ASSERT_MSG(cbegin() <= first && first < last && last <= cend(), "invalid small_vector position");
-
-		size_t pos1         = std::distance(cbegin(), first);
-		size_t pos2         = std::distance(cbegin(), last);
-		size_t count         = pos2 - pos1;
-		size_t my_size      = m_storage.get_size();
-		size_t new_size     = my_size - count;
-		size_t my_capacity  = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-		T*     ptr          = m_storage.get_ptr();
-
-		if (my_capacity == new_capacity) {
-			std::move(ptr + pos2, ptr + my_size, ptr + pos1);
-			std::destroy_n(ptr + new_size, count);
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-
-			std::uninitialized_move_n(ptr, pos1, new_memory);
-			std::uninitialized_move_n(ptr + pos2, my_size - pos2, new_memory + pos1);
-			std::destroy_n(ptr, my_size);
-			deallocate_uninitialized(ptr, my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return m_storage.get_ptr() + pos1;
-	}
-
-	void assign(size_t new_size, const T& value)
-	{
-		resize(new_size, value);
-	}
-
-	template <class Iter>
-	void assign(Iter first, Iter last)
-	{
-		size_t   my_size      = m_storage.get_size();
-		size_t   new_size     = std::distance(first, last);
-		size_t   my_capacity  = calc_capacity(my_size);
-		size_t   new_capacity = calc_capacity(new_size);
-		T*       my_ptr       = m_storage.get_ptr();
-
-		if (my_capacity == new_capacity) {
-			if (new_size < my_size) {
-				std::copy_n(first, new_size, my_ptr);
-				std::destroy_n(my_ptr + new_size, my_size - new_size);
-			} else if (my_size < new_size) {
-				std::copy_n(first, my_size, my_ptr);
-				std::uninitialized_copy_n(first + my_size, new_size - my_size, my_ptr + my_size); // TODO: fix first + my_size
-			} else /* rhs_size == my_size */ {
-				std::copy_n(first, my_size, my_ptr);
-				return *this;
-			}
-			m_storage.set_size(new_size);
-		} else {
-			auto* new_memory = allocate_uninitialized(new_capacity);
-
-			std::destroy_n(my_ptr, my_size);
-			deallocate_uninitialized(my_ptr, my_size);
-			std::uninitialized_copy_n(first, new_size, new_memory);
-			m_storage.reset(new_memory, new_size);
-		}
-
-		return *this;
-	}
-
-	template <class Iter>
-	void assign(std::initializer_list<T> ilist)
-	{
-		assign(ilist.begin(), ilist.end());
-	}
-
-	void resize(size_t new_size)
-	{
-		size_t my_size = m_storage.get_size();
-
-		if (my_size == new_size) return;
-
-		size_t old_capacity = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-
-		if (old_capacity == new_capacity) {
-			if (my_size < new_size) {
-				std::uninitialized_default_construct_n(m_storage.get_ptr() + my_size, new_size - my_size);
-			} else /* new_size < size */ {
-				std::destroy_n(m_storage.get_ptr() + new_size, my_size - new_size);
-			}
-			m_storage.set_size(new_size);
-		} else {
-			T* new_memory = allocate_uninitialized(new_capacity);
-
-			if (old_capacity < new_capacity) {
-				std::uninitialized_move_n(m_storage.get_ptr(), my_size, new_memory);
-				std::uninitialized_default_construct_n(new_memory + my_size, new_size - my_size);
-			} else /* new_capacity < old_capacity */ {
-				std::uninitialized_move_n(m_storage.get_ptr(), new_size, new_memory);
-				std::destroy_n(m_storage.get_ptr() + new_size, my_size - new_size);
-			}
-
-			deallocate_uninitialized(m_storage.get_ptr(), my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-	}
-	
-	void resize(size_t new_size, const T& value)
-	{
-		size_t my_size = m_storage.get_size();
-
-		if (my_size == new_size) return;
-
-		size_t old_capacity = calc_capacity(my_size);
-		size_t new_capacity = calc_capacity(new_size);
-
-		if (old_capacity == new_capacity) {
-			if (my_size < new_size) {
-				std::uninitialized_fill_n(m_storage.get_ptr() + my_size, new_size - my_size, value);
-			} else /* new_size < size */ {
-				std::destroy_n(m_storage.get_ptr() + new_size, my_size - new_size);
-			}
-			m_storage.set_size(new_size);
-		} else {
-			T* new_memory = allocate_uninitialized(new_capacity);
-
-			if (old_capacity < new_capacity) {
-				std::uninitialized_move_n(m_storage.get_ptr(), my_size, new_memory);
-				std::uninitialized_fill_n(new_memory + my_size, new_size - my_size, value);
-			} else /* new_capacity < old_capacity */ {
-				std::uninitialized_move_n(m_storage.get_ptr(), new_size, new_memory);
-				std::destroy_n(m_storage.get_ptr() + new_size, my_size - new_size);
-			}
-
-			deallocate_uninitialized(m_storage.get_ptr(), my_size);
-			m_storage.reset(new_memory, new_size);
-		}
-	}
-	
-	void clear() noexcept
-	{
-		deallocate_uninitialized(m_storage.get_ptr(), m_storage.get_size());
-		m_storage.reset();
-	}
-
-	void swap(small_vector& rhs) noexcept
-	{
-		m_storage.swap(rhs.m_storage);
-	}
-
-	T* data() noexcept
-	{
-		return m_storage.get_ptr();
-	}
-
-	const T* data() const noexcept
-	{
-		return m_storage.get_ptr();
-	}
-
-	iterator begin() noexcept
-	{
-		return m_storage.get_ptr();
-	}
-
-	const_iterator begin() const noexcept
-	{
-		return m_storage.get_ptr();
-	}
-
-	iterator end() noexcept
-	{
-		return m_storage.get_ptr() + m_storage.get_size();
-	}
-
-	const_iterator end() const noexcept
-	{
-		return m_storage.get_ptr() + m_storage.get_size();
-	}
-
-	reverse_iterator rbegin() noexcept
-	{
-		return reverse_iterator(end());
-	}
-
-	const_reverse_iterator rbegin() const noexcept
-	{
-		return const_reverse_iterator(end());
-	}
-
-	reverse_iterator rend() noexcept
-	{
-		return reverse_iterator(begin());
-	}
-
-	const_reverse_iterator rend() const noexcept
-	{
-		return const_reverse_iterator(begin());
-	}
-
-	const_iterator cbegin() const noexcept
-	{
-		return begin();
-	}
-
-	const_iterator cend() const noexcept
-	{
-		return end();
-	}
-
-	const_reverse_iterator crbegin() const noexcept
-	{
-		return const_reverse_iterator(end());
-	}
-
-	const_reverse_iterator crend() const noexcept
-	{
-		return const_reverse_iterator(begin());
-	}
-
-	bool empty() const noexcept
-	{
-		return m_storage.get_size() == 0;
-	}
-
-	size_t size() const noexcept
-	{
-		return m_storage.get_size();
-	}
-
-	size_t max_size() const noexcept
-	{
-		return priv::compressed_ptr<T>::MAX_SIZE;
-	}
-
-	size_t capacity() const noexcept
-	{
-		return ;
-	}
-
-	T& operator[](const size_t pos) noexcept
-	{
-		VERA_ASSERT_MSG(pos < m_storage.get_size(), "invalid small_vector subscript");
-		return m_storage.get_ptr()[pos];
-	}
-
-	const T& operator[](const size_t pos) const noexcept
-	{
-		VERA_ASSERT_MSG(pos < m_storage.get_size(), "invalid small_vector subscript");
-		return m_storage.get_ptr()[pos];
-	}
-
-	T& at(size_t pos)
-	{
-		VERA_CHECK_MSG(pos < m_storage.get_size(), "invalid small_vector subscript");
-		return m_storage.get_ptr()[pos];
-	}
-
-	const T& at(size_t pos) const
-	{
-		VERA_CHECK_MSG(pos < m_storage.get_size(), "invalid small_vector subscript");
-		return m_storage.get_ptr()[pos];
-	}
-
-	T& front()
-	{
-		VERA_ASSERT_MSG(m_storage.get_size() == 0, "front() called on empty small_vector");
-		return m_storage.get_ptr()[0];
-	}
-
-	const T& front() const
-	{
-		VERA_ASSERT_MSG(m_storage.get_size() == 0, "front() called on empty small_vector");
-		return m_storage.get_ptr()[0];
-	}
-
-	T& back()
-	{
-		VERA_ASSERT_MSG(m_storage.get_size() == 0, "back() called on empty small_vector");
-		return m_storage.get_ptr()[m_storage.get_size() - 1];
-	}
-	
-	const T& back() const
-	{
-		VERA_ASSERT_MSG(m_storage.get_size() == 0, "back() called on empty small_vector");
-		return m_storage.get_ptr()[m_storage.get_size() - 1];
+		VERA_ASSERT(!empty());
+		alloc_traits::destroy(get_allocator(), data() + size() - 1);
+		--m_storage.m_size;
 	}
 
 private:
-	static size_t calc_capacity(size_t size)
+	VERA_CONSTEXPR Allocator& get_allocator() VERA_NOEXCEPT
 	{
-		if (size == 0) return 0;
-		return size <= 4 ? 4 : 1ULL << (0x40 - std::countl_zero(size));
+		return static_cast<Allocator&>(m_storage);
 	}
 
-	static T* allocate_uninitialized(size_t count)
+	VERA_CONSTEXPR const Allocator& get_allocator() const VERA_NOEXCEPT
 	{
-		VERA_ASSERT_MSG(count < 0x10000, "small_vector exeeded max size");
-
-		std::allocator<T>().allocate(count);
+		return static_cast<const Allocator&>(m_storage);
 	}
 
-	static void deallocate_uninitialized(T* ptr, size_t count)
+	VERA_CONSTEXPR void grow(size_type min_capacity)
 	{
-		std::allocator<T>().deallocate(ptr, 0);
+		size_type new_capacity = capacity() + capacity() / 2;
+		if (new_capacity < min_capacity) {
+			new_capacity = min_capacity;
+		}
+
+		pointer new_storage_ptr = alloc_traits::allocate(get_allocator(), new_capacity);
+		
+		// Move elements
+		std::uninitialized_move(begin(), end(), new_storage_ptr);
+
+		// Destroy old elements
+		std::destroy(begin(), end());
+
+		// Deallocate old storage if it was on the heap
+		if (!m_storage.is_using_inline_storage()) {
+			alloc_traits::deallocate(get_allocator(), m_storage.data(), capacity());
+		}
+
+		m_storage.m_storage.ptr = new_storage_ptr;
+		m_storage.m_capacity = new_capacity;
 	}
 
-private:
-	priv::compressed_ptr<T> m_storage;
+	storage_type m_storage;
 };
 
 VERA_NAMESPACE_END

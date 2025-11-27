@@ -5,7 +5,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-class Semaphore : protected CoreObject
+class Semaphore : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Semaphore)
 public:
@@ -20,7 +20,7 @@ public:
 	bool wait(uint64_t timeout = UINT64_MAX) const;
 };
 
-class TimelineSemaphore : protected CoreObject
+class TimelineSemaphore : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(TimelineSemaphore)
 public:

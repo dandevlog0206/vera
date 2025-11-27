@@ -11,11 +11,10 @@
 #define VERA_CORE_OBJECT_INIT(obj_name)                                            \
 	using impl_type = class obj_name ## Impl;                                      \
 	using pair_type = ::vr::priv::compressed_pair<obj_name, obj_name ## Impl>;     \
+	using CoreObject::getImpl;                                                     \
 	friend class CoreObject;                                                       \
 	friend class obj<obj_name>;                                                    \
 	friend pair_type;                                                              \
-	template <class Target, class T>                                               \
-	friend VERA_CONSTEXPR obj<Target> obj_cast(obj<T> source) VERA_NOEXCEPT;       \
 	VERA_NODISCARD CoreObjectType getCoreObjectType() const VERA_NOEXCEPT override \
 	{                                                                              \
 		return CoreObjectType::obj_name;                                           \

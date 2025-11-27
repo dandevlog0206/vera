@@ -93,221 +93,207 @@ template <> static constexpr auto primitive_type_v<cdouble4x2> = ReflectionPrimi
 template <> static constexpr auto primitive_type_v<cdouble4x3> = ReflectionPrimitiveType::CDouble4x3;
 template <> static constexpr auto primitive_type_v<cdouble4x4> = ReflectionPrimitiveType::CDouble4x4;
 
-ShaderVariable::ShaderVariable(ShaderParameterImpl* impl) :
-	m_impl(impl),
-	m_node(nullptr),
-	m_array_idx(0),
-	m_offset(0) {}
-
 ShaderVariable::ShaderVariable(
-	ShaderParameterImpl*  impl,
-	const ReflectionNode* node
+	ShaderParameterImpl*         impl,
+	const ReflectionNode*        node,
+	ShaderParameterBlockStorage* block,
+	uint32_t                     offset
 ) :
 	m_impl(impl),
 	m_node(node),
-	m_array_idx(0),
-	m_offset(0) {}
-
-ShaderVariable::ShaderVariable(
-	ShaderParameterImpl*  impl,
-	const ReflectionNode* node,
-	uint32_t              array_idx
-) :
-	m_impl(impl),
-	m_node(node),
-	m_array_idx(array_idx),
-	m_offset(0) {}
-
-ShaderVariable::ShaderVariable(
-	ShaderParameterImpl*  impl,
-	const ReflectionNode* node,
-	uint32_t              array_idx,
-	uint32_t              offset
-) :
-	m_impl(impl),
-	m_node(node),
-	m_array_idx(array_idx),
+	m_block(block),
 	m_offset(offset) {}
 
-void ShaderVariable::setTextureView(obj<TextureView> texture_view, TextureLayout layout)
+bool ShaderVariable::isRoot() const VERA_NOEXCEPT
+{
+	return m_node->type == ReflectionNodeType::Root;
+}
+
+bool ShaderVariable::isArray() const VERA_NOEXCEPT
+{
+	return
+		m_node->type == ReflectionNodeType::DescriptorArray ||
+		m_node->type == ReflectionNodeType::Array;
+}
+
+bool ShaderVariable::isStruct() const VERA_NOEXCEPT
+{
+	return
+		m_node->type == ReflectionNodeType::DescriptorBlock ||
+		m_node->type == ReflectionNodeType::PushConstant ||
+		m_node->type == ReflectionNodeType::Struct;
+}
+
+ShaderVariable ShaderVariable::at(std::string_view name) const
+{
+	if (empty())
+		throw Exception("attempt to access member of an empty variable");
+
+	const ReflectionNameMap* name_map = nullptr;
+	
+	if (m_node->hasProperty(ReflectionPropertyFlagBits::NameMap)) {
+		name_map = &m_node->getNameMap();
+	} else if (m_node->hasProperty(ReflectionPropertyFlagBits::Block)) {
+		name_map = &m_node->getBlock()->getNameMap();
+	} else {
+		throw Exception("variable does not have any member");
+	}
+
+	if (auto it = name_map->find(name); it != name_map->end()) {
+		const ReflectionNode* member_node = it->second;
+		
+		if (m_node->type == ReflectionNodeType::Struct) {
+			return ShaderVariable(
+				m_impl,
+				it->second,
+				m_block,
+				m_offset + member_node->getOffset());
+
+		} else if (m_node->type == ReflectionNodeType::Root) {
+			ShaderParameterBlockStorage* block = nullptr;
+
+			if (member_node->type == ReflectionNodeType::PushConstant) {
+				block = &m_impl->pushConstantStorage;
+			} else {
+				auto& set_state = m_impl->setStates[member_node->getSet()];
+				auto  it        = set_state.bindingRanges.find(member_node->getBinding());
+
+				if (it == set_state.bindingRanges.end())
+					throw Exception("invalid descriptor array member access");
+
+				block = &set_state.blockStorages[it->second.blockRange.first()];
+			}
+
+			return { m_impl, it->second, block, 0 };
+		} else {
+			return { m_impl, it->second, m_block, 0 };
+		}
+	}
+
+	throw Exception("cannot find member named '{}'", name);
+}
+
+ShaderVariable ShaderVariable::at(uint32_t idx) const
+{
+	if (empty())
+		throw Exception("attempt to access member of an empty variable");
+	if (!m_node->hasProperty(ReflectionPropertyFlagBits::ElementNode))
+		throw Exception("variable is not an array");
+	if (idx >= m_node->getElementCount())
+		throw Exception("array index out of bounds");
+
+	if (m_node->type == ReflectionNodeType::Array) {
+		return {
+			m_impl,
+			m_node->getElementNode(),
+			m_block,
+			m_offset + idx * m_node->getStride()
+		};
+	} else /* m_node->type == ReflectionNodeType::DescriptorArray */ {
+		return {
+			m_impl,
+			m_node->getElementNode(),
+			m_block + idx,
+			0
+		};
+	}
+}
+
+ShaderVariable ShaderVariable::operator[](std::string_view name) const VERA_NOEXCEPT
+{
+	VERA_ASSERT_MSG(!empty(), "attempt to access member of an empty variable");
+
+	const ReflectionNameMap* name_map = nullptr;
+	
+	if (m_node->hasProperty(ReflectionPropertyFlagBits::NameMap)) {
+		name_map = &m_node->getNameMap();
+	} else if (m_node->hasProperty(ReflectionPropertyFlagBits::Block)) {
+		name_map = &m_node->getBlock()->getNameMap();
+	} else {
+		VERA_ERROR_MSG("variable does not have any member");
+	}
+
+	if (auto it = name_map->find(name); it != name_map->end()) {
+		const ReflectionNode* member_node = it->second;
+		
+		if (m_node->type == ReflectionNodeType::Struct) {
+			return ShaderVariable(
+				m_impl,
+				it->second,
+				m_block,
+				m_offset + member_node->getOffset());
+
+		} else if (m_node->type == ReflectionNodeType::Root) {
+			ShaderParameterBlockStorage* block = nullptr;
+
+			if (member_node->type == ReflectionNodeType::PushConstant) {
+				block = &m_impl->pushConstantStorage;
+			} else {
+				auto& set_state = m_impl->setStates[member_node->getSet()];
+				auto  it        = set_state.bindingRanges.find(member_node->getBinding());
+
+				VERA_ASSERT_MSG(it != set_state.bindingRanges.end(),
+					"invalid descriptor array member access");
+
+				block = &set_state.blockStorages[it->second.blockRange.first()];
+			}
+
+			return { m_impl, it->second, block, 0 };
+		} else {
+			return { m_impl, it->second, m_block, 0 };
+		}
+	}
+
+	VERA_ERROR_MSG("cannot find member");
+}
+
+ShaderVariable ShaderVariable::operator[](uint32_t idx) const VERA_NOEXCEPT
+{
+	VERA_ASSERT_MSG(!empty(), "attempt to access member of an empty variable");
+	VERA_ASSERT_MSG(m_node->hasProperty(ReflectionPropertyFlagBits::ElementNode), "variable is not an array");
+	VERA_ASSERT_MSG(idx < m_node->getElementCount(), "array index out of bounds");
+
+	if (m_node->type == ReflectionNodeType::Array) {
+		return {
+			m_impl,
+			m_node->getElementNode(),
+			m_block,
+			m_offset + idx * m_node->getStride()
+		};
+	} else /* m_node->type == ReflectionNodeType::DescriptorArray */ {
+		return {
+			m_impl,
+			m_node->getElementNode(),
+			m_block + idx,
+			0
+		};
+	}
+}
+
+void ShaderVariable::setSampler(obj<Sampler> sampler)
+{
+}
+
+void ShaderVariable::setTextureView(obj<TextureView> texture_view)
+{
+}
+
+void ShaderVariable::setBufferView(obj<BufferView> buffer_view)
+{
+}
+
+void ShaderVariable::setBuffer(obj<Buffer> buffer, size_t offset, size_t range)
+{
+}
+
+void setValue(const float value)
 {
 
 }
 
-void ShaderVariable::setValue(const bool value)
+void setValue(const float4& value)
 {
-}
 
-void ShaderVariable::setValue(const int8_t value)
-{
-}
-
-void ShaderVariable::setValue(const uint8_t value)
-{
-}
-
-void ShaderVariable::setValue(const int16_t value)
-{
-}
-
-void ShaderVariable::setValue(const uint16_t value)
-{
-}
-
-void ShaderVariable::setValue(const int32_t value)
-{
-}
-
-void ShaderVariable::setValue(const uint32_t value)
-{
-}
-
-void ShaderVariable::setValue(const int64_t value)
-{
-}
-
-void ShaderVariable::setValue(const uint64_t value)
-{
-}
-
-void ShaderVariable::setValue(const float value)
-{
-}
-
-void ShaderVariable::setValue(const double value)
-{
-}
-
-void ShaderVariable::setValue(const bool2& value)
-{
-}
-
-void ShaderVariable::setValue(const bool3& value)
-{
-}
-
-void ShaderVariable::setValue(const bool4& value)
-{
-}
-
-void ShaderVariable::setValue(const char2& value)
-{
-}
-
-void ShaderVariable::setValue(const char3& value)
-{
-}
-
-void ShaderVariable::setValue(const char4& value)
-{
-}
-
-void ShaderVariable::setValue(const uchar2& value)
-{
-}
-
-void ShaderVariable::setValue(const uchar3& value)
-{
-}
-
-void ShaderVariable::setValue(const uchar4& value)
-{
-}
-
-void ShaderVariable::setValue(const short2& value)
-{
-}
-
-void ShaderVariable::setValue(const short3& value)
-{
-}
-
-void ShaderVariable::setValue(const short4& value)
-{
-}
-
-void ShaderVariable::setValue(const ushort2& value)
-{
-}
-
-void ShaderVariable::setValue(const ushort3& value)
-{
-}
-
-void ShaderVariable::setValue(const ushort4& value)
-{
-}
-
-void ShaderVariable::setValue(const int2& value)
-{
-}
-
-void ShaderVariable::setValue(const int3& value)
-{
-}
-
-void ShaderVariable::setValue(const int4& value)
-{
-}
-
-void ShaderVariable::setValue(const uint2& value)
-{
-}
-
-void ShaderVariable::setValue(const uint3& value)
-{
-}
-
-void ShaderVariable::setValue(const uint4& value)
-{
-}
-
-void ShaderVariable::setValue(const long2& value)
-{
-}
-
-void ShaderVariable::setValue(const long3& value)
-{
-}
-
-void ShaderVariable::setValue(const long4& value)
-{
-}
-
-void ShaderVariable::setValue(const ulong2& value)
-{
-}
-
-void ShaderVariable::setValue(const ulong3& value)
-{
-}
-
-void ShaderVariable::setValue(const ulong4& value)
-{
-}
-
-void ShaderVariable::setValue(const float2& value)
-{
-}
-
-void ShaderVariable::setValue(const float3& value)
-{
-}
-
-void ShaderVariable::setValue(const float4& value)
-{
-}
-
-void ShaderVariable::setValue(const double2& value)
-{
-}
-
-void ShaderVariable::setValue(const double3& value)
-{
-}
-
-void ShaderVariable::setValue(const double4& value)
-{
 }
 
 bool ShaderVariable::empty() const VERA_NOEXCEPT

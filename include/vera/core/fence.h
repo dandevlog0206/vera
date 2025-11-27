@@ -5,7 +5,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-class Fence : protected CoreObject
+class Fence : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Fence)
 public:

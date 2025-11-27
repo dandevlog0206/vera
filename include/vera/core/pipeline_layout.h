@@ -24,7 +24,7 @@ struct PipelineLayoutCreateInfo
 	std::vector<PushConstantRange>        pushConstantRanges   = {};
 };
 
-class PipelineLayout : protected CoreObject
+class PipelineLayout : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(PipelineLayout)
 public:

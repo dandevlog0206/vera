@@ -15,49 +15,41 @@ class Buffer;
 class BufferView;
 class ReflectionNode;
 class ShaderParameterImpl;
+class ShaderParameterBlockStorage;
 
 class ShaderVariable
 {
-	friend class ShaderStorage;
-	ShaderVariable(ShaderParameterImpl* impl);
+	friend class ShaderParameter;
 	ShaderVariable(
-		ShaderParameterImpl*  impl,
-		const ReflectionNode* node);
-	ShaderVariable(
-		ShaderParameterImpl*  impl,
-		const ReflectionNode* node,
-		uint32_t              array_idx);
-	ShaderVariable(
-		ShaderParameterImpl*  impl,
-		const ReflectionNode* node,
-		uint32_t              array_idx,
-		uint32_t              offset);
+		ShaderParameterImpl*         impl,
+		const ReflectionNode*        node,
+		ShaderParameterBlockStorage* block,
+		uint32_t                     offset);
 public:
 	ShaderVariable() = default;
 
 	VERA_NODISCARD bool isRoot() const VERA_NOEXCEPT;
 	VERA_NODISCARD bool isArray() const VERA_NOEXCEPT;
+	VERA_NODISCARD bool isStruct() const VERA_NOEXCEPT; // includes block
 
-	VERA_NODISCARD ShaderVariable operator[](std::string_view name) VERA_NOEXCEPT;
-	VERA_NODISCARD ShaderVariable operator[](uint32_t idx) VERA_NOEXCEPT;
+	VERA_NODISCARD ShaderVariable at(std::string_view name) const;
+	VERA_NODISCARD ShaderVariable at(uint32_t idx) const;
 
-	VERA_NODISCARD ShaderVariable at(std::string_view name);
-	VERA_NODISCARD ShaderVariable at(uint32_t idx);
-
-	void operator=(obj<Sampler> sampler);
-	void operator=(obj<TextureView> texture_view);
-	void operator=(obj<BufferView> buffer_view);
-	void operator=(obj<Buffer> buffer);
+	VERA_NODISCARD ShaderVariable operator[](std::string_view name) const VERA_NOEXCEPT;
+	VERA_NODISCARD ShaderVariable operator[](uint32_t idx) const VERA_NOEXCEPT;
 
 	void setSampler(obj<Sampler> sampler);
-	void setTextureView(
-		obj<TextureView> texture_view,
-		TextureLayout    layout = TextureLayout::Undefined);
+	void setTextureView(obj<TextureView> texture_view);
 	void setBufferView(obj<BufferView> buffer_view);
 	void setBuffer(
 		obj<Buffer> buffer,
 		size_t      offset = 0,
 		size_t      range  = 0);
+
+	void operator=(obj<Sampler> sampler) { setSampler(sampler); }
+	void operator=(obj<TextureView> texture_view) { setTextureView(texture_view); }
+	void operator=(obj<BufferView> buffer_view) { setBufferView(buffer_view); }
+	void operator=(obj<Buffer> buffer) { setBuffer(buffer); }
 
 	// primitive types
 	void setValue(const bool value);
@@ -147,7 +139,7 @@ public:
 	void setValue(const cdouble4x4& value);
 
 	template <class T>
-	requires requires(ShaderVariable& s, const T& t) { s.setValue(t); }
+		requires requires(ShaderVariable& s, const T& t) { s.setValue(t); }
 	void operator=(const T& value)
 	{
 		setValue(value);
@@ -156,10 +148,10 @@ public:
 	VERA_NODISCARD bool empty() const VERA_NOEXCEPT;
 
 private:
-	ShaderParameterImpl*  m_impl;
-	const ReflectionNode* m_node;
-	uint32_t              m_array_idx;
-	uint32_t              m_offset;
+	ShaderParameterImpl*         m_impl;
+	const ReflectionNode*        m_node;
+	ShaderParameterBlockStorage* m_block;
+	uint32_t                     m_offset;
 };
 
 VERA_NAMESPACE_END

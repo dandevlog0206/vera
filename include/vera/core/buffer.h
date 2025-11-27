@@ -11,7 +11,7 @@ struct BufferCreateInfo
 	MemoryPropertyFlags propetyFlags = {};
 };
 
-class Buffer : protected CoreObject
+class Buffer : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Buffer)
 public:

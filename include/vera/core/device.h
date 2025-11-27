@@ -64,7 +64,7 @@ struct DeviceCreateInfo
 	std::string_view              pipelineCacheFilePath = {};
 };
 
-class Device : protected CoreObject
+class Device : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Device)
 public:

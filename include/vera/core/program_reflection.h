@@ -7,12 +7,14 @@
 VERA_NAMESPACE_BEGIN
 
 class Device;
+class Pipeline;
 class ShaderReflection;
 
-class ProgramReflection : protected CoreObject
+class ProgramReflection : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ProgramReflection)
 public:
+	static VERA_NODISCARD obj<ProgramReflection> create(obj<Device> device, obj<Pipeline> pipeline);
 	static VERA_NODISCARD obj<ProgramReflection> create(
 		obj<Device>                       device,
 		array_view<obj<ShaderReflection>> shader_reflections);

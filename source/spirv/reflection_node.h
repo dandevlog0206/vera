@@ -118,16 +118,16 @@ enum class ReflectionNodeType VERA_ENUM
 
 	Struct          = static_cast<uint32_t>(
 		ReflectionPropertyFlagBits::Type |
-		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::PaddedSize |
 		ReflectionPropertyFlagBits::MemberNodes |
 		ReflectionPropertyFlagBits::NameMap),
 
 	Array           = static_cast<uint32_t>(
 		ReflectionPropertyFlagBits::Type |
-		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::PaddedSize |
 		ReflectionPropertyFlagBits::ElementNode |
 		ReflectionPropertyFlagBits::ElementCount |
@@ -135,8 +135,8 @@ enum class ReflectionNodeType VERA_ENUM
 
 	Primitive       = static_cast<uint32_t>(
 		ReflectionPropertyFlagBits::Type |
-		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::PaddedSize |
 		ReflectionPropertyFlagBits::PrimitiveType)
 };
@@ -312,6 +312,28 @@ public:
 			prop_off_v<ReflectionPropertyFlagBits::MemberNodes>);
 	}
 
+	VERA_NODISCARD VERA_INLINE const ReflectionNameMap& getNameMap() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::NameMap),
+			"name map property is not available for this node type");
+
+		return *reinterpret_cast<const ReflectionNameMap*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::NameMap>);
+	}
+
+	VERA_NODISCARD VERA_INLINE const ReflectionStructNode* getBlock() const VERA_NOEXCEPT
+	{
+		VERA_ASSERT_MSG(
+			hasProperty(ReflectionPropertyFlagBits::Block),
+			"block property is not available for this node type");
+
+		return *reinterpret_cast<const ReflectionStructNode* const*>(
+			reinterpret_cast<const std::byte*>(this) +
+			prop_off_v<ReflectionPropertyFlagBits::Block>);
+	}
+
 	VERA_NODISCARD VERA_INLINE const ReflectionNode* getElementNode() const VERA_NOEXCEPT
 	{
 		VERA_ASSERT_MSG(
@@ -343,17 +365,6 @@ public:
 		return *reinterpret_cast<const uint32_t*>(
 			reinterpret_cast<const std::byte*>(this) +
 			prop_off_v<ReflectionPropertyFlagBits::Stride>);
-	}
-
-	VERA_NODISCARD VERA_INLINE const ReflectionNameMap& getNameMap() const VERA_NOEXCEPT
-	{
-		VERA_ASSERT_MSG(
-			hasProperty(ReflectionPropertyFlagBits::NameMap),
-			"name map property is not available for this node type");
-
-		return *reinterpret_cast<const ReflectionNameMap*>(
-			reinterpret_cast<const std::byte*>(this) +
-			prop_off_v<ReflectionPropertyFlagBits::NameMap>);
 	}
 };
 

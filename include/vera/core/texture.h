@@ -22,7 +22,7 @@ struct TextureCreateInfo
 	// ResourceBindFlags bindFlags;
 };
 
-class Texture : protected CoreObject
+class Texture : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Texture)
 public:

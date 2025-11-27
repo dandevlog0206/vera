@@ -19,7 +19,7 @@ struct SwapchainCreateInfo
 	PresentMode presentMode = PresentMode::Fifo;
 };
 
-class Swapchain : protected CoreObject
+class Swapchain : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Swapchain)
 public:

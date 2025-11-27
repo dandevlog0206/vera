@@ -16,7 +16,7 @@ struct DeviceMemoryCreateInfo
 	std::bitset<32>     memoryTypeMask;
 };
 
-class DeviceMemory : protected CoreObject
+class DeviceMemory : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(DeviceMemory)
 public:

@@ -21,7 +21,7 @@ struct DescriptorPoolCreateInfo
 	uint32_t                       maxSets   = 0;
 };
 
-class DescriptorPool : protected CoreObject
+class DescriptorPool : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(DescriptorPool)
 public:

@@ -10,14 +10,12 @@ VERA_NAMESPACE_BEGIN
 class PipelineImpl
 {
 public:
-	using shader_pair = std::pair<ShaderStageFlagBits, obj<Shader>>;
-
 	obj<Device>              device            = {};
 	obj<PipelineLayout>      pipelineLayout    = {};
+	std::vector<obj<Shader>> shaders           = {};
 
 	vk::Pipeline             vkPipeline        = {};
 
-	std::vector<shader_pair> shaders           = {};
 	PipelineBindPoint        pipelineBindPoint = {};
 	hash_t                   hashValue         = {};
 };

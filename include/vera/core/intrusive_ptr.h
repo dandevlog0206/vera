@@ -10,6 +10,11 @@ VERA_PRIV_NAMESPACE_BEGIN
 typedef class WeakNode* WeakNodePtr;
 typedef class WeakNodeLink* WeakNodeLinkPtr;
 
+template <class From, class To>
+concept is_pointer_static_castable = requires (From* from_ptr) {
+	static_cast<To*>(from_ptr);
+};
+
 class WeakNodeLink
 {
 public:
@@ -147,6 +152,19 @@ public:
 	VERA_INLINE obj(obj&& rhs) VERA_NOEXCEPT :
 		m_ptr(std::exchange(rhs.m_ptr, nullptr)) {}
 
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE obj(const obj<Object2>& rhs) VERA_NOEXCEPT :
+		m_ptr(static_cast<Object*>(rhs.m_ptr))
+	{
+		increase();
+	}
+
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE obj(obj<Object2>&& rhs) VERA_NOEXCEPT :
+		m_ptr(static_cast<Object*>(std::exchange(rhs.m_ptr, nullptr))) {}
+
 	VERA_INLINE ~obj() VERA_NOEXCEPT
 	{
 		decrease();
@@ -170,6 +188,35 @@ public:
 		decrease();
 		m_ptr = std::exchange(rhs.m_ptr, nullptr);
 
+		return *this;
+	}
+
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE obj& operator=(const obj<Object2>& rhs) VERA_NOEXCEPT
+	{
+		auto* casted_ptr = static_cast<Object*>(rhs.m_ptr);
+
+		if (m_ptr == casted_ptr) return *this;
+
+		decrease();
+		m_ptr = casted_ptr;
+		increase();
+
+		return *this;
+	}
+
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE obj& operator=(obj<Object2>&& rhs) VERA_NOEXCEPT
+	{
+		auto* casted_ptr = static_cast<Object*>(rhs.m_ptr);
+	
+		if (m_ptr == casted_ptr) return *this;
+		
+		decrease();
+		m_ptr = std::exchange(casted_ptr, nullptr);
+		
 		return *this;
 	}
 
@@ -439,33 +486,47 @@ public:
 	VERA_INLINE	const_ref(const Object* ptr) VERA_NOEXCEPT :
 		m_ptr(ptr) {}
 
-	template <class T>
-	requires requires (T* p) { static_cast<const Object*>(p); }
-	VERA_INLINE const_ref(ref<T> rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<const Object*>(rhs.m_ptr)) {}
-
-	template <class T>
-	requires requires (T* p) { static_cast<const Object*>(p); }
-	VERA_INLINE const_ref(const_ref<T> rhs) VERA_NOEXCEPT :
-		m_ptr(static_cast<const Object*>(rhs.m_ptr)) {}
-
 	VERA_INLINE	const_ref(const const_ref& rhs) VERA_NOEXCEPT :
 		m_ptr(rhs.m_ptr) {}
 
 	VERA_INLINE	const_ref(const_ref&& rhs) VERA_NOEXCEPT :
 		m_ptr(std::exchange(rhs.m_ptr, nullptr)) {}
 
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE const_ref(ref<Object2> rhs) VERA_NOEXCEPT :
+		m_ptr(static_cast<const Object*>(rhs.m_ptr)) {}
+
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE const_ref(const_ref<Object2> rhs) VERA_NOEXCEPT :
+		m_ptr(static_cast<const Object*>(rhs.m_ptr)) {}
+
 	VERA_INLINE const_ref& operator=(const const_ref& rhs) VERA_NOEXCEPT
 	{
 		this->m_ptr = rhs.m_ptr;
-
 		return *this;
 	}
 
 	VERA_INLINE const_ref& operator=(const_ref&& rhs) VERA_NOEXCEPT
 	{
 		this->m_ptr = std::exchange(rhs.m_ptr, nullptr);
+		return *this;
+	}
 
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE const_ref& operator=(const_ref<Object2> rhs) VERA_NOEXCEPT
+	{
+		this->m_ptr = static_cast<const Object*>(rhs.m_ptr);
+		return *this;
+	}
+
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE const_ref& operator=(const_ref<Object2>&& rhs) VERA_NOEXCEPT
+	{
+		this->m_ptr = static_cast<const Object*>(std::exchange(rhs.m_ptr, nullptr));
 		return *this;
 	}
 
@@ -530,9 +591,9 @@ public:
 	VERA_INLINE	ref(Object* ptr) VERA_NOEXCEPT :
 		my_base(ptr) {}
 
-	template <class T>
-	requires requires (T* p) { static_cast<const Object*>(p); }
-	VERA_INLINE ref(ref<T> rhs) VERA_NOEXCEPT :
+	template <class Object2>
+		requires priv::is_pointer_static_castable<Object2, Object>
+	VERA_INLINE ref(ref<Object2> rhs) VERA_NOEXCEPT :
 		my_base(static_cast<const Object*>(rhs.m_ptr)) {}
 
 	VERA_INLINE ref(const ref& rhs) VERA_NOEXCEPT :

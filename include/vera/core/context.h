@@ -50,7 +50,7 @@ struct ContextCreateInfo
 	bool                          enableDeviceFault        = false;
 };
 
-class Context : protected CoreObject
+class Context : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Context)
 public:

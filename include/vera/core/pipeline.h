@@ -123,7 +123,7 @@ struct ComputePipelineCreateInfo
 	obj<PipelineLayout> pipelineLayout; // optional
 };
 
-class Pipeline : protected CoreObject
+class Pipeline : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(Pipeline)
 public:
@@ -132,10 +132,10 @@ public:
 	static obj<Pipeline> create(obj<Device> device, const ComputePipelineCreateInfo& info);
 	~Pipeline() VERA_NOEXCEPT override;
 
-	obj<Device> getDevice();
-	obj<PipelineLayout> getPipelineLayout();
-	std::vector<obj<Shader>> enumerateShaders();
-	obj<Shader> getShader(ShaderStageFlagBits stage);
+	VERA_NODISCARD obj<Device> getDevice() const VERA_NOEXCEPT;
+	VERA_NODISCARD obj<PipelineLayout> getPipelineLayout() const VERA_NOEXCEPT;
+	VERA_NODISCARD array_view<obj<Shader>> enumerateShaders() const VERA_NOEXCEPT;
+	VERA_NODISCARD obj<Shader> getShader(ShaderStageFlagBits stage_flag) const VERA_NOEXCEPT;
 };
 
 VERA_NAMESPACE_END

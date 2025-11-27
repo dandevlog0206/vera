@@ -14,7 +14,7 @@ struct BufferViewCreateInfo
 	size_t size;
 };
 
-class BufferView : protected CoreObject
+class BufferView : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(BufferView)
 public:

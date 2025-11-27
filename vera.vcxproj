@@ -181,7 +181,8 @@
     <ClInclude Include="include\vera\core\command_buffer_sync.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_variable.h" />
-    <ClInclude Include="include\vera\util\hybrid_vector.h" />
+    <ClInclude Include="include\vera\core\stream.h" />
+    <ClInclude Include="include\vera\util\small_vector.h" />
     <ClInclude Include="include\vera\util\renderdoc.h" />
     <ClInclude Include="include\vera\geometry\aabb.h" />
     <ClInclude Include="include\vera\geometry\bezier.h" />
@@ -296,7 +297,7 @@
     <ClInclude Include="include\vera\graphics\graphics_state.h" />
     <ClInclude Include="include\vera\core\device_memory.h" />
     <ClInclude Include="include\vera\util\rect.h" />
-    <ClInclude Include="include\vera\util\small_vector.h" />
+    <ClInclude Include="include\vera\util\compact_vector.h" />
     <ClInclude Include="source\impl\device_impl.h" />
     <ClInclude Include="source\impl\fence_impl.h" />
     <ClInclude Include="source\impl\object_impl.h" />

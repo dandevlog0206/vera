@@ -4,7 +4,7 @@
 #include "../impl/program_reflection_impl.h"
 
 #include "../../include/vera/core/device.h"
-#include "../../include/vera/core/pipeline_layout.h"
+#include "../../include/vera/core/pipeline.h"
 #include "../../include/vera/core/shader_reflection.h"
 #include "../../include/vera/util/static_vector.h"
 
@@ -54,6 +54,16 @@ static hash_t hash_shader_reflections(
 		hash_combine(seed, shader_reflection->hash());
 
 	return seed;
+}
+
+obj<ProgramReflection> ProgramReflection::create(obj<Device> device, obj<Pipeline> pipeline)
+{
+	static_vector<obj<ShaderReflection>, MAX_SHADER_STAGE_COUNT> shader_reflections;
+
+	for (auto& shader : pipeline->enumerateShaders())
+		shader_reflections.push_back(ShaderReflection::create(device, shader));
+
+	return create(device, shader_reflections);
 }
 
 obj<ProgramReflection> ProgramReflection::create(

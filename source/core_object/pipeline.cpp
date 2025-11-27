@@ -124,7 +124,7 @@ static void add_shader_stage(
 	shader_info.pSpecializationInfo = nullptr;
 
 	shader_infos.push_back(shader_info);
-	impl.shaders.push_back(std::make_pair(stage, shader));
+	impl.shaders.push_back(shader);
 }
 
 static void fill_shader_info(
@@ -784,7 +784,7 @@ obj<Pipeline> Pipeline::create(obj<Device> device, const ComputePipelineCreateIn
 	impl.device            = std::move(device);
 	impl.pipelineLayout    = std::move(pipeline_layout);
 	impl.vkPipeline        = result.value;
-	impl.shaders           = { std::make_pair(ShaderStageFlagBits::Compute, info.computeShader) };
+	impl.shaders           = { info.computeShader };
 	impl.pipelineBindPoint = PipelineBindPoint::Compute;
 	impl.hashValue         = hash_value;
 
@@ -804,33 +804,28 @@ Pipeline::~Pipeline() VERA_NOEXCEPT
 	destroyObjectImpl(this);
 }
 
-obj<Device> Pipeline::getDevice()
+obj<Device> Pipeline::getDevice() const VERA_NOEXCEPT
 {
 	return getImpl(this).device;
 }
 
-obj<PipelineLayout> Pipeline::getPipelineLayout()
+obj<PipelineLayout> Pipeline::getPipelineLayout() const VERA_NOEXCEPT
 {
 	return getImpl(this).pipelineLayout;
 }
 
-std::vector<obj<Shader>> Pipeline::enumerateShaders()
+array_view<obj<Shader>> Pipeline::enumerateShaders() const VERA_NOEXCEPT
 {
-	std::vector<obj<Shader>> result;
-
-	for (auto [flag, shader] : getImpl(this).shaders)
-		result.push_back(std::move(shader));
-
-	return result;
+	return getImpl(this).shaders;
 }
 
-obj<Shader> Pipeline::getShader(ShaderStageFlagBits stage)
+obj<Shader> Pipeline::getShader(ShaderStageFlagBits stage_flag) const VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 
-	for (auto& [flag, shader] : impl.shaders)
-		if (flag == stage) return shader;
-	
+	for (auto& shader : impl.shaders)
+		if (shader->getStageFlags().has(stage_flag)) return shader;
+
 	return {};
 }
 

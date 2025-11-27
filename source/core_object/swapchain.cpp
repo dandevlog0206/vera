@@ -27,7 +27,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-class SwapchainFactory : protected CoreObject {
+class SwapchainFactory : public CoreObject {
 public:
 	static obj<FrameBuffer> createFrameBuffer(SwapchainImpl& swapchain_impl)
 	{

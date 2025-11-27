@@ -20,7 +20,7 @@ struct DescriptorIndex
 	uint32_t arrayIndex = 0;
 };
 
-class ShaderParameter : protected CoreObject
+class ShaderParameter : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ShaderParameter)
 public:
@@ -36,7 +36,8 @@ public:
 
 	VERA_NODISCARD ShaderVariable getRootVariable() VERA_NOEXCEPT;
 
-	void reset();
+	void setBindless(uint32_t set, bool enable = true);
+	VERA_NODISCARD bool isBindless(uint32_t set) const VERA_NOEXCEPT;
 
 	void setSampler(
 		const DescriptorIndex& idx,
@@ -79,6 +80,10 @@ public:
 		const void* data,
 		size_t      size,
 		size_t      offset = 0);
+
+	void nextFrame();
+
+	void reset();
 };
 
 VERA_NAMESPACE_END

@@ -43,7 +43,7 @@ struct TextureViewCreateInfo
 	uint32_t           layerCount     = 1;
 };
 
-class TextureView : protected CoreObject
+class TextureView : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(TextureView)
 public:

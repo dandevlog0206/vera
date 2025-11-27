@@ -141,7 +141,7 @@
     <ClInclude Include="include\vera\graphics\color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\util\small_vector.h">
+    <ClInclude Include="include\vera\util\compact_vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\core\logger.h">
@@ -522,7 +522,10 @@
     <ClInclude Include="include\vera\core\reflection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\util\hybrid_vector.h">
+    <ClInclude Include="include\vera\util\small_vector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vera\core\stream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

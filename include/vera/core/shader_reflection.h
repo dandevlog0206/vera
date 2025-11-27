@@ -13,7 +13,7 @@ VERA_NAMESPACE_BEGIN
 class Device;
 class Shader;
 
-class ShaderReflection : protected CoreObject
+class ShaderReflection : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ShaderReflection)
 public:

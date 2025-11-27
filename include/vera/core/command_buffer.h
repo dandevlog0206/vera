@@ -61,7 +61,7 @@ struct RenderingInfo
 	std::optional<StencilAttachmentInfo> stencilAttachment;
 };
 
-class CommandBuffer : protected CoreObject // TODO: consider rename to command buffer
+class CommandBuffer : public CoreObject // TODO: consider rename to command buffer
 {
 	VERA_CORE_OBJECT_INIT(CommandBuffer)
 public:
