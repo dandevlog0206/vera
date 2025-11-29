@@ -10,7 +10,7 @@
 
 VERA_NAMESPACE_BEGIN
 
-const vk::DeviceMemory& get_vk_device_memory(const_ref<DeviceMemory> device_memory) VERA_NOEXCEPT
+const vk::DeviceMemory& get_vk_device_memory(cref<DeviceMemory> device_memory) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(device_memory).vkMemory;
 }

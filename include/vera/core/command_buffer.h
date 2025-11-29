@@ -1,8 +1,9 @@
 #pragma once
 
 #include "device.h"
-#include "command_buffer_sync.h"
+#include "command_sync.h"
 #include "../graphics/color.h"
+#include "../util/small_vector.h"
 #include "../util/array_view.h"
 #include "../util/rect.h"
 #include <optional>
@@ -61,6 +62,23 @@ struct RenderingInfo
 	std::optional<StencilAttachmentInfo> stencilAttachment;
 };
 
+struct SubmitInfo
+{
+	struct WaitInfo
+	{
+		obj<Semaphore>     semaphore;
+		PipelineStageFlags stageMask;
+	};
+
+	struct SignalInfo
+	{
+		obj<Semaphore> semaphore;
+	};
+
+	small_vector<WaitInfo>   waitInfos;
+	small_vector<SignalInfo> signalInfos;
+};
+
 class CommandBuffer : public CoreObject // TODO: consider rename to command buffer
 {
 	VERA_CORE_OBJECT_INIT(CommandBuffer)
@@ -70,7 +88,7 @@ public:
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 
-	VERA_NODISCARD CommandBufferSync getSync() const VERA_NOEXCEPT;
+	VERA_NODISCARD CommandSync getSync() const VERA_NOEXCEPT;
 
 	void reset();
 
@@ -96,31 +114,31 @@ public:
 
 	void setViewport(const Viewport& viewport);
 	void setScissor(const Scissor& scissor);
-	void bindVertexBuffer(obj<Buffer> buffer, size_t offset = 0);
-	void bindIndexBuffer(obj<Buffer> buffer, size_t offset = 0);
-	void bindPipeline(obj<Pipeline> pipeline);
+	void bindVertexBuffer(cref<Buffer> buffer, size_t offset = 0);
+	void bindIndexBuffer(cref<Buffer> buffer, size_t offset = 0);
+	void bindPipeline(cref<Pipeline> pipeline);
 	
 	void pushConstant(
-		const_ref<PipelineLayout> pipeline_layout,
-		ShaderStageFlags          stage_flags,
-		uint32_t                  offset,
-		const void*               data,
-		uint32_t                  size);
+		cref<PipelineLayout> pipeline_layout,
+		ShaderStageFlags     stage_flags,
+		uint32_t             offset,
+		const void*          data,
+		uint32_t             size);
 
 	void bindDescriptorSet(
-		const_ref<PipelineLayout> pipeline_layout,
-		uint32_t                  set,
-		ref<DescriptorSet>        desc_set);
+		cref<PipelineLayout> pipeline_layout,
+		uint32_t             set,
+		cref<DescriptorSet>  desc_set);
 
 	void bindDescriptorSet(
-		const_ref<PipelineLayout> pipeline_layout,
-		uint32_t                  set,
-		ref<DescriptorSet>        desc_set,
-		array_view<uint32_t>      dynamic_offsets);
+		cref<PipelineLayout> pipeline_layout,
+		uint32_t             set,
+		cref<DescriptorSet>  desc_set,
+		array_view<uint32_t> dynamic_offsets);
 	
 	void bindGraphicsState(const GraphicsState& state);
 
-	void bindShaderParameter(obj<ShaderParameter> params);
+	void bindShaderParameter(ref<ShaderParameter> params);
 
 	void beginRendering(const RenderingInfo& info);
 
@@ -146,7 +164,7 @@ public:
 
 	void end();
 
-	CommandBufferSync submit();
+	CommandSync submit(const SubmitInfo& info = {});
 };
 
 VERA_NAMESPACE_END

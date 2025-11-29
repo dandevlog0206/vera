@@ -29,6 +29,7 @@ public:
 	static obj<Texture> createColorAtt(obj<Device> device, uint32_t width, uint32_t height, DepthFormat format);
 	static obj<Texture> createDepth(obj<Device> device, uint32_t width, uint32_t height, DepthFormat format);
 	static obj<Texture> createStencil(obj<Device> device, uint32_t width, uint32_t height, StencilFormat format);
+	static obj<Texture> create(obj<Device> device, const Image& image);
 	static obj<Texture> create(obj<Device> device, const TextureCreateInfo& info);
 	~Texture() VERA_NOEXCEPT override;
 

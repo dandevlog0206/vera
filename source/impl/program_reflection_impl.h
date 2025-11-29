@@ -15,6 +15,7 @@ public:
 
 	std::pmr::monotonic_buffer_resource memory            = {};
 	ShaderStageFlags                    shaderStageFlags  = {};
+	PipelineBindPoint                   pipelineBindPoint = {};
 	array_view<ReflectionEntryPoint>    entryPoints       = {};
 	const ReflectionRootNode*           rootNode          = {};
 	hash_t                              hashValue         = {};

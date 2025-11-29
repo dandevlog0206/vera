@@ -20,6 +20,7 @@ enum class CoreObjectType VERA_ENUM
 	DescriptorSet,
 	RenderContext,
 	CommandBuffer,
+	CommandStream,
 	Fence,
 	Semaphore,
 	TimelineSemaphore,
@@ -94,7 +95,8 @@ enum class PipelineBindPoint VERA_ENUM
 {
 	Unknown,
 	Graphics,
-	Compute
+	Compute,
+	RayTracing
 };
 
 VERA_VK_ABI_COMPATIBLE enum class PrimitiveTopology VERA_ENUM
@@ -492,24 +494,23 @@ VERA_VK_ABI_COMPATIBLE enum class DescriptorSetLayoutBindingFlagBits VERA_FLAG_B
 	VariableDescriptorCount  = 1 << 3
 } VERA_ENUM_FLAGS(DescriptorSetLayoutBindingFlagBits, DescriptorSetLayoutBindingFlags)
 
-enum class DescriptorType VERA_ENUM
+VERA_VK_ABI_COMPATIBLE enum class DescriptorType VERA_ENUM
 {
-	Unknown                            = 0,
-	Sampler                            = 1,
-	CombinedTextureSampler             = 2,
-	SampledTexture                     = 3,
-	StorageTexture                     = 4,
-	UniformTexelBuffer                 = 5,
-	StorageTexelBuffer                 = 6,
-	UniformBuffer                      = 7,
-	StorageBuffer                      = 8,
-	UniformBufferDynamic               = 9,
-	StorageBufferDynamic               = 10,
-	InputAttachment                    = 11,
-	inlineUniformBlock                 = 1000138001,
-	AccelerationStructure              = 1000150001,
-	AccelerationStructureNV            = 1000165001,
-	PartitionedAccelerationStructureNV = 1000570001
+	Sampler                            = 0,
+	CombinedTextureSampler             = 1,
+	SampledTexture                     = 2,
+	StorageTexture                     = 3,
+	UniformTexelBuffer                 = 4,
+	StorageTexelBuffer                 = 5,
+	UniformBuffer                      = 6,
+	StorageBuffer                      = 7,
+	UniformBufferDynamic               = 8,
+	StorageBufferDynamic               = 9,
+	InputAttachment                    = 10,
+	inlineUniformBlock                 = 1000138000,
+	AccelerationStructure              = 1000150000,
+	AccelerationStructureNV            = 1000165000,
+	PartitionedAccelerationStructureNV = 1000570000
 };
 
 VERA_VK_ABI_COMPATIBLE enum class DescriptorPoolCreateFlagBits VERA_FLAG_BITS

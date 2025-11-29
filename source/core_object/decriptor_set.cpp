@@ -77,7 +77,7 @@ static void store_binding_state(DescriptorSetImpl& impl, uint32_t binding, obj<O
 	impl.bindingStates[key] = obj_cast<CoreObject>(std::move(obj));
 }
 
-const vk::DescriptorSet& get_vk_descriptor_set(const_ref<DescriptorSet> descriptor_set) VERA_NOEXCEPT
+const vk::DescriptorSet& get_vk_descriptor_set(cref<DescriptorSet> descriptor_set) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(descriptor_set).vkDescriptorSet;
 }

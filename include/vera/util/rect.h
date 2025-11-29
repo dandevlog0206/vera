@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../core/assertion.h"
 #include "extent.h"
 #include "../math/math_util.h"
 #include <type_traits>
@@ -11,7 +12,7 @@ struct rect_base
 {
 	using value_type  = T;
 	using size_type   = T;
-	using vector_type = vector_base<2, value_type, packed_highp>;
+	using point_type  = vector_base<2, value_type, packed_highp>;
 	using extent_type = extent_base<2, size_type>; 
 
 	VERA_CONSTEXPR rect_base() VERA_NOEXCEPT = default;
@@ -61,6 +62,18 @@ struct rect : public rect_base<T, std::is_integral_v<T>>
 	using extent_type = typename base_type::extent_type;
 
 	using base_type::base_type;
+
+	VERA_NODISCARD VERA_CONSTEXPR point_type operator[](size_t idx) const VERA_NOEXCEPT
+	{
+		switch (idx) {
+		case 0: return this->upper_left();
+		case 1: return this->upper_right();
+		case 2: return this->bottom_right();
+		case 3: return this->bottom_left();
+		default:
+			VERA_ERROR_MSG("rect index out of range");
+		}
+	}
 
 	VERA_NODISCARD VERA_CONSTEXPR point_type position() const VERA_NOEXCEPT
 	{

@@ -93,15 +93,145 @@ template <> static constexpr auto primitive_type_v<cdouble4x2> = ReflectionPrimi
 template <> static constexpr auto primitive_type_v<cdouble4x3> = ReflectionPrimitiveType::CDouble4x3;
 template <> static constexpr auto primitive_type_v<cdouble4x4> = ReflectionPrimitiveType::CDouble4x4;
 
+template <class T>
+static void write_scalar_value(
+	const ReflectionNode*        node,
+	ShaderParameterBlockStorage* storage,
+	uint32_t                     offset,
+	const T                      value
+)
+{
+	VERA_ASSERT_MSG(
+		node->type == ReflectionNodeType::Primitive,
+		"attempt to write a non-primitive type with a basic type writer");
+	VERA_ASSERT_MSG(
+		offset + sizeof(T) <= storage->block.size(),
+		"attempt to write beyond the bounds of the block storage");
+
+	auto* ptr = storage->block.data() + offset;
+
+	switch (node->getPrimitiveType()) {
+	case ReflectionPrimitiveType::Bool:
+		*reinterpret_cast<bool*>(ptr) = static_cast<bool>(value);
+		break;
+	case ReflectionPrimitiveType::Char:
+		*reinterpret_cast<int8_t*>(ptr) = static_cast<int8_t>(value);
+		break;
+	case ReflectionPrimitiveType::UChar:
+		*reinterpret_cast<uint8_t*>(ptr) = static_cast<uint8_t>(value);
+		break;
+	case ReflectionPrimitiveType::Short:
+		*reinterpret_cast<int16_t*>(ptr) = static_cast<int16_t>(value);
+		break;
+	case ReflectionPrimitiveType::UShort:
+		*reinterpret_cast<uint16_t*>(ptr) = static_cast<uint16_t>(value);
+		break;
+	case ReflectionPrimitiveType::Int:
+		*reinterpret_cast<int32_t*>(ptr) = static_cast<int32_t>(value);
+		break;
+	case ReflectionPrimitiveType::UInt:
+		*reinterpret_cast<uint32_t*>(ptr) = static_cast<uint32_t>(value);
+		break;
+	case ReflectionPrimitiveType::Long:
+		*reinterpret_cast<int64_t*>(ptr) = static_cast<int64_t>(value);
+		break;
+	case ReflectionPrimitiveType::ULong:
+		*reinterpret_cast<uint64_t*>(ptr) = static_cast<uint64_t>(value);
+		break;
+	case ReflectionPrimitiveType::Float:
+		*reinterpret_cast<float*>(ptr) = static_cast<float>(value);
+		break;
+	case ReflectionPrimitiveType::Double:
+		*reinterpret_cast<double*>(ptr) = static_cast<double>(value);
+		break;
+	default:
+		VERA_ERROR_MSG("mismatched primitive type in basic type writer");
+		break;
+	}
+}
+
+template <class T>
+static void write_vector_value(
+	const ReflectionNode*        node,
+	ShaderParameterBlockStorage* storage,
+	uint32_t                     offset,
+	const T&                     value
+)
+{
+	VERA_ASSERT_MSG(
+		node->type == ReflectionNodeType::Primitive,
+		"attempt to write a non-primitive type with a basic type writer");
+	VERA_ASSERT_MSG(
+		offset + sizeof(T) <= storage->block.size(),
+		"attempt to write beyond the bounds of the block storage");
+	VERA_ASSERT_MSG(
+		node->getPrimitiveType() == primitive_type_v<T>,
+		"mismatched primitive type in basic type writer");
+
+	auto* ptr = storage->block.data() + offset;
+	*reinterpret_cast<T*>(ptr) = value;
+}
+
+template <class T>
+static void write_matrix_value(
+	const ReflectionNode*        node,
+	ShaderParameterBlockStorage* storage,
+	uint32_t                     offset,
+	const T&                     value
+)
+{
+	VERA_ASSERT_MSG(
+		node->type == ReflectionNodeType::Primitive,
+		"attempt to write a non-primitive type with a basic type writer");
+	VERA_ASSERT_MSG(
+		offset + sizeof(T) <= storage->block.size(),
+		"attempt to write beyond the bounds of the block storage");
+	VERA_ASSERT_MSG(
+		node->getPrimitiveType() == primitive_type_v<T>,
+		"mismatched primitive type in basic type writer");
+
+	auto* ptr = storage->block.data() + offset;
+
+	if constexpr (std::is_same_v<T, rfloat2x3>) {
+		*reinterpret_cast<float3*>(ptr)      = value[0];
+		*reinterpret_cast<float3*>(ptr + 16) = value[1];
+	} else if constexpr (std::is_same_v<T, rfloat3x3>) {
+		*reinterpret_cast<float3*>(ptr)      = value[0];
+		*reinterpret_cast<float3*>(ptr + 16) = value[1];
+		*reinterpret_cast<float3*>(ptr + 32) = value[2];
+	} else if constexpr (std::is_same_v<T, rfloat4x3>) {
+		*reinterpret_cast<float3*>(ptr)      = value[0];
+		*reinterpret_cast<float3*>(ptr + 16) = value[1];
+		*reinterpret_cast<float3*>(ptr + 32) = value[2];
+		*reinterpret_cast<float3*>(ptr + 48) = value[3];
+	} else if constexpr (std::is_same_v<T, cfloat2x3>) {
+		*reinterpret_cast<float3*>(ptr)      = value[0];
+		*reinterpret_cast<float3*>(ptr + 16) = value[1];
+	} else if constexpr (std::is_same_v<T, cfloat3x3>) {
+		*reinterpret_cast<float3*>(ptr)      = value[0];
+		*reinterpret_cast<float3*>(ptr + 16) = value[1];
+		*reinterpret_cast<float3*>(ptr + 32) = value[2];
+	} else if constexpr (std::is_same_v<T, cfloat4x3>) {
+		*reinterpret_cast<float3*>(ptr)      = value[0];
+		*reinterpret_cast<float3*>(ptr + 16) = value[1];
+		*reinterpret_cast<float3*>(ptr + 32) = value[2];
+		*reinterpret_cast<float3*>(ptr + 48) = value[3];
+	} else {
+		*reinterpret_cast<T*>(ptr) = value;
+	}
+}
+
 ShaderVariable::ShaderVariable(
 	ShaderParameterImpl*         impl,
 	const ReflectionNode*        node,
 	ShaderParameterBlockStorage* block,
+	uint32_t                     array_idx,
 	uint32_t                     offset
 ) :
 	m_impl(impl),
 	m_node(node),
 	m_block(block),
+	m_array_idx(array_idx),
 	m_offset(offset) {}
 
 bool ShaderVariable::isRoot() const VERA_NOEXCEPT
@@ -145,28 +275,28 @@ ShaderVariable ShaderVariable::at(std::string_view name) const
 		if (m_node->type == ReflectionNodeType::Struct) {
 			return ShaderVariable(
 				m_impl,
-				it->second,
+				member_node,
 				m_block,
+				m_array_idx,
 				m_offset + member_node->getOffset());
-
 		} else if (m_node->type == ReflectionNodeType::Root) {
 			ShaderParameterBlockStorage* block = nullptr;
 
 			if (member_node->type == ReflectionNodeType::PushConstant) {
 				block = &m_impl->pushConstantStorage;
-			} else {
+			} else if ((member_node->type == ReflectionNodeType::DescriptorBlock)) {
 				auto& set_state = m_impl->setStates[member_node->getSet()];
-				auto  it        = set_state.bindingRanges.find(member_node->getBinding());
+				auto  it        = set_state.bindingStates.find(member_node->getBinding());
 
-				if (it == set_state.bindingRanges.end())
+				if (it == set_state.bindingStates.end())
 					throw Exception("invalid descriptor array member access");
 
 				block = &set_state.blockStorages[it->second.blockRange.first()];
 			}
 
-			return { m_impl, it->second, block, 0 };
+			return { m_impl, member_node, block, 0, 0 };
 		} else {
-			return { m_impl, it->second, m_block, 0 };
+			return { m_impl, member_node, m_block, 0, member_node->getOffset() };
 		}
 	}
 
@@ -187,6 +317,7 @@ ShaderVariable ShaderVariable::at(uint32_t idx) const
 			m_impl,
 			m_node->getElementNode(),
 			m_block,
+			m_array_idx,
 			m_offset + idx * m_node->getStride()
 		};
 	} else /* m_node->type == ReflectionNodeType::DescriptorArray */ {
@@ -194,6 +325,7 @@ ShaderVariable ShaderVariable::at(uint32_t idx) const
 			m_impl,
 			m_node->getElementNode(),
 			m_block + idx,
+			idx,
 			0
 		};
 	}
@@ -221,6 +353,7 @@ ShaderVariable ShaderVariable::operator[](std::string_view name) const VERA_NOEX
 				m_impl,
 				it->second,
 				m_block,
+				m_array_idx,
 				m_offset + member_node->getOffset());
 
 		} else if (m_node->type == ReflectionNodeType::Root) {
@@ -228,19 +361,19 @@ ShaderVariable ShaderVariable::operator[](std::string_view name) const VERA_NOEX
 
 			if (member_node->type == ReflectionNodeType::PushConstant) {
 				block = &m_impl->pushConstantStorage;
-			} else {
+			} else if (member_node->type == ReflectionNodeType::DescriptorBlock) {
 				auto& set_state = m_impl->setStates[member_node->getSet()];
-				auto  it        = set_state.bindingRanges.find(member_node->getBinding());
+				auto  it        = set_state.bindingStates.find(member_node->getBinding());
 
-				VERA_ASSERT_MSG(it != set_state.bindingRanges.end(),
+				VERA_ASSERT_MSG(it != set_state.bindingStates.end(),
 					"invalid descriptor array member access");
 
 				block = &set_state.blockStorages[it->second.blockRange.first()];
 			}
 
-			return { m_impl, it->second, block, 0 };
+			return { m_impl, member_node, block, 0, 0 };
 		} else {
-			return { m_impl, it->second, m_block, 0 };
+			return { m_impl, member_node, m_block, 0, member_node->getOffset() };
 		}
 	}
 
@@ -258,6 +391,7 @@ ShaderVariable ShaderVariable::operator[](uint32_t idx) const VERA_NOEXCEPT
 			m_impl,
 			m_node->getElementNode(),
 			m_block,
+			m_array_idx,
 			m_offset + idx * m_node->getStride()
 		};
 	} else /* m_node->type == ReflectionNodeType::DescriptorArray */ {
@@ -265,6 +399,7 @@ ShaderVariable ShaderVariable::operator[](uint32_t idx) const VERA_NOEXCEPT
 			m_impl,
 			m_node->getElementNode(),
 			m_block + idx,
+			idx,
 			0
 		};
 	}
@@ -272,28 +407,561 @@ ShaderVariable ShaderVariable::operator[](uint32_t idx) const VERA_NOEXCEPT
 
 void ShaderVariable::setSampler(obj<Sampler> sampler)
 {
+	if (m_impl == nullptr)
+		throw Exception("attempt to set a sampler on an empty variable");
+	if (m_node->type != ReflectionNodeType::Descriptor)
+		throw Exception("attempt to set a sampler on a non-descriptor variable");
+	if (auto desc_type = m_node->getDescriptorType();
+		desc_type != DescriptorType::Sampler &&
+		desc_type != DescriptorType::CombinedTextureSampler)
+		throw Exception("attempt to set a sampler on a non-sampler descriptor");
+
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	m_impl->setStates[m_node->getSet()].writeSampler(
+		std::move(sampler),
+		m_node->getBinding(),
+		m_array_idx);
 }
 
 void ShaderVariable::setTextureView(obj<TextureView> texture_view)
 {
+	if (m_impl == nullptr)
+		throw Exception("attempt to set a texture view on an empty variable");
+	if (m_node->type != ReflectionNodeType::Descriptor)
+		throw Exception("attempt to set a texture view on a non-descriptor variable");
+	if (auto desc_type = m_node->getDescriptorType();
+		desc_type != DescriptorType::CombinedTextureSampler &&
+		desc_type != DescriptorType::SampledTexture &&
+		desc_type != DescriptorType::StorageTexture)
+		throw Exception("attempt to set a texture view on a non-texture descriptor");
+
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	m_impl->setStates[m_node->getSet()].writeTextureView(
+		std::move(texture_view),
+		m_node->getBinding(),
+		m_array_idx);
 }
 
 void ShaderVariable::setBufferView(obj<BufferView> buffer_view)
 {
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	m_impl->setStates[m_node->getSet()].writeBufferView(
+		std::move(buffer_view),
+		m_node->getBinding(),
+		m_array_idx);
 }
 
 void ShaderVariable::setBuffer(obj<Buffer> buffer, size_t offset, size_t range)
 {
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	m_impl->setStates[m_node->getSet()].writeBuffer(
+		std::move(buffer),
+		offset,
+		range,
+		m_node->getBinding(),
+		m_array_idx);
 }
 
-void setValue(const float value)
+void ShaderVariable::setValue(const bool value)
 {
-
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
 }
 
-void setValue(const float4& value)
+void ShaderVariable::setValue(const int8_t value)
 {
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
 
+void ShaderVariable::setValue(const uint8_t value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const int16_t value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uint16_t value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const int32_t value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uint32_t value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const int64_t value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uint64_t value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const float value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const double value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_scalar_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const bool2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const bool3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const bool4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const char2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const char3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const char4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uchar2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uchar3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uchar4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const short2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const short3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const short4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const ushort2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const ushort3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const ushort4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const int2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const int3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const int4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uint2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uint3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const uint4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const long2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const long3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const long4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const ulong2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const ulong3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const ulong4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const float2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const float3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const float4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const double2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const double3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const double4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_vector_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat2x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat2x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat2x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat3x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat3x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat3x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat4x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat4x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rfloat4x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble2x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble2x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble2x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble3x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble3x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble3x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble4x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble4x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const rdouble4x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat2x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat2x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat2x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat3x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat3x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat3x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat4x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat4x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cfloat4x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble2x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble2x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble2x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble3x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble3x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble3x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble4x2& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble4x3& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setValue(const cdouble4x4& value)
+{
+	m_impl->prepareDescriptorWrite(m_node->getSet(), m_node->getBinding(), m_array_idx);
+	write_matrix_value(m_node, m_block, m_offset, value);
+}
+
+void ShaderVariable::setBindless(bool enable)
+{
+	if (m_impl == nullptr)
+		throw Exception("attempt to set bindless on an empty variable");
+	if (!m_block || m_node->getSet() == UINT32_MAX)
+		throw Exception("attempt to set bindless on a non-descriptor variable");
+
+	m_impl->setBindless(m_node->getSet(), m_node->getBinding(), enable);
+}
+
+bool ShaderVariable::isBindless() const VERA_NOEXCEPT
+{
+	if (!m_impl || !m_block || m_node->getSet() == UINT32_MAX)
+		return false;
+
+	return m_impl->isBindless(m_node->getSet(), m_node->getBinding());
 }
 
 bool ShaderVariable::empty() const VERA_NOEXCEPT

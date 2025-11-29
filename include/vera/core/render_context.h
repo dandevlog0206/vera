@@ -32,7 +32,7 @@ public:
 	VERA_NODISCARD uint32_t getFrameCount() const;
 	VERA_NODISCARD const RenderFrame& getCurrentFrame() const;
 
-	VERA_NODISCARD CommandBufferSync getCommandBufferSync() const;
+	VERA_NODISCARD CommandSync getSync() const;
 
 	void transitionImageLayout(
 		ref<Texture>   texture,
@@ -57,7 +57,7 @@ public:
 		uint32_t             idx_off,
 		uint32_t             vtx_off);
 
-	void submit();
+	void submit(const SubmitInfo& info = {});
 };
 
 VERA_NAMESPACE_END

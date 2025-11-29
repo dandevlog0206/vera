@@ -8,6 +8,7 @@
 #include "../../../include/vera/util/flag.h"
 #include <memory_resource>
 #include <string_view>
+#include <unordered_map>
 
 namespace spv_reflect
 {
@@ -33,12 +34,14 @@ class ReflectionPrimitiveNode;
  * offset0  - type
  * offset4  - stageFlags
  * offset8  - name
- * offset16 - descriptorType / offset
- * offset20 - set / paddedSize
- * offset24 - memberNodes / binding / primitiveType
- * offset32 - nameMap / block / elementNode
+ * offset16 - set
+ * offset20 - binding
+ * offset24 - descriptorType / offset
+ * offset28 - paddedSize
+ * offset32 - memberNodes / block / elementNode / primitiveType
  * offset40 - elementCount
  * offset44 - stride
+ * offset48 - nameMap
  */
 
 enum class ReflectionTargetFlagBits VERA_ENUM
@@ -119,6 +122,8 @@ enum class ReflectionNodeType VERA_ENUM
 	Struct          = static_cast<uint32_t>(
 		ReflectionPropertyFlagBits::Type |
 		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::Set |
+		ReflectionPropertyFlagBits::Binding |
 		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::PaddedSize |
 		ReflectionPropertyFlagBits::MemberNodes |
@@ -127,6 +132,8 @@ enum class ReflectionNodeType VERA_ENUM
 	Array           = static_cast<uint32_t>(
 		ReflectionPropertyFlagBits::Type |
 		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::Set |
+		ReflectionPropertyFlagBits::Binding |
 		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::PaddedSize |
 		ReflectionPropertyFlagBits::ElementNode |
@@ -136,6 +143,8 @@ enum class ReflectionNodeType VERA_ENUM
 	Primitive       = static_cast<uint32_t>(
 		ReflectionPropertyFlagBits::Type |
 		ReflectionPropertyFlagBits::Name |
+		ReflectionPropertyFlagBits::Set |
+		ReflectionPropertyFlagBits::Binding |
 		ReflectionPropertyFlagBits::Offset |
 		ReflectionPropertyFlagBits::PaddedSize |
 		ReflectionPropertyFlagBits::PrimitiveType)
@@ -149,8 +158,10 @@ typedef std::pmr::polymorphic_allocator<std::pair<std::string_view,
 typedef std::pmr::polymorphic_allocator<std::pair<uint64_t, const ReflectionDescriptorNode*>>
 	ReflectionDescriptorBindingAllocator;
 
-typedef ska::flat_hash_map<std::string_view, const ReflectionNode*, std::hash<std::string_view>,
-	std::equal_to<std::string_view>, ReflectionNameMapAllocator> ReflectionNameMap;
+//typedef ska::flat_hash_map<std::string_view, const ReflectionNode*, std::hash<std::string_view>,
+//	std::equal_to<std::string_view>, ReflectionNameMapAllocator> ReflectionNameMap;
+
+typedef std::pmr::unordered_map<std::string_view, const ReflectionNode*> ReflectionNameMap;
 
 typedef ska::flat_hash_map<uint64_t, const ReflectionDescriptorNode*, std::hash<uint64_t>, std::equal_to<uint64_t>,
 	ReflectionDescriptorBindingAllocator> ReflectionBindingMap;
@@ -163,18 +174,18 @@ public:
 	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Type>           = 0;
 	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::StageFlags>     = 4;
 	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Name>           = 8;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::DescriptorType> = 16;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Offset>         = 16;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Set>            = 20;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::PaddedSize>     = 20;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::MemberNodes>    = 24;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Binding>        = 24;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::PrimitiveType>  = 24;
-	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::NameMap>        = 40;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Set>            = 16;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Binding>        = 20;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::DescriptorType> = 24;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Offset>         = 24;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::PaddedSize>     = 28;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::MemberNodes>    = 32;
 	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Block>          = 32;
 	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::ElementNode>    = 32;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::PrimitiveType>  = 32;
 	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::ElementCount>   = 40;
 	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::Stride>         = 44;
+	template <> static VERA_CONSTEXPR size_t prop_off_v<ReflectionPropertyFlagBits::NameMap>        = 48;
 
 	ReflectionNodeType type;
 
@@ -382,6 +393,8 @@ public:
 //	ReflectionNodeType type;
 	ShaderStageFlags   stageFlags;
 	const char*        name;
+	uint32_t           set;
+	uint32_t           binding;
 	uint32_t           offset;
 	uint32_t           paddedSize;
 };
@@ -407,10 +420,10 @@ public:
 	uint32_t                                  setCount;
 	uint32_t                                  minSet;
 	uint32_t                                  maxSet;
-	array_view<const ReflectionResourceNode*> memberNodes;
-	ReflectionNameMap                         nameMap;
 	uint32_t                                  descriptorCount;
 	uint32_t                                  pushConstantCount;
+	array_view<const ReflectionResourceNode*> memberNodes;
+	ReflectionNameMap                         nameMap;
 	array_view<ReflectionSetRange>            setRanges;
 	ReflectionBindingMap                      bindingMap;
 
@@ -436,9 +449,9 @@ public:
 //	ReflectionNodeType type;
 //	ShaderStageFlags   stageFlags;
 //	const char*        name;
-	DescriptorType     descriptorType;
 	uint32_t           set;
 	uint32_t           binding;
+	DescriptorType     descriptorType;
 	VERA_MEMBER_PADDING(uint32_t)
 };
 
@@ -448,9 +461,9 @@ public:
 //	ReflectionNodeType              type;
 //	ShaderStageFlags                stageFlags;
 //	const char*                     name;
-//	DescriptorType                  descriptorType;
 //	uint32_t                        set;
 //	uint32_t                        binding;
+//	DescriptorType                  descriptorType;
 //	VERA_MEMBER_PADDING(uint32_t)
 	const ReflectionDescriptorNode* elementNode;
 	uint32_t                        elementCount;
@@ -463,9 +476,9 @@ public:
 //	ReflectionNodeType          type;
 //	ShaderStageFlags            stageFlags;
 //	const char*                 name;
-//	DescriptorType              descriptorType;
 //	uint32_t                    set;
 //	uint32_t                    binding;
+//	DescriptorType              descriptorType;
 //	VERA_MEMBER_PADDING(uint32_t)
 	const ReflectionStructNode* block;
 };
@@ -476,9 +489,10 @@ public:
 //	ReflectionNodeType          type;
 //	ShaderStageFlags            stageFlags;
 //	const char*                 name;
+	VERA_MEMBER_PADDING(uint32_t)
+	VERA_MEMBER_PADDING(uint32_t)
 	uint32_t                    offset;
 	uint32_t                    paddedSize;
-	VERA_MEMBER_PADDING(uint32_t)
 	const ReflectionStructNode* block;
 };
 
@@ -488,9 +502,10 @@ public:
 //	ReflectionNodeType                     type;
 //	ShaderStageFlags                       stageFlags;
 //	const char*                            name;
+//	uint32_t                               set;
+//	uint32_t                               binding;
 //	uint32_t                               offset;
 //	uint32_t                               paddedSize;
-//	VERA_MEMBER_PADDING(uint32_t)
 	array_view<const ReflectionBlockNode*> memberNodes;
 	ReflectionNameMap                      nameMap;
 };
@@ -501,11 +516,10 @@ public:
 //	ReflectionNodeType         type;
 //	ShaderStageFlags           stageFlags;
 //	const char*                name;
+//	uint32_t                   set;
+//	uint32_t                   binding;
 //	uint32_t                   offset;
 //	uint32_t                   paddedSize;
-//	VERA_MEMBER_PADDING(uint32_t)
-	VERA_MEMBER_PADDING(uint32_t)
-	VERA_MEMBER_PADDING(uint32_t)
 	const ReflectionBlockNode* elementNode;
 	uint32_t                   elementCount;
 	uint32_t                   stride;
@@ -517,6 +531,8 @@ public:
 //	ReflectionNodeType      type;
 //	ShaderStageFlags        stageFlags;
 //	const char*             name;
+//	uint32_t                set;
+//	uint32_t                binding;
 //	uint32_t                offset;
 //	uint32_t                paddedSize;
 	ReflectionPrimitiveType primitiveType;

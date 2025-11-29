@@ -19,22 +19,22 @@ VERA_NAMESPACE_BEGIN
 
 static void append_render_frame(RenderContextImpl& impl, uint32_t at, uint64_t id)
 {
-	auto* render_frame = *impl.renderFrames.emplace(impl.renderFrames.cbegin() + at, new RenderContextFrame);
+	auto& render_frame = *impl.renderFrames.emplace(impl.renderFrames.cbegin() + at);
 
-	render_frame->commandBuffer     = CommandBuffer::create(impl.device);
-	render_frame->framebuffers      = {};
-	render_frame->commandBufferSync = {};
-	render_frame->frameID           = id;
+	render_frame.commandBuffer = CommandBuffer::create(impl.device);
+	render_frame.sync          = {};
+	render_frame.frameID       = id;
+	render_frame.framebuffers  = {};
 
-	render_frame->commandBuffer->begin();
+	render_frame.commandBuffer->begin();
 }
 
 static void reset_render_frame(RenderContextImpl& impl, RenderContextFrame& render_frame, uint64_t id)
 {
 	render_frame.commandBuffer->reset();
 	render_frame.framebuffers.clear();
-	render_frame.commandBufferSync = {};
-	render_frame.frameID           = id;
+	render_frame.sync    = {};
+	render_frame.frameID = id;
 
 	render_frame.commandBuffer->begin();
 }
@@ -42,11 +42,11 @@ static void reset_render_frame(RenderContextImpl& impl, RenderContextFrame& rend
 static void render_context_next_frame(RenderContextImpl& impl)
 {
 	auto  next_idx   = (impl.frameIndex + 1) % static_cast<int32_t>(impl.renderFrames.size());
-	auto& curr_frame = *impl.renderFrames[impl.frameIndex];
-	auto& next_frame = *impl.renderFrames[next_idx];
-	auto& next_sync  = next_frame.commandBufferSync;
+	auto& curr_frame = impl.renderFrames[impl.frameIndex];
+	auto& next_frame = impl.renderFrames[next_idx];
+	auto& next_sync  = next_frame.sync;
 
-	curr_frame.commandBufferSync = curr_frame.commandBuffer->getSync();
+	curr_frame.sync = curr_frame.commandBuffer->getSync();
 	impl.currentFrameID++;
 
 	if (next_idx != impl.frameIndex && (next_sync.empty() || next_sync.isComplete())) {
@@ -56,7 +56,7 @@ static void render_context_next_frame(RenderContextImpl& impl)
 		append_render_frame(impl, impl.frameIndex + 1, impl.currentFrameID);
 		impl.frameIndex = impl.frameIndex + 1;
 	} else {
-		next_frame.commandBufferSync.waitForComplete();
+		next_frame.sync.wait();
 
 		reset_render_frame(impl, next_frame, impl.currentFrameID);
 		impl.frameIndex = next_idx;
@@ -65,7 +65,7 @@ static void render_context_next_frame(RenderContextImpl& impl)
 
 static RenderContextFrame& get_current_frame(RenderContextImpl& impl)
 {
-	return *impl.renderFrames[impl.frameIndex];
+	return impl.renderFrames[impl.frameIndex];
 }
 
 obj<RenderContext> RenderContext::create(obj<Device> device, const RenderContextCreateInfo& info)
@@ -88,9 +88,6 @@ RenderContext::~RenderContext() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 
-	for (auto* frame_ptr : impl.renderFrames)
-		delete frame_ptr;
-
 	destroyObjectImpl(this);
 }
 
@@ -103,7 +100,7 @@ obj<CommandBuffer> RenderContext::getRenderCommand()
 {
 	auto& impl = getImpl(this);
 
-	return impl.renderFrames[impl.frameIndex]->commandBuffer;
+	return impl.renderFrames[impl.frameIndex].commandBuffer;
 }
 
 uint32_t RenderContext::getCurrentFrameIndex() const
@@ -119,15 +116,13 @@ VERA_NODISCARD uint32_t RenderContext::getFrameCount() const
 VERA_NODISCARD const RenderFrame& RenderContext::getCurrentFrame() const
 {
 	auto& impl = getImpl(this);
-
-	return *impl.renderFrames[impl.frameIndex];
+	return impl.renderFrames[impl.frameIndex];
 }
 
-CommandBufferSync RenderContext::getCommandBufferSync() const
+CommandSync RenderContext::getSync() const
 {
 	auto& impl = getImpl(this);
-
-	return impl.renderFrames[impl.frameIndex]->commandBufferSync;
+	return impl.renderFrames[impl.frameIndex].sync;
 }
 
 void RenderContext::transitionImageLayout(ref<Texture> texture, TextureLayout old_layout, TextureLayout new_layout)
@@ -173,7 +168,7 @@ void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32
 
 		// Identify swapchain image and save for future use
 		if (texture_impl.textureUsage.has(TextureUsageFlagBits::FrameBuffer)) {
-			auto& render_frame = *impl.renderFrames[impl.frameIndex];
+			auto& render_frame = impl.renderFrames[impl.frameIndex];
 
 			// TODO: optimize
 			if (std::none_of(VERA_SPAN(render_frame.framebuffers),
@@ -183,18 +178,18 @@ void RenderContext::draw(const GraphicsState& states, uint32_t vtx_count, uint32
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.commandBufferSync = render_frame.commandBuffer->getSync();
+				framebuffer_impl.commandSync = render_frame.commandBuffer->getSync();
+
+				cmd->transitionImageLayout(
+					color.texture,
+					vr::PipelineStageFlagBits::ColorAttachmentOutput,
+					vr::PipelineStageFlagBits::ColorAttachmentOutput,
+					vr::AccessFlagBits{},
+					vr::AccessFlagBits::ColorAttachmentWrite,
+					vr::TextureLayout::Undefined,
+					vr::TextureLayout::ColorAttachmentOptimal);
 			}
 		}
-
-		cmd->transitionImageLayout(
-			color.texture,
-			vr::PipelineStageFlagBits::ColorAttachmentOutput,
-			vr::PipelineStageFlagBits::ColorAttachmentOutput,
-			vr::AccessFlagBits{},
-			vr::AccessFlagBits::ColorAttachmentWrite,
-			vr::TextureLayout::Undefined,
-			vr::TextureLayout::ColorAttachmentOptimal);
 	}
 
 	cmd->bindGraphicsState(states);
@@ -217,7 +212,7 @@ void RenderContext::draw(
 
 		// Identify swapchain image and save for future use
 		if (texture_impl.textureUsage.has(TextureUsageFlagBits::FrameBuffer)) {
-			auto& render_frame = *impl.renderFrames[impl.frameIndex];
+			auto& render_frame = impl.renderFrames[impl.frameIndex];
 
 			// TODO: optimize
 			if (std::none_of(VERA_SPAN(render_frame.framebuffers),
@@ -227,22 +222,22 @@ void RenderContext::draw(
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.commandBufferSync = render_frame.commandBuffer->getSync();
+				framebuffer_impl.commandSync = render_frame.commandBuffer->getSync();
+
+				cmd->transitionImageLayout(
+					color.texture,
+					vr::PipelineStageFlagBits::ColorAttachmentOutput,
+					vr::PipelineStageFlagBits::ColorAttachmentOutput,
+					vr::AccessFlagBits{},
+					vr::AccessFlagBits::ColorAttachmentWrite,
+					vr::TextureLayout::Undefined,
+					vr::TextureLayout::ColorAttachmentOptimal);
 			}
 		}
-
-		cmd->transitionImageLayout(
-			color.texture,
-			vr::PipelineStageFlagBits::ColorAttachmentOutput,
-			vr::PipelineStageFlagBits::ColorAttachmentOutput,
-			vr::AccessFlagBits{},
-			vr::AccessFlagBits::ColorAttachmentWrite,
-			vr::TextureLayout::Undefined,
-			vr::TextureLayout::ColorAttachmentOptimal);
 	}
 
 	cmd->bindGraphicsState(states);
-	// cmd->bindShaderParameter(param);
+	cmd->bindShaderParameter(param);
 
 	cmd->draw(vtx_count, 1, vtx_off, 0);
 }
@@ -263,7 +258,7 @@ void RenderContext::drawIndexed(
 
 		// Identify swapchain image and save for future use
 		if (texture_impl.textureUsage.has(TextureUsageFlagBits::FrameBuffer)) {
-			auto& render_frame = *impl.renderFrames[impl.frameIndex];
+			auto& render_frame = impl.renderFrames[impl.frameIndex];
 
 			// TODO: optimize
 			if (std::none_of(VERA_SPAN(render_frame.framebuffers),
@@ -273,18 +268,18 @@ void RenderContext::drawIndexed(
 				auto& framebuffer_impl = getImpl(texture_impl.frameBuffer);
 				
 				render_frame.framebuffers.push_back(texture_impl.frameBuffer);
-				framebuffer_impl.commandBufferSync = render_frame.commandBuffer->getSync();
+				framebuffer_impl.commandSync = render_frame.commandBuffer->getSync();
+
+				cmd->transitionImageLayout(
+					color.texture,
+					vr::PipelineStageFlagBits::ColorAttachmentOutput,
+					vr::PipelineStageFlagBits::ColorAttachmentOutput,
+					vr::AccessFlagBits{},
+					vr::AccessFlagBits::ColorAttachmentWrite,
+					vr::TextureLayout::Undefined,
+					vr::TextureLayout::ColorAttachmentOptimal);
 			}
 		}
-
-		cmd->transitionImageLayout(
-			color.texture,
-			vr::PipelineStageFlagBits::ColorAttachmentOutput,
-			vr::PipelineStageFlagBits::ColorAttachmentOutput,
-			vr::AccessFlagBits{},
-			vr::AccessFlagBits::ColorAttachmentWrite,
-			vr::TextureLayout::Undefined,
-			vr::TextureLayout::ColorAttachmentOptimal);
 	}
 
 	cmd->bindGraphicsState(states);
@@ -293,11 +288,10 @@ void RenderContext::drawIndexed(
 	cmd->drawIndexed(idx_count, 1, idx_off, vtx_off, 0);
 }
 
-void RenderContext::submit()
+void RenderContext::submit(const SubmitInfo& info)
 {
 	auto& impl         = getImpl(this);
-	auto& device_impl  = getImpl(impl.device);
-	auto& render_frame = *impl.renderFrames[impl.frameIndex];
+	auto& render_frame = impl.renderFrames[impl.frameIndex];
 	auto& cmd_impl     = getImpl(render_frame.commandBuffer);
 
 	for (auto& framebuffer : render_frame.framebuffers)
@@ -308,33 +302,36 @@ void RenderContext::submit()
 
 	render_frame.commandBuffer->end();
 
-	cmd_impl.state = CommandBufferState::Submitted;
+	small_vector<vk::Semaphore, 8>          wait_semaphores;
+	small_vector<vk::PipelineStageFlags, 8> wait_stages;
+	small_vector<vk::Semaphore, 8>          signal_semaphores;
+
+	for (auto& framebuffer : render_frame.framebuffers) {
+		if (auto& framebuffer_impl = getImpl(framebuffer); framebuffer_impl.waitSemaphore) {
+			wait_semaphores.push_back(get_vk_semaphore(framebuffer_impl.waitSemaphore));
+			wait_stages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		}
+	}
+	for (auto& wait_info : info.waitInfos) {
+		wait_semaphores.push_back(get_vk_semaphore(wait_info.semaphore));
+		wait_stages.push_back(to_vk_pipeline_stage_flags(wait_info.stageMask));
+	}
+	
+	for (auto& signal_info : info.signalInfos)
+		signal_semaphores.push_back(get_vk_semaphore(signal_info.semaphore));
+
+	signal_semaphores.push_back(get_vk_semaphore(cmd_impl.tracker->semaphore));
 
 	vk::SubmitInfo submit_info;
+	submit_info.waitSemaphoreCount   = static_cast<uint32_t>(wait_semaphores.size());
+	submit_info.pWaitSemaphores      = wait_semaphores.data();
+	submit_info.pWaitDstStageMask    = wait_stages.data();
 	submit_info.commandBufferCount   = 1;
 	submit_info.pCommandBuffers      = &cmd_impl.vkCommandBuffer;
-	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores    = &get_vk_semaphore(cmd_impl.semaphore);
+	submit_info.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size());
+	submit_info.pSignalSemaphores    = signal_semaphores.data();
 
-	static_vector<vk::Semaphore, 32>          semaphores;
-	static_vector<vk::PipelineStageFlags, 32> stage_masks;
-
-	if (!render_frame.framebuffers.empty()) {
-		for (auto& framebuffer : render_frame.framebuffers) {
-			auto& framebuffer_impl = getImpl(framebuffer);
-
-			if (!framebuffer_impl.waitSemaphore) continue;
-
-			semaphores.push_back(get_vk_semaphore(framebuffer_impl.waitSemaphore));
-			stage_masks.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-		}
-
-		submit_info.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
-		submit_info.pWaitSemaphores    = semaphores.data();
-		submit_info.pWaitDstStageMask  = stage_masks.data();
-	}
-
-	device_impl.vkGraphicsQueue.submit(submit_info, get_vk_fence(cmd_impl.fence));
+	cmd_impl.submitToDedicatedQueue(submit_info);
 
 	render_context_next_frame(impl);
 }

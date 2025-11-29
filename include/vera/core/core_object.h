@@ -61,7 +61,7 @@ public:
 	}
 
 	template <class Object>
-	VERA_NODISCARD VERA_INLINE static typename Object::impl_type& getImpl(weak_obj<Object>& obj) VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE static typename Object::impl_type& getImpl(wref<Object>& obj) VERA_NOEXCEPT
 	{
 		static_assert(std::is_base_of_v<CoreObject, Object>);
 
@@ -69,7 +69,7 @@ public:
 	}
 
 	template <class Object>
-	VERA_NODISCARD VERA_INLINE static const typename Object::impl_type& getImpl(const weak_obj<Object>& obj) VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE static const typename Object::impl_type& getImpl(const wref<Object>& obj) VERA_NOEXCEPT
 	{
 		static_assert(std::is_base_of_v<CoreObject, Object>);
 
@@ -85,7 +85,7 @@ public:
 	}
 
 	template <class Object>
-	VERA_NODISCARD VERA_INLINE static const typename Object::impl_type& getImpl(const_ref<Object> obj) VERA_NOEXCEPT
+	VERA_NODISCARD VERA_INLINE static const typename Object::impl_type& getImpl(cref<Object> obj) VERA_NOEXCEPT
 	{
 		static_assert(std::is_base_of_v<CoreObject, Object>);
 
@@ -116,7 +116,16 @@ protected:
 	{
 		static_assert(std::is_base_of_v<CoreObject, Object>);
 
-		return obj<Object>(static_cast<Object*>(new typename Object::pair_type));
+		using pair_type = typename Object::pair_type;
+		using impl_type = typename Object::impl_type;
+
+		size_t pair_size = sizeof(pair_type);
+		auto*  raw_mem   = reinterpret_cast<std::byte*>(operator new(pair_size));
+
+		::new (raw_mem) Object;
+		::new (raw_mem + offsetof(pair_type, second)) impl_type;
+
+		return obj<Object>(reinterpret_cast<Object*>(raw_mem));
 	}
 
 	template <class Object>

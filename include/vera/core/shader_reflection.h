@@ -17,7 +17,7 @@ class ShaderReflection : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(ShaderReflection)
 public:
-	static VERA_NODISCARD obj<ShaderReflection> create(obj<Device> device, const_ref<Shader> shader);
+	static VERA_NODISCARD obj<ShaderReflection> create(obj<Device> device, cref<Shader> shader);
 	static VERA_NODISCARD obj<ShaderReflection> create(obj<Device> device, array_view<uint32_t> spirv_code);
 	~ShaderReflection() VERA_NOEXCEPT override;
 

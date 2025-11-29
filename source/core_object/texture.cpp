@@ -90,7 +90,7 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
-const vk::Image& get_vk_image(const_ref<Texture> texture) VERA_NOEXCEPT
+const vk::Image& get_vk_image(cref<Texture> texture) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(texture).vkImage;
 }
@@ -132,6 +132,20 @@ obj<Texture> Texture::createStencil(obj<Device> device, uint32_t width, uint32_t
 
 	impl.textureUsage  = TextureUsageFlagBits::DepthStencilAttachment;
 	impl.textureAspect = TextureAspectFlagBits::Stencil;
+
+	return obj;
+}
+
+obj<Texture> Texture::create(obj<Device> device, const Image & image)
+{
+	auto obj = create(device, TextureCreateInfo{
+		.type       = TextureType::Texture2D,
+		.format     = image.format(),
+		.width      = image.width(),
+		.height     = image.height(),
+	});
+
+	obj->upload(image);
 
 	return obj;
 }
@@ -249,9 +263,7 @@ void Texture::upload(const Image& image)
 		vr::TextureLayout::ShaderReadOnlyOptimal);
 	command_buffer->end();
 
-	auto sync = command_buffer->submit();
-
-	sync.waitForComplete();
+	command_buffer->submit().wait();
 }
 
 obj<Device> Texture::getDevice()
@@ -332,7 +344,7 @@ extent3d Texture::extent() const
 	return { impl.width, impl.height, impl.depth };
 }
 
-const vk::ImageView& get_vk_image_view(const_ref<TextureView> texture_view) VERA_NOEXCEPT
+const vk::ImageView& get_vk_image_view(cref<TextureView> texture_view) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(texture_view).vkImageView;
 }
@@ -348,11 +360,12 @@ obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCrea
 	auto& impl         = getImpl(obj);
 	auto& texture_impl = getImpl(texture);
 	auto  vk_device    = get_vk_device(texture_impl.device);
+	auto  format       = info.format != Format::Unknown ? info.format : texture_impl.textureFormat;
 
 	vk::ImageViewCreateInfo view_info;
 	view_info.image                           = texture_impl.vkImage;
 	view_info.viewType                        = to_vk_image_view_type(info.type);
-	view_info.format                          = to_vk_format(info.format);
+	view_info.format                          = to_vk_format(format);
 	view_info.components.r                    = to_vk_component_swizzle(info.mapping.r);
 	view_info.components.g                    = to_vk_component_swizzle(info.mapping.g);
 	view_info.components.b                    = to_vk_component_swizzle(info.mapping.b);
@@ -370,7 +383,7 @@ obj<TextureView> TextureView::create(obj<Texture> texture, const TextureViewCrea
 	impl.height         = texture_impl.height;
 	impl.depth          = texture_impl.depth;
 	impl.type           = info.type;
-	impl.format         = info.format;
+	impl.format         = format;
 	impl.mapping        = info.mapping;
 	impl.aspectFlags    = info.aspectFlags;
 	impl.baseMipLevel   = info.baseMipLevel;

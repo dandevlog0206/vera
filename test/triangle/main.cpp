@@ -30,8 +30,8 @@ public:
 		});
 
 		m_pass = vr::GraphicsPass::create(m_device, vr::GraphicsPassCreateInfo{
-			.vertexShader   = vr::Shader::create(m_device, "shader/triangle.vert.glsl.spv"),
-			.fragmentShader = vr::Shader::create(m_device, "shader/triangle.frag.glsl.spv"),
+			.vertexShader   = vr::Shader::create(m_device, "spirv/triangle.vert.glsl.spv"),
+			.fragmentShader = vr::Shader::create(m_device, "spirv/triangle.frag.glsl.spv"),
 			.vertexCount    = 6
 		});
 

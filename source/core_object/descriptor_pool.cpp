@@ -33,7 +33,7 @@ static void invalidate_all_descriptor_sets(DescriptorPoolImpl& impl, bool destro
 	impl.allocatedSets.clear();
 }
 
-const vk::DescriptorPool& get_vk_descriptor_pool(const_ref<DescriptorPool> descriptor_pool) VERA_NOEXCEPT
+const vk::DescriptorPool& get_vk_descriptor_pool(cref<DescriptorPool> descriptor_pool) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(descriptor_pool).vkDescriptorPool;
 }
@@ -45,6 +45,26 @@ vk::DescriptorPool& get_vk_descriptor_pool(ref<DescriptorPool> descriptor_pool) 
 
 obj<DescriptorPool> DescriptorPool::create(obj<Device> device, const DescriptorPoolCreateInfo& info)
 {
+	static const vk::DescriptorPoolSize default_pool_sizes[] = {
+		{ vk::DescriptorType::eSampler,                            1000 },
+		{ vk::DescriptorType::eCombinedImageSampler,               1000 },
+		{ vk::DescriptorType::eSampledImage,                       1000 },
+		{ vk::DescriptorType::eStorageImage,                       1000 },
+		{ vk::DescriptorType::eUniformTexelBuffer,                 1000 },
+		{ vk::DescriptorType::eStorageTexelBuffer,                 1000 },
+		{ vk::DescriptorType::eUniformBuffer,                      1000 },
+		{ vk::DescriptorType::eStorageBuffer,                      1000 },
+		{ vk::DescriptorType::eUniformBufferDynamic,               1000 },
+		{ vk::DescriptorType::eStorageBufferDynamic,               1000 },
+		{ vk::DescriptorType::eInputAttachment,                    1000 },
+
+		// TODO: enable descriptor pool sizes for the following descriptor types when supported
+		// { vk::DescriptorType::eInlineUniformBlock,                 1000 },
+		// { vk::DescriptorType::eAccelerationStructureKHR,           1000 },
+		// { vk::DescriptorType::eAccelerationStructureNV,            1000 },
+		// { vk::DescriptorType::ePartitionedAccelerationStructureNV, 1000 }
+	};
+
 	auto  obj       = createNewCoreObject<DescriptorPool>();
 	auto& impl      = getImpl(obj);
 	auto  vk_device = get_vk_device(device);
@@ -53,26 +73,6 @@ obj<DescriptorPool> DescriptorPool::create(obj<Device> device, const DescriptorP
 	pool_info.flags = to_vk_descriptor_pool_create_flags(info.flags);
 
 	if (info.poolSizes.empty()) {
-		vk::DescriptorPoolSize default_pool_sizes[] = {
-			{ vk::DescriptorType::eSampler,                            1000 },
-			{ vk::DescriptorType::eCombinedImageSampler,               1000 },
-			{ vk::DescriptorType::eSampledImage,                       1000 },
-			{ vk::DescriptorType::eStorageImage,                       1000 },
-			{ vk::DescriptorType::eUniformTexelBuffer,                 1000 },
-			{ vk::DescriptorType::eStorageTexelBuffer,                 1000 },
-			{ vk::DescriptorType::eUniformBuffer,                      1000 },
-			{ vk::DescriptorType::eStorageBuffer,                      1000 },
-			{ vk::DescriptorType::eUniformBufferDynamic,               1000 },
-			{ vk::DescriptorType::eStorageBufferDynamic,               1000 },
-			{ vk::DescriptorType::eInputAttachment,                    1000 },
-
-			// TODO: enable descriptor pool sizes for the following descriptor types when supported
-			// { vk::DescriptorType::eInlineUniformBlock,                 1000 },
-			// { vk::DescriptorType::eAccelerationStructureKHR,           1000 },
-			// { vk::DescriptorType::eAccelerationStructureNV,            1000 },
-			// { vk::DescriptorType::ePartitionedAccelerationStructureNV, 1000 }
-		};
-
 		pool_info.maxSets       = info.maxSets;
 		pool_info.poolSizeCount = static_cast<uint32_t>(VERA_LENGTHOF(default_pool_sizes));
 		pool_info.pPoolSizes    = default_pool_sizes;
@@ -92,6 +92,12 @@ obj<DescriptorPool> DescriptorPool::create(obj<Device> device, const DescriptorP
 	impl.device           = std::move(device);
 	impl.vkDescriptorPool = vk_device.createDescriptorPool(pool_info);
 	impl.flags            = info.flags;
+	impl.maxSets          = pool_info.maxSets;
+
+	impl.poolSizes.assign(
+		reinterpret_cast<const DescriptorPoolSize*>(pool_info.pPoolSizes),
+		reinterpret_cast<const DescriptorPoolSize*>(pool_info.pPoolSizes) + pool_info.poolSizeCount
+	);
 
 	return obj;
 }
@@ -113,6 +119,21 @@ obj<Device> DescriptorPool::getDevice() VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
 	return impl.device;
+}
+
+DescriptorPoolCreateFlags DescriptorPool::getFlags() const VERA_NOEXCEPT
+{
+	return getImpl(this).flags;
+}
+
+array_view<DescriptorPoolSize> DescriptorPool::enumeratePoolSizes() const VERA_NOEXCEPT
+{
+	return getImpl(this).poolSizes;
+}
+
+uint32_t DescriptorPool::getMaxSets() const VERA_NOEXCEPT
+{
+	return getImpl(this).maxSets;
 }
 
 obj<DescriptorSet> DescriptorPool::allocate(obj<DescriptorSetLayout> layout) {

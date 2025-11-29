@@ -259,7 +259,7 @@ ref<FrameBuffer> Swapchain::acquireNextImage()
 
 	if (sync.imageIndex != -1) {
 		auto& framebuffer_impl = getImpl(impl.framebuffers[sync.imageIndex]);
-		framebuffer_impl.commandBufferSync.waitForComplete();
+		framebuffer_impl.commandSync.wait();
 	}
 
 	while (trial++ < 10) {
@@ -275,9 +275,9 @@ ref<FrameBuffer> Swapchain::acquireNextImage()
 			auto& framebuffer_impl = getImpl(framebuffer);
 			auto& texture_impl     = getImpl(framebuffer_impl.colorAttachment);
 
-			framebuffer_impl.waitSemaphore     = sync.waitSemaphore;
-			framebuffer_impl.commandBufferSync = {};
-			texture_impl.textureLayout         = TextureLayout::Undefined;
+			framebuffer_impl.waitSemaphore = sync.waitSemaphore;
+			framebuffer_impl.commandSync   = {};
+			texture_impl.textureLayout     = TextureLayout::Undefined;
 
 			return framebuffer;
 		} else if (result.result == vk::Result::eSuboptimalKHR || result.result == vk::Result::eNotReady) {
@@ -303,7 +303,7 @@ void Swapchain::present()
 	auto& impl         = getImpl(this);
 	auto& device_impl  = getImpl(impl.device);
 	auto& texture_impl = getImpl(impl.framebuffers[impl.acquiredImageIndex]);
-	auto  cmd_sync     = texture_impl.commandBufferSync;
+	auto  cmd_sync     = texture_impl.commandSync;
 
 	if (cmd_sync.empty())
 		throw Exception("swapchain image is not used in any draw commands");

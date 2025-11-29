@@ -76,7 +76,7 @@ static bool wait_timeline_semaphores(
 	throw Exception("failed to wait semaphore");
 }
 
-const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore) VERA_NOEXCEPT
+const vk::Semaphore& get_vk_semaphore(cref<Semaphore> semaphore) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(semaphore).vkSemaphore;
 }

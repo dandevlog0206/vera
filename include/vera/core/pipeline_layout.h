@@ -4,12 +4,12 @@
 #include "descriptor_set_layout.h"
 #include "shader_reflection.h"
 #include "../util/array_view.h"
-#include <vector>
-#include "program_reflection.h"
+#include "../util/small_vector.h"
 
 VERA_NAMESPACE_BEGIN
 
 class ShaderReflection;
+class ProgramReflection;
 
 struct PushConstantRange
 {
@@ -20,17 +20,17 @@ struct PushConstantRange
 
 struct PipelineLayoutCreateInfo
 {
-	std::vector<obj<DescriptorSetLayout>> descriptorSetLayouts = {};
-	std::vector<PushConstantRange>        pushConstantRanges   = {};
+	small_vector<obj<DescriptorSetLayout>> descriptorSetLayouts = {};
+	small_vector<PushConstantRange>        pushConstantRanges   = {};
 };
 
 class PipelineLayout : public CoreObject
 {
 	VERA_CORE_OBJECT_INIT(PipelineLayout)
 public:
-	static obj<PipelineLayout> create(obj<Device> device, array_view<const_ref<Shader>> shaders);
-	static obj<PipelineLayout> create(obj<Device> device, const_ref<ProgramReflection> program_reflection);
-	static obj<PipelineLayout> create(obj<Device> device, array_view<const_ref<ShaderReflection>> shader_reflections);
+	static obj<PipelineLayout> create(obj<Device> device, array_view<cref<Shader>> shaders);
+	static obj<PipelineLayout> create(obj<Device> device, cref<ProgramReflection> program_reflection);
+	static obj<PipelineLayout> create(obj<Device> device, array_view<cref<ShaderReflection>> shader_reflections);
 	static obj<PipelineLayout> create(obj<Device> device, const PipelineLayoutCreateInfo& info);
 	~PipelineLayout() VERA_NOEXCEPT override;
 
@@ -42,9 +42,9 @@ public:
 
 	VERA_NODISCARD array_view<PushConstantRange> getPushConstantRanges() const VERA_NOEXCEPT;
 
-	VERA_NODISCARD bool isCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
-	VERA_NODISCARD bool isDescriptorSetLayoutCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
-	VERA_NODISCARD bool isPushConstantCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
+	VERA_NODISCARD bool isCompatible(cref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
+	VERA_NODISCARD bool isDescriptorSetLayoutCompatible(cref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
+	VERA_NODISCARD bool isPushConstantCompatible(cref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT;
 
 	VERA_NODISCARD size_t hash() const VERA_NOEXCEPT;
 };

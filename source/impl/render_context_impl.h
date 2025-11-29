@@ -2,6 +2,7 @@
 
 #include "object_impl.h"
 #include "../../include/vera/core/render_frame.h"
+#include "../../include/vera/core/command_stream.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -9,13 +10,14 @@ struct RenderContextFrame : RenderFrame
 {
 	using FrameBuffers = std::vector<ref<FrameBuffer>>;
 
-	FrameBuffers framebuffers;
+	FrameBuffers        framebuffers = {};
+	obj<CommandStream>  stream       = {};
 };
 
 class RenderContextImpl
 {
 public:
-	using RenderContextFrames = std::vector<RenderContextFrame*>;
+	using RenderContextFrames = std::vector<RenderContextFrame>;
 
 	obj<Device>         device            = {};
 

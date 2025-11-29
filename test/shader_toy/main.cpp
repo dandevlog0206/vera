@@ -12,8 +12,7 @@ public:
 	MyApp() :
 		m_mouse_pos(0.f, 0.f),
 		m_time(0.f),
-		m_pause(false),
-		m_exit(false)
+		m_pause(false)
 	{
 		m_context = vr::Context::create(vr::ContextCreateInfo{
 			.enableValidation = VERA_IS_DEBUG,
@@ -48,8 +47,6 @@ public:
 		MyApp& app = *reinterpret_cast<MyApp*>(window.UserPtr.get());
 
 		switch (e.type()) {
-		case vr::os::WindowEventType::Close:
-			app.m_exit = true;
 			break;
 		case vr::os::WindowEventType::Resize:
 		case vr::os::WindowEventType::Move:
@@ -60,8 +57,6 @@ public:
 
 			if (args.key == vr::os::Key::P)
 				app.m_pause = !app.m_pause;
-			if (args.key == vr::os::Key::Escape)
-				app.m_exit = true;
 
 			if (auto id = vr::os::Keyboard::getNumber(args.key); id != -1) {
 				auto root = app.openShaderToyJsonFile();
@@ -93,7 +88,7 @@ public:
 
 	void run()
 	{
-		while (!m_exit) {
+		while (!m_window.needClose()) {
 			updateAsync(m_timer.dt());
 			m_window.handleEvent();
 			m_timer.update();
@@ -112,17 +107,17 @@ public:
 		float width  = static_cast<float>(image->width());
 		float height = static_cast<float>(image->height());
 
-		auto& params = m_pass->getShaderParameter();
-		params["pc"]["resolution"] = vr::float2(width, height);
-		params["pc"]["time"]       = m_time;
-		params["pc"]["timeDelta"]  = m_timer.dt();
-		params["pc"]["frameRate"]  = m_timer.framerate();
-		params["pc"]["frame"]      = m_render_ctx->getCurrentFrame().frameID;
-		params["pc"]["mouse"]      = m_mouse_pos;
-		params["pc"]["position"]   = m_camera->getPosition();
-		params["pc"]["direction"]  = m_camera->getDirection();
-		params["pc"]["up"]         = m_camera->getUp();
-		params["pc"]["scale"]      = 1.f;
+		auto root_var = m_pass->getRootVariable();
+		root_var["pc"]["resolution"] = vr::float2(width, height);
+		root_var["pc"]["time"]       = m_time;
+		root_var["pc"]["timeDelta"]  = m_timer.dt();
+		root_var["pc"]["frameRate"]  = m_timer.framerate();
+		root_var["pc"]["frame"]      = m_render_ctx->getCurrentFrame().frameID;
+		root_var["pc"]["mouse"]      = m_mouse_pos;
+		root_var["pc"]["position"]   = m_camera->getPosition();
+		root_var["pc"]["direction"]  = m_camera->getDirection();
+		root_var["pc"]["up"]         = m_camera->getUp();
+		root_var["pc"]["scale"]      = 1.f;
 
 		m_pass->execute(m_render_ctx, image);
 
@@ -159,11 +154,11 @@ public:
 				.vertexCount    = 6
 			};
 			
-			auto new_pass = std::make_unique<vr::GraphicsPass>(m_device, pass_info);
+			auto new_pass = vr::GraphicsPass::create(m_device, pass_info);
 			
 			if (json.contains("channels")) {
-				auto& param = new_pass->getShaderParameter();
-				loadShaderToyChannels(json["channels"], param);
+				auto root_var = new_pass->getRootVariable();
+				loadShaderToyChannels(json["channels"], root_var);
 			}
 			
 			m_device->waitIdle();
@@ -242,7 +237,7 @@ private:
 		}
 	}
 
-	void loadShaderToyChannels(nlohmann::json channels, vr::ShaderParameter& param)
+	void loadShaderToyChannels(nlohmann::json channels, vr::ShaderVariable& root_var)
 	{
 		for (const auto& channel : channels) {
 			std::string type = channel.at("type");
@@ -260,7 +255,7 @@ private:
 				
 				texture->upload(image);
 
-				param[name] = texture;
+				root_var[name] = vr::TextureView::create(texture);
 			} else {
 				throw vr::Exception("invalid channel type");
 			}
@@ -289,19 +284,18 @@ private:
 	}
 
 private:
-	vr::obj<vr::Context>              m_context;
-	vr::obj<vr::Device>               m_device;
-	vr::obj<vr::RenderContext>        m_render_ctx;
-	vr::obj<vr::Swapchain>            m_swapchain;
-	std::unique_ptr<vr::GraphicsPass> m_pass;
+	vr::obj<vr::Context>        m_context;
+	vr::obj<vr::Device>         m_device;
+	vr::obj<vr::RenderContext>  m_render_ctx;
+	vr::obj<vr::Swapchain>      m_swapchain;
+	vr::obj<vr::GraphicsPass>   m_pass;
 
-	vr::os::Window                    m_window;
-	vr::Timer                         m_timer;
-	std::unique_ptr<vr::Camera>       m_camera;
-	vr::float2                        m_mouse_pos;
-	float                             m_time;
-	bool                              m_pause;
-	bool                              m_exit;
+	vr::os::Window              m_window;
+	vr::Timer                   m_timer;
+	std::unique_ptr<vr::Camera> m_camera;
+	vr::float2                  m_mouse_pos;
+	float                       m_time;
+	bool                        m_pause;
 };
 
 int main()

@@ -1,6 +1,7 @@
 #include "../../include/vera/pass/graphics_pass.h"
 
 #include "../../include/vera/core/buffer.h"
+#include "../../include/vera/core/program_reflection.h"
 #include "../../include/vera/core/texture_view.h"
 #include <sstream>
 
@@ -58,11 +59,10 @@ obj<GraphicsPass> GraphicsPass::create(obj<Device> device, const GraphicsPassCre
 	}
 
 	obj->m_pipeline = Pipeline::create(device, pipeline_info);
-	ProgramReflection::create();
 	
-	// obj->m_param    = ShaderParameter::create(obj->m_pipeline->getPipelineLayout());
-	// m_param    = ShaderParameter::create(nullptr);
-	obj->m_param = nullptr;
+	auto reflection = vr::ProgramReflection::create(device, obj->m_pipeline);
+
+	obj->m_param = ShaderParameter::create(device, reflection);
 	obj->m_states.setPipeline(obj->m_pipeline);
 
 	return obj;

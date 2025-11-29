@@ -218,7 +218,7 @@ bool RenderDoc::launchReplayUI(uint32_t connectTargetControl, const char* cmdlin
 	return g_rdoc_api->LaunchReplayUI(connectTargetControl, cmdline);
 }
 
-void RenderDoc::setActiveWindow(const_ref<Context> context, const os::Window* wndHandle)
+void RenderDoc::setActiveWindow(cref<Context> context, const os::Window* wndHandle)
 {
 	if (!g_rdoc_api) return;
 
@@ -235,7 +235,7 @@ void RenderDoc::setActiveWindow(const_ref<Context> context, const os::Window* wn
 	g_rdoc_api->SetActiveWindow(device_handle, window_handle);
 }
 
-void RenderDoc::startFrameCapture(const_ref<Context> context, const os::Window* wndHandle)
+void RenderDoc::startFrameCapture(cref<Context> context, const os::Window* wndHandle)
 {
 	if (!g_rdoc_api) return;
 
@@ -258,7 +258,7 @@ bool RenderDoc::isFrameCapturing()
 	return g_rdoc_api->IsFrameCapturing();
 }
 
-bool RenderDoc::endFrameCapture(const_ref<Context> context, const os::Window* wndHandle)
+bool RenderDoc::endFrameCapture(cref<Context> context, const os::Window* wndHandle)
 {
 	if (!g_rdoc_api) return false;
 
@@ -285,7 +285,7 @@ void RenderDoc::setCaptureFileComments(const char* filePath, const char* comment
 	if (g_rdoc_api) g_rdoc_api->SetCaptureFileComments(filePath, comments);
 }
 
-bool RenderDoc::discardFrameCapture(const_ref<Context> context, const os::Window* wndHandle)
+bool RenderDoc::discardFrameCapture(cref<Context> context, const os::Window* wndHandle)
 {
 	if (!g_rdoc_api) return false;
 	

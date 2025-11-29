@@ -55,12 +55,18 @@ static bool operator==(const RenderingInfo& lhs, const RenderingInfo& rhs)
 	return true;
 }
 
+static bool check_command_buffer_in_use(const CommandBufferImpl& impl)
+{
+	const auto& tracker = *impl.tracker;
+	return tracker.state == CommandBufferState::Pending && !tracker.fence->signaled();
+}
+
 static vk::ImageView get_vk_image_view(ref<Texture> texture)
 {
 	return get_vk_image_view(texture->getTextureView());
 }
 
-const vk::CommandBuffer& get_vk_command_buffer(const_ref<CommandBuffer> cmd_buffer) VERA_NOEXCEPT
+const vk::CommandBuffer& get_vk_command_buffer(cref<CommandBuffer> cmd_buffer) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(cmd_buffer).vkCommandBuffer;
 }
@@ -85,13 +91,10 @@ obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 	alloc_info.commandBufferCount = 1;
 
 	impl.device                = device;
-	impl.semaphore             = Semaphore::create(impl.device);
-	impl.fence                 = Fence::create(impl.device);
 	impl.vkCommandPool         = alloc_info.commandPool;
 	impl.vkCommandBuffer       = vk_device.allocateCommandBuffers(alloc_info).front();
-	impl.submitID              = 0;
 	impl.submitQueueType       = SubmitQueueType::Transfer;
-	impl.state                 = CommandBufferState::Initialized;
+	impl.tracker               = std::make_shared<CommandBufferTracker>();
 	impl.currentViewport       = {};
 	impl.currentScissor        = {};
 	impl.currentVertexBuffer   = {};
@@ -99,6 +102,11 @@ obj<CommandBuffer> CommandBuffer::create(obj<Device> device)
 	impl.currentRenderingInfo  = {};
 	impl.currentDescriptorSets = {};
 	impl.currentPipeline       = {};
+
+	impl.tracker->semaphore = Semaphore::create(impl.device);
+	impl.tracker->fence     = Fence::create(impl.device);
+	impl.tracker->state     = CommandBufferState::Initial;
+	impl.tracker->submitID  = 0;
 
 	return obj;
 }
@@ -108,10 +116,10 @@ CommandBuffer::~CommandBuffer() VERA_NOEXCEPT
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	// TODO: use CommandBufferSync lator
+	// TODO: use CommandSync later
 	vk_device.waitIdle();
-	impl.boundObjects.clear();
-	impl.boundShaderParameters.clear();
+
+	impl.tracker->state = CommandBufferState::Invalid;
 
 	vk_device.freeCommandBuffers(impl.vkCommandPool, impl.vkCommandBuffer);
 	vk_device.destroy(impl.vkCommandPool);
@@ -124,11 +132,10 @@ obj<Device> CommandBuffer::getDevice() VERA_NOEXCEPT
 	return getImpl(this).device;
 }
 
-CommandBufferSync CommandBuffer::getSync() const VERA_NOEXCEPT
+CommandSync CommandBuffer::getSync() const VERA_NOEXCEPT
 {
 	auto& impl = getImpl(this);
-
-	return CommandBufferSync(&impl, impl.submitID);
+	return CommandSync(impl.tracker, impl.tracker->submitID);
 }
 
 void CommandBuffer::reset()
@@ -136,24 +143,21 @@ void CommandBuffer::reset()
 	auto& impl      = getImpl(this);
 	auto  vk_device = get_vk_device(impl.device);
 
-	if (impl.state == CommandBufferState::Submitted && !impl.fence->signaled())
+	if (check_command_buffer_in_use(impl))
 		throw Exception("cannot reset a submitted command buffer that is not completed");
 
-	impl.fence->reset();
+	impl.tracker->fence->reset();
+	impl.tracker->state     = CommandBufferState::Initial;
+	impl.tracker->submitID += 1;
 
-	impl.boundObjects.clear();
-	impl.boundShaderParameters.clear();
-
-	impl.submitID               += 1;
-	impl.submitQueueType         = SubmitQueueType::Transfer;
-	impl.state                   = CommandBufferState::Initialized;
-	impl.currentViewport         = {};
-	impl.currentScissor          = {};
-	impl.currentVertexBuffer     = {};
-	impl.currentIndexBuffer      = {};
-	impl.currentRenderingInfo    = {};
-	impl.currentDescriptorSets   = {};
-	impl.currentPipeline         = {};
+	impl.submitQueueType       = SubmitQueueType::Transfer;
+	impl.currentViewport       = {};
+	impl.currentScissor        = {};
+	impl.currentVertexBuffer   = {};
+	impl.currentIndexBuffer    = {};
+	impl.currentRenderingInfo  = {};
+	impl.currentDescriptorSets = {};
+	impl.currentPipeline       = {};
 
 	vk_device.resetCommandPool(impl.vkCommandPool);
 }
@@ -162,7 +166,7 @@ void CommandBuffer::begin()
 {
 	auto& impl = getImpl(this);
 
-	impl.state = CommandBufferState::Recording;
+	impl.tracker->state = CommandBufferState::Recording;
 
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
@@ -249,9 +253,9 @@ void CommandBuffer::setViewport(const Viewport& viewport)
 
 	vk::Viewport vk_viewport;
 	vk_viewport.x        = viewport.posX;
-	vk_viewport.y        = viewport.height + viewport.posY;
+	vk_viewport.y        = viewport.posY;
 	vk_viewport.width    = viewport.width;
-	vk_viewport.height   = -viewport.height;
+	vk_viewport.height   = viewport.height;
 	vk_viewport.minDepth = viewport.minDepth;
 	vk_viewport.maxDepth = viewport.maxDepth;
 
@@ -273,7 +277,7 @@ void CommandBuffer::setScissor(const Scissor& scissor)
 	impl.currentScissor = scissor;
 }
 
-void CommandBuffer::bindVertexBuffer(obj<Buffer> buffer, size_t offset)
+void CommandBuffer::bindVertexBuffer(cref<Buffer> buffer, size_t offset)
 {
 	auto& impl        = getImpl(this);
 	auto& buffer_impl = getImpl(buffer);
@@ -284,10 +288,9 @@ void CommandBuffer::bindVertexBuffer(obj<Buffer> buffer, size_t offset)
 
 	impl.vkCommandBuffer.bindVertexBuffers(0, 1, &buffer_impl.vkBuffer, &offsets);
 	impl.currentVertexBuffer = buffer;
-	impl.boundObjects.push_back(obj_cast<CoreObject>(std::move(buffer)));
 }
 
-void CommandBuffer::bindIndexBuffer(obj<Buffer> buffer, size_t offset)
+void CommandBuffer::bindIndexBuffer(cref<Buffer> buffer, size_t offset)
 {
 	auto& impl        = getImpl(this);
 	auto& buffer_impl = getImpl(buffer);
@@ -297,10 +300,9 @@ void CommandBuffer::bindIndexBuffer(obj<Buffer> buffer, size_t offset)
 
 	impl.vkCommandBuffer.bindIndexBuffer(buffer_impl.vkBuffer, offset, to_vk_index_type(buffer_impl.indexType));
 	impl.currentIndexBuffer = buffer;
-	impl.boundObjects.push_back(obj_cast<CoreObject>(std::move(buffer)));
 }
 
-void CommandBuffer::bindPipeline(obj<Pipeline> pipeline)
+void CommandBuffer::bindPipeline(cref<Pipeline> pipeline)
 {
 	auto& impl          = getImpl(this);
 	auto& pipeline_impl = getImpl(pipeline);
@@ -309,11 +311,10 @@ void CommandBuffer::bindPipeline(obj<Pipeline> pipeline)
 		to_vk_pipeline_bind_point(pipeline_impl.pipelineBindPoint),
 		pipeline_impl.vkPipeline);
 	impl.currentPipeline = pipeline;
-	impl.boundObjects.push_back(obj_cast<CoreObject>(std::move(pipeline)));
 }
 
 void CommandBuffer::pushConstant(
-	const_ref<PipelineLayout> pipeline_layout,
+	cref<PipelineLayout> pipeline_layout,
 	ShaderStageFlags          stage_flags,
 	uint32_t                  offset,
 	const void*               data,
@@ -329,9 +330,9 @@ void CommandBuffer::pushConstant(
 }
 
 void CommandBuffer::bindDescriptorSet(
-	const_ref<PipelineLayout> pipeline_layout,
-	uint32_t                  set,
-	ref<DescriptorSet>        desc_set
+	cref<PipelineLayout> pipeline_layout,
+	uint32_t             set,
+	cref<DescriptorSet>  desc_set
 ) {
 	auto& impl = getImpl(this);
 
@@ -346,10 +347,10 @@ void CommandBuffer::bindDescriptorSet(
 }
 
 void CommandBuffer::bindDescriptorSet(
-	const_ref<PipelineLayout> pipeline_layout,
-	uint32_t                  set,
-	ref<DescriptorSet>        desc_set,
-	array_view<uint32_t>      dynamic_offsets
+	cref<PipelineLayout> pipeline_layout,
+	uint32_t             set,
+	cref<DescriptorSet>  desc_set,
+	array_view<uint32_t> dynamic_offsets
 ) {
 	VERA_ASSERT_MSG(pipeline_layout, "pipeline layout is null");
 	
@@ -395,22 +396,10 @@ void CommandBuffer::bindGraphicsState(const GraphicsState& state)
 	}
 }
 
-void CommandBuffer::bindShaderParameter(obj<ShaderParameter> params)
+void CommandBuffer::bindShaderParameter(ref<ShaderParameter> params)
 {
-	VERA_ASSERT_MSG(params, "shader storage is null");
-
-	auto& impl         = getImpl(this);
-	auto& storage_impl = getImpl(params);
-
-	for (const auto& bound_storage : impl.boundShaderParameters) {
-		if (bound_storage == params) {
-			storage_impl.bind(impl);
-			return;
-		}
-	}
-
-	impl.boundShaderParameters.push_back(params);
-	storage_impl.bind(impl);
+	VERA_ASSERT_MSG(params, "shader parameter is null");
+	getImpl(params).bind(this);
 }
 
 void CommandBuffer::beginRendering(const RenderingInfo& info)
@@ -532,42 +521,72 @@ void CommandBuffer::end()
 {
 	auto& impl = getImpl(this);
 
-	impl.state = CommandBufferState::Executable;
+	impl.tracker->state = CommandBufferState::Executable;
 
 	impl.vkCommandBuffer.end();
 }
 
-CommandBufferSync CommandBuffer::submit()
+CommandSync CommandBuffer::submit(const SubmitInfo& info)
 {
-	auto& impl        = getImpl(this);
-	auto& device_impl = getImpl(impl.device);
+	auto& impl = getImpl(this);
 
-	impl.state = CommandBufferState::Submitted;
+	vk::SubmitInfo                          submit_info;
+	small_vector<vk::Semaphore, 8>          wait_semaphores;
+	small_vector<vk::PipelineStageFlags, 8> wait_stages;
+	small_vector<vk::Semaphore, 8>          signal_semaphores;
 
-	vk::SubmitInfo submit_info;
-	submit_info.commandBufferCount   = 1;
-	submit_info.pCommandBuffers      = &impl.vkCommandBuffer;
-	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores    = &get_vk_semaphore(impl.semaphore);
+	if (info.waitInfos.empty() && info.signalInfos.empty()) {
+		submit_info.commandBufferCount   = 1;
+		submit_info.pCommandBuffers      = &impl.vkCommandBuffer;
+		submit_info.signalSemaphoreCount = 1;
+		submit_info.pSignalSemaphores    = &get_vk_semaphore(impl.tracker->semaphore);
+	} else {
+		wait_semaphores.reserve(info.waitInfos.size());
+		wait_stages.reserve(info.waitInfos.size());
+		signal_semaphores.reserve(info.signalInfos.size() + 1);
 
-	for (auto& obj : impl.boundShaderParameters) {
-		auto& param_impl = getImpl(obj);
-		param_impl.submitFrame(impl);
+		for (auto& wait_info : info.waitInfos) {
+			wait_semaphores.push_back(get_vk_semaphore(wait_info.semaphore));
+			wait_stages.push_back(to_vk_pipeline_stage_flags(wait_info.stageMask));
+		}
+		for (auto& signal_info : info.signalInfos)
+			signal_semaphores.push_back(get_vk_semaphore(signal_info.semaphore));
+
+		signal_semaphores.push_back(get_vk_semaphore(impl.tracker->semaphore));
+
+		submit_info.waitSemaphoreCount   = static_cast<uint32_t>(wait_semaphores.size());
+		submit_info.pWaitSemaphores      = wait_semaphores.data();
+		submit_info.pWaitDstStageMask    = wait_stages.data();
+		submit_info.commandBufferCount   = 1;
+		submit_info.pCommandBuffers      = &impl.vkCommandBuffer;
+		submit_info.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size());
+		submit_info.pSignalSemaphores    = signal_semaphores.data();
 	}
 
-	switch (impl.submitQueueType) {
+	impl.submitToDedicatedQueue(submit_info);
+
+	return CommandSync();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void CommandBufferImpl::submitToDedicatedQueue(const vk::SubmitInfo& submit_info)
+{
+	auto& device_impl = CoreObject::getImpl(device);
+
+	tracker->state = CommandBufferState::Pending;
+
+	switch (submitQueueType) {
 	case SubmitQueueType::Transfer:
-		device_impl.vkTransferQueue.submit(submit_info, get_vk_fence(impl.fence));
+		device_impl.vkTransferQueue.submit(submit_info, get_vk_fence(tracker->fence));
 		break;
 	case SubmitQueueType::Compute:
-		device_impl.vkComputeQueue.submit(submit_info, get_vk_fence(impl.fence));
+		device_impl.vkComputeQueue.submit(submit_info, get_vk_fence(tracker->fence));
 		break;
 	case SubmitQueueType::Graphics:
-		device_impl.vkGraphicsQueue.submit(submit_info, get_vk_fence(impl.fence));
+		device_impl.vkGraphicsQueue.submit(submit_info, get_vk_fence(tracker->fence));
 		break;
 	}
-
-	return CommandBufferSync(&impl, impl.submitID);
 }
 
 VERA_NAMESPACE_END

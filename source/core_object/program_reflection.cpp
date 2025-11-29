@@ -17,6 +17,37 @@ enum
 
 typedef static_vector<const ReflectionRootNode*, MAX_SHADER_STAGE_COUNT> PerStageReflectionRootNodeArray;
 
+static PipelineBindPoint get_pipeline_bind_point(ShaderStageFlags stage_flags)
+{
+
+	static const ShaderStageFlags graphics_stages = 
+		ShaderStageFlagBits::Vertex |
+		ShaderStageFlagBits::TessellationControl |
+		ShaderStageFlagBits::TessellationEvaluation |
+		ShaderStageFlagBits::Geometry |
+		ShaderStageFlagBits::Fragment;
+
+	static const ShaderStageFlags compute_stages =
+		ShaderStageFlagBits::Compute;
+
+	static const ShaderStageFlags ray_tracing_stages =
+		ShaderStageFlagBits::RayGen |
+		ShaderStageFlagBits::AnyHit |
+		ShaderStageFlagBits::ClosestHit |
+		ShaderStageFlagBits::Miss |
+		ShaderStageFlagBits::Intersection |
+		ShaderStageFlagBits::Callable;
+
+	if (stage_flags | graphics_stages)
+		return PipelineBindPoint::Graphics;
+	if (stage_flags | compute_stages)
+		return PipelineBindPoint::Compute;
+	if (stage_flags | ray_tracing_stages)
+		return PipelineBindPoint::RayTracing;
+
+	VERA_ASSERT_MSG(false, "invalid shader stage for pipeline bind point");
+}
+
 template <class T>
 static T* allocate(
 	ProgramReflectionImpl& impl,
@@ -85,7 +116,7 @@ obj<ProgramReflection> ProgramReflection::create(
 	auto*    entry_points     = allocate<ReflectionEntryPoint>(impl, shader_reflections.size());
 	uint32_t entry_point_idx  = 0;
 	auto     reflection_crefs = array_view(
-		reinterpret_cast<const const_ref<ShaderReflection>*>(shader_reflections.data()),
+		reinterpret_cast<const cref<ShaderReflection>*>(shader_reflections.data()),
 		shader_reflections.size());
 
 	for (auto& shader_reflections : shader_reflections) {
@@ -101,13 +132,14 @@ obj<ProgramReflection> ProgramReflection::create(
 		entry_point_idx++;
 	}
 	
-	impl.device           = std::move(device);
-	impl.pipelineLayout   = PipelineLayout::create(impl.device, reflection_crefs);
+	impl.device            = std::move(device);
+	impl.pipelineLayout    = PipelineLayout::create(impl.device, reflection_crefs);
 	impl.shaderReflections.assign(VERA_SPAN(shader_reflections));
-	impl.shaderStageFlags = stage_flags;
-	impl.entryPoints      = array_view{ entry_points, entry_point_idx };
-	impl.rootNode         = ReflectionRootNode::merge(root_nodes, &impl.memory);
-	impl.hashValue        = hash_value;
+	impl.shaderStageFlags  = stage_flags;
+	impl.pipelineBindPoint = get_pipeline_bind_point(stage_flags);
+	impl.entryPoints       = array_view{ entry_points, entry_point_idx };
+	impl.rootNode          = ReflectionRootNode::merge(root_nodes, &impl.memory);
+	impl.hashValue         = hash_value;
 
 	device_impl.registerCachedObject<ProgramReflection>(hash_value, obj);
 
@@ -129,6 +161,16 @@ obj<Device> ProgramReflection::getDevice() const VERA_NOEXCEPT
 	return getImpl(this).device;
 }
 
+ShaderStageFlags ProgramReflection::getShaderStageFlags() const VERA_NOEXCEPT
+{
+	return getImpl(this).shaderStageFlags;
+}
+
+PipelineBindPoint ProgramReflection::getPipelineBindPoint() const VERA_NOEXCEPT
+{
+	return getImpl(this).pipelineBindPoint;
+}
+
 array_view<obj<ShaderReflection>> ProgramReflection::enumerateShaderReflections() const VERA_NOEXCEPT
 {
 	return getImpl(this).shaderReflections;
@@ -144,11 +186,6 @@ obj<ShaderReflection> ProgramReflection::getShaderReflection(ShaderStageFlags st
 			return reflection;
 
 	return {};
-}
-
-ShaderStageFlags ProgramReflection::getShaderStageFlags() const VERA_NOEXCEPT
-{
-	return getImpl(this).shaderStageFlags;
 }
 
 array_view<ReflectionEntryPoint> ProgramReflection::enumerateEntryPoints() const VERA_NOEXCEPT

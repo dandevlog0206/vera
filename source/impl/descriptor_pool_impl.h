@@ -5,6 +5,8 @@
 
 VERA_NAMESPACE_BEGIN
 
+struct DescriptorPoolSize;
+
 class DescriptorPoolImpl
 {
 public:
@@ -12,13 +14,15 @@ public:
 	using DescriptorSetPool    = std::vector<obj<DescriptorSet>>;
 	using DescriptorSetPoolMap = std::unordered_map<hash_t, DescriptorSetPool>;
 
-	obj<Device>               device           = {};
+	obj<Device>                     device           = {};
 
-	vk::DescriptorPool        vkDescriptorPool = {};
+	vk::DescriptorPool              vkDescriptorPool = {};
 
-	AllocatedMap              allocatedSets    = {};
-	DescriptorSetPoolMap      poolMap          = {};
-	DescriptorPoolCreateFlags flags            = {};
+	AllocatedMap                    allocatedSets    = {};
+	DescriptorSetPoolMap            poolMap          = {};
+	DescriptorPoolCreateFlags       flags            = {};
+	std::vector<DescriptorPoolSize> poolSizes        = {};
+	uint32_t                        maxSets          = {};
 };
 
 VERA_NAMESPACE_END

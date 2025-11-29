@@ -2,6 +2,7 @@
 
 #include "object_impl.h"
 #include "../../include/vera/core/descriptor_set_layout.h"
+#include <map>
 
 VERA_NAMESPACE_BEGIN
 
@@ -9,7 +10,7 @@ class DescriptorSetLayoutImpl
 {
 public:
 	using LayoutBindings = std::vector<DescriptorSetLayoutBinding>;
-	using BindingMap     = std::unordered_map<uint32_t, DescriptorSetLayoutBinding*>;
+	using BindingMap     = std::map<uint32_t, DescriptorSetLayoutBinding*>;
 
 	obj<Device>              device                = {};
 

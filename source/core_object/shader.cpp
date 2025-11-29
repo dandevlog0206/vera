@@ -129,7 +129,7 @@ static size_t hash_shader_code(array_view<uint32_t> spirv_code)
 	return seed;
 }
 
-const vk::ShaderModule& get_vk_shader_module(const_ref<Shader> shader) VERA_NOEXCEPT
+const vk::ShaderModule& get_vk_shader_module(cref<Shader> shader) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(shader).vkShaderModule;
 }

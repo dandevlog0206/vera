@@ -166,7 +166,8 @@ static DescriptorType to_descriptor_type(SpvReflectDescriptorType type)
 	case SPV_REFLECT_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
 		return DescriptorType::AccelerationStructure;
 	}
-	return DescriptorType::Unknown;
+	
+	VERA_ERROR_MSG("invalid descriptor type");
 }
 
 static const ReflectionSpecConstant* find_spec_constant(
@@ -730,7 +731,7 @@ static size_t hash_shader_code(array_view<uint32_t> spirv_code)
 	return seed;
 }
 
-obj<ShaderReflection> ShaderReflection::create(obj<Device> device, const_ref<Shader> shader)
+obj<ShaderReflection> ShaderReflection::create(obj<Device> device, cref<Shader> shader)
 {
 	auto& device_impl = getImpl(device);
 	auto& shader_impl = getImpl(shader);

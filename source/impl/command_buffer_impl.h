@@ -2,7 +2,7 @@
 
 #include "object_impl.h"
 #include "../../include/vera/core/command_buffer.h"
-#include "../../include/vera/core/command_buffer_sync.h"
+#include "../../include/vera/core/command_sync.h"
 
 VERA_NAMESPACE_BEGIN
 
@@ -13,32 +13,36 @@ enum class SubmitQueueType VERA_ENUM
 	Graphics
 };
 
+struct CommandBufferTracker
+{
+	obj<Semaphore>     semaphore = {};
+	obj<Fence>         fence     = {};
+	CommandBufferState state     = CommandBufferState::Invalid;
+	uint64_t           submitID  = 0;
+};
+
 class CommandBufferImpl
 {
 public:
-	using DescriptorSetState = std::vector<const_ref<DescriptorSet>>;
-	using ObjectBindingArray = std::vector<obj<CoreObject>>;
-	using ShaderParameterSet = std::vector<obj<ShaderParameter>>;
+	using DescriptorSetState = std::vector<cref<DescriptorSet>>;
+	using Tracker            = std::shared_ptr<CommandBufferTracker>;
 
-	obj<Device>         device                = {};
-	obj<Semaphore>      semaphore             = {};
-	obj<Fence>          fence                 = {};
+	obj<Device>        device                = {};
 
-	vk::CommandPool     vkCommandPool         = {};
-	vk::CommandBuffer   vkCommandBuffer       = {};
+	vk::CommandPool    vkCommandPool         = {};
+	vk::CommandBuffer  vkCommandBuffer       = {};
 
-	uint64_t            submitID              = {};
-	SubmitQueueType     submitQueueType       = {};
-	CommandBufferState  state                 = {};
-	ObjectBindingArray  boundObjects          = {};
-	ShaderParameterSet  boundShaderParameters = {};
-	Viewport            currentViewport       = {};
-	Scissor             currentScissor        = {};
-	const_ref<Buffer>   currentVertexBuffer   = {};
-	const_ref<Buffer>   currentIndexBuffer    = {};
-	RenderingInfo       currentRenderingInfo  = {};
-	DescriptorSetState  currentDescriptorSets = {};
-	const_ref<Pipeline> currentPipeline       = {};
+	SubmitQueueType    submitQueueType       = {};
+	Tracker            tracker               = {};
+	Viewport           currentViewport       = {};
+	Scissor            currentScissor        = {};
+	cref<Buffer>       currentVertexBuffer   = {};
+	cref<Buffer>       currentIndexBuffer    = {};
+	RenderingInfo      currentRenderingInfo  = {};
+	DescriptorSetState currentDescriptorSets = {};
+	cref<Pipeline>     currentPipeline       = {};
+
+	void submitToDedicatedQueue(const vk::SubmitInfo& submit_info);
 };
 
 VERA_NAMESPACE_END

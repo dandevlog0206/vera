@@ -30,6 +30,10 @@ public:
 
 	VERA_NODISCARD obj<Device> getDevice() VERA_NOEXCEPT;
 
+	VERA_NODISCARD DescriptorPoolCreateFlags getFlags() const VERA_NOEXCEPT;
+	VERA_NODISCARD array_view<DescriptorPoolSize> enumeratePoolSizes() const VERA_NOEXCEPT;
+	VERA_NODISCARD uint32_t getMaxSets() const VERA_NOEXCEPT;
+
 	VERA_NODISCARD obj<DescriptorSet> allocate(obj<DescriptorSetLayout> layout);
 	VERA_NODISCARD obj<DescriptorSet> allocate(obj<DescriptorSetLayout> layout, uint32_t variable_descriptor_count);
 

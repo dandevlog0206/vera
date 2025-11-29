@@ -73,7 +73,7 @@ static void get_device_features(vk::PhysicalDevice physical_device, void* chain)
 	physical_device.getFeatures2(&device_features2);
 }
 
-const vk::Device& get_vk_device(const_ref<Device> device) VERA_NOEXCEPT
+const vk::Device& get_vk_device(cref<Device> device) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(device).vkDevice;
 }
@@ -176,10 +176,11 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 
 	// Check physical device features
 	void* curr_chain = nullptr;
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceRobustness2FeaturesEXT, robustness2_features)
+	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceMaintenance4Features, maintenance4_features)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceTimelineSemaphoreFeatures, timeline_semaphore)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceDynamicRenderingFeatures, dynamic_rendering)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceDescriptorIndexingFeatures, descriptor_indexing)
-	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceMaintenance4Features, maintenance4_features)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_features)
 	CHAIN_DEVICE_FEATURE(curr_chain, vk::PhysicalDeviceFaultFeaturesEXT, device_fault)
 
@@ -187,6 +188,11 @@ obj<Device> Device::create(obj<Context> context, const DeviceCreateInfo& info)
 
 	impl.enabledFeatures.resize(VERA_ENUM_COUNT(DeviceFeatureType), 0);
 
+	if (robustness2_features.nullDescriptor) {
+		robustness2_features.robustBufferAccess2 = VK_FALSE;
+		robustness2_features.robustImageAccess2  = VK_FALSE;
+		device_extensions.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
+	}
 	if (timeline_semaphore.timelineSemaphore) {
 		device_extensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 		ENABLE_FEATURE(DeviceFeatureType::TimelineSemaphore);

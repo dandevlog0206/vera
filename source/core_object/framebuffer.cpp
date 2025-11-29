@@ -77,15 +77,15 @@ ref<Texture> FrameBuffer::getStencilTexture()
 
 void FrameBuffer::waitForComplete() const
 {
-	auto& sync = getImpl(this).commandBufferSync;
+	auto& sync = getImpl(this).commandSync;
 
 	if (!sync.empty())
-		sync.waitForComplete();
+		sync.wait();
 }
 
 bool FrameBuffer::isComplete() const
 {
-	auto& sync = getImpl(this).commandBufferSync;
+	auto& sync = getImpl(this).commandSync;
 	
 	return !sync.empty() || sync.isComplete();
 }

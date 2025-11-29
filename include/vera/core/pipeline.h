@@ -1,5 +1,6 @@
 #pragma once
 
+#include "shader.h"
 #include "pipeline_layout.h"
 #include "../graphics/vertex_input.h"
 #include "../util/bool32.h"

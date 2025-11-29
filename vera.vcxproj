@@ -159,6 +159,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\core\command_stream.cpp" />
     <ClCompile Include="source\core\shader_variable.cpp" />
     <ClCompile Include="source\core_object\program_reflection.cpp" />
     <ClCompile Include="source\core_object\shader_reflection.cpp" />
@@ -178,10 +179,10 @@
     <ClInclude Include="include\vera\core\descriptor_pool.h" />
     <ClInclude Include="include\vera\core\shader_parameter.h" />
     <ClInclude Include="include\vera\core\intrusive_ptr.h" />
-    <ClInclude Include="include\vera\core\command_buffer_sync.h" />
+    <ClInclude Include="include\vera\core\command_sync.h" />
     <ClInclude Include="include\vera\core\shader_reflection.h" />
     <ClInclude Include="include\vera\core\shader_variable.h" />
-    <ClInclude Include="include\vera\core\stream.h" />
+    <ClInclude Include="include\vera\core\command_stream.h" />
     <ClInclude Include="include\vera\util\small_vector.h" />
     <ClInclude Include="include\vera\util\renderdoc.h" />
     <ClInclude Include="include\vera\geometry\aabb.h" />
@@ -337,7 +338,7 @@
     <ClInclude Include="include\vera\core\texture_view.h" />
     <ClInclude Include="source\impl\include_vulkan.h" />
     <ClInclude Include="source\impl\window_impl.h" />
-    <ClCompile Include="source\core\command_buffer_sync.cpp" />
+    <ClCompile Include="source\core\command_sync.cpp" />
     <ClCompile Include="source\core\exception.cpp" />
     <ClCompile Include="source\typography\font.cpp" />
     <ClCompile Include="source\core_object\descriptor_pool.cpp" />

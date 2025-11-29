@@ -1,13 +1,7 @@
 #include <vera/vera.h>
-#include <chrono>
 #include <thread>
 
 using namespace std;
-
-random_device                    rd;
-mt19937                          rnd(rd());
-uniform_real_distribution<float> pos_dist(-1.f, 1.f);
-uniform_real_distribution<float> color_dist(0.f, 1.f);
 
 struct Vertex
 {
@@ -22,22 +16,11 @@ struct Vertex
 	VERA_VERTEX_DESCRIPTOR_END
 };
 
-static vr::float2 get_random_pos()
-{
-	return { pos_dist(rnd), pos_dist(rnd) };
-}
-
-static vr::float4 get_random_color()
-{
-	return { color_dist(rnd), color_dist(rnd), color_dist(rnd), 1.f };
-}
-
 class MyApp
 {
 public:
 	MyApp() :
-		m_window(1080, 720, "Texture Demo"),
-		m_exit(false)
+		m_window(1080, 720, "Texture Demo")
 	{
 		m_window.UserPtr = this;
 		m_window.registerEventHandler(eventHandler);
@@ -57,79 +40,14 @@ public:
 			.presentMode = vr::PresentMode::Immediate
 		});
 
-		m_pass = std::make_unique<vr::GraphicsPass>(m_device, vr::GraphicsPassCreateInfo{
-			.vertexShader    = vr::Shader::create(m_device, "shader/default.vert.glsl.spv"),
-			.fragmentShader  = vr::Shader::create(m_device, "shader/default.frag.glsl.spv"),
+		m_pass = vr::GraphicsPass::create(m_device, vr::GraphicsPassCreateInfo{
+			.vertexShader    = vr::Shader::create(m_device, "spirv/default.vert.glsl.spv"),
+			.fragmentShader  = vr::Shader::create(m_device, "spirv/default.frag.glsl.spv"),
 			.vertexInput     = VERA_REFLECT_VERTEX(Vertex),
-			.vertexCount     = 36
+			.vertexCount     = 6
 		});
 
-		auto image  = vr::Image::loadFromFile("resource/vulkan.png");
-		
-		vr::ImageSampler sampler(vr::ImageSamplerCreateInfo{
-			.filter                  = vr::ImageSamplerFilter::Linear,
-			.addressModeU            = vr::ImageSamplerAddressMode::ClampToBorder,
-			.addressModeV            = vr::ImageSamplerAddressMode::ClampToBorder,
-			.borderColor             = { 1.f, 0.f, 1.f, 1.f },
-			.unnormalizedCoordinates = false,
-		});
-
-		//image = vr::ImageEdit::createMask(image, 0, 0, 0.f, 0.99f);
-		//image = vr::ImageEdit::blit(image, sampler, vr::ImageBlitInfo{
-		//	.dstWidth  = image.width(),
-		//	.dstHeight = image.height(),
-		//	.uv0       = { -2.f, -2.f },
-		//	.uv1       = { 2.f, -2.f },
-		//	.uv2       = { 2.f, 2.f },
-		//	.uv3       = { -2.f, 2.f }
-		//});
-
-		m_texture = vr::Texture::create(m_device, vr::TextureCreateInfo{
-			.format = image.format(),
-			.width  = image.width(),
-			.height = image.height()
-		});
-
-		m_texture->upload(image);
-
-		m_pass->getRootVariable()["sTexture"] = m_texture;
-
-		auto  vertex_memory = m_pass->getVertexBuffer()->getDeviceMemory();
-		auto* map           = reinterpret_cast<Vertex*>(vertex_memory->map());
-		auto  aspect        = static_cast<float>(image.width()) / image.height();
-
-		for (uint32_t i = 0; i < 36; i += 6) {
-			vr::float2 v0  = { 0, 0};
-			vr::float2 v1  = { 500, 0 };
-			vr::float2 v2  = { 500, 500 * aspect };
-			vr::float2 v3  = { 0, 500 * aspect };
-			vr::float2 uv0 = { 0.0, 0.0 };
-			vr::float2 uv1 = { 1.0, 0.0 };
-			vr::float2 uv2 = { 1.0, 1.0 };
-			vr::float2 uv3 = { 0.0, 1.0 };
-
-			auto offset = 500.f * get_random_pos();
-			auto color  = vr::Color(vr::Colors::White).unorm();
-
-			map[i + 0].pos   = v0 + offset;
-			map[i + 0].color = color;
-			map[i + 0].uv    = uv0;
-			map[i + 1].pos   = v1 + offset;
-			map[i + 1].color = color;
-			map[i + 1].uv    = uv1;
-			map[i + 2].pos   = v2 + offset;
-			map[i + 2].color = color;
-			map[i + 2].uv    = uv2;
-			map[i + 3].pos   = v0 + offset;
-			map[i + 3].color = color;
-			map[i + 3].uv    = uv0;
-			map[i + 4].pos   = v2 + offset;
-			map[i + 4].color = color;
-			map[i + 4].uv    = uv2;
-			map[i + 5].pos   = v3 + offset;
-			map[i + 5].color = color;
-			map[i + 5].uv    = uv3;
-		}
+		loadImages();
 
 		m_window.Focussed = true;
 	}
@@ -139,9 +57,6 @@ public:
 		MyApp& app = *reinterpret_cast<MyApp*>(window.UserPtr.get());
 
 		switch (e.type()) {
-		case vr::os::WindowEventType::Close:
-			app.m_exit = true;
-			break;
 		case vr::os::WindowEventType::Resize:
 		case vr::os::WindowEventType::Move:
 			app.drawFrame();
@@ -151,10 +66,9 @@ public:
 
 	int run()
 	{
-		while (!m_exit) {
+		while (!m_window.needClose()) {
 			m_window.handleEvent();
 			drawFrame();
-			this_thread::sleep_for(3ms);
 		}
 
 		m_device->waitIdle();
@@ -166,39 +80,79 @@ public:
 	{
 		if (m_swapchain->isOccluded()) return;
 
-		auto  image = m_swapchain->acquireNextImage();
-		float time  = m_timer.elapsed();
-
-		auto mat = vr::Transform2D().translate(1080 / 2, 720 / 2).rotate(time).translate(-250, -250).getMatrix();
-		//auto mat = vr::Transform2D().translate(sinf(time), sinf(time)).getMatrix();
-		//auto mat = vr::Transform2D().getMatrix();
+		auto image    = m_swapchain->acquireNextImage();
+		auto time     = m_timer.elapsed();
+		auto viewport = vr::float2(
+			static_cast<float>(image->width()),
+			static_cast<float>(image->height()));
 
 		auto root_var = m_pass->getRootVariable();
-		root_var["pc"]["viewport"]  = vr::float2(image->width(), image->height());
-		root_var["pc"]["time"]      = time; // for block variable
-		root_var["pc"]["transform"] = mat;
-		root_var["pc"]["colors"][0] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.05f, 1.9f) - 1.f)).unorm();
-		root_var["pc"]["colors"][1] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 0.71666f, 1.9f) - 1.f)).unorm();
-		root_var["pc"]["colors"][2] = vr::Colormaps::turbo(abs(fmodf(0.5f * time + 1.38333f, 1.9f) - 1.f)).unorm();
+		root_var["pc"]["viewport"] = viewport;
+		root_var["pc"]["time"]     = time;
 
-		m_pass->execute(m_render_ctx, image);
+		for (uint32_t i = 0; i < 10; ++i) {
+			auto image_pos = vr::float2(
+				cosf(time / 3.f + vr::to_radian(i * 36.f)) * 300.f,
+				sinf(time / 3.f + vr::to_radian(i * 36.f)) * 300.f
+			);
+			
+			auto mat = vr::Transform2D()
+				.translate(viewport / 2.f)
+				.translate(image_pos)
+				.translate(-50, -50)
+				.getMatrix();
+
+			root_var["pc"]["transform"] = vr::to_col_major(mat);
+			root_var["Texture"]         = m_textures[i];
+
+			m_pass->execute(m_render_ctx, image);
+		}
 
 		m_render_ctx->submit();
 		m_swapchain->present();
 	}
 
 private:
-	vr::obj<vr::Context>              m_context;
-	vr::obj<vr::Device>               m_device;
-	vr::obj<vr::RenderContext>        m_render_ctx;
-	vr::obj<vr::Swapchain>            m_swapchain;
-	vr::obj<vr::Texture>              m_texture;
-	std::unique_ptr<vr::GraphicsPass> m_pass;
+	void loadImages()
+	{
+		auto  root_var = m_pass->getRootVariable();
+		auto  center   = vr::float2{ 1080 / 2.f, 720 / 2.f };
 
-	vr::os::Window                    m_window;
-	vr::Timer                         m_timer;
+		for (uint32_t i = 0; i < 10; ++i) {
+			auto path    = std::format("resource/test/{}.png", i);
+			auto image   = vr::Image::loadFromFile(path);
+			auto texture = vr::Texture::create(m_device, image);
 
-	bool                              m_exit;
+			m_textures.push_back(vr::TextureView::create(std::move(texture)));
+		}
+
+		auto  vertex_memory = m_pass->getVertexBuffer()->getDeviceMemory();
+		auto* map           = reinterpret_cast<Vertex*>(vertex_memory->map());
+
+		auto v     = vr::rect<float>{ 0.f, 0.f, 100.f, 100.f };
+		auto uv    = vr::rect<float>{ 0.f, 0.f, 1.f, 1.f };
+		auto color = vr::Color(vr::Colors::White).unorm();
+
+		map[0] = { v[0], color, uv[0] };
+		map[1] = { v[1], color, uv[1] };
+		map[2] = { v[2], color, uv[2] };
+		map[3] = { v[0], color, uv[0] };
+		map[4] = { v[2], color, uv[2] };
+		map[5] = { v[3], color, uv[3] };
+	}
+
+private:
+	using Textures = std::vector<vr::obj<vr::TextureView>>;
+
+	vr::obj<vr::Context>       m_context;
+	vr::obj<vr::Device>        m_device;
+	vr::obj<vr::RenderContext> m_render_ctx;
+	vr::obj<vr::Swapchain>     m_swapchain;
+	vr::obj<vr::GraphicsPass>  m_pass;
+	Textures                   m_textures;
+
+	vr::os::Window             m_window;
+	vr::Timer                  m_timer;
 };
 
 int main()

@@ -2,6 +2,7 @@
 #include "../math/vector_types.h"
 #include "../math/matrix_types.h"
 #include <string_view>
+#include <concepts> // Add this include
 
 VERA_NAMESPACE_BEGIN
 
@@ -17,6 +18,39 @@ class ReflectionNode;
 class ShaderParameterImpl;
 class ShaderParameterBlockStorage;
 
+// Define a concept that enumerates all valid types for setValue
+template<class T>
+concept IsShaderPrimitiveValueType =
+	std::same_as<T, bool> ||
+	std::same_as<T, int8_t> || std::same_as<T, uint8_t> ||
+	std::same_as<T, int16_t> || std::same_as<T, uint16_t> ||
+	std::same_as<T, int32_t> || std::same_as<T, uint32_t> ||
+	std::same_as<T, int64_t> || std::same_as<T, uint64_t> ||
+	std::same_as<T, float> || std::same_as<T, double> ||
+	std::same_as<T, bool2> || std::same_as<T, bool3> || std::same_as<T, bool4> ||
+	std::same_as<T, char2> || std::same_as<T, char3> || std::same_as<T, char4> ||
+	std::same_as<T, uchar2> || std::same_as<T, uchar3> || std::same_as<T, uchar4> ||
+	std::same_as<T, short2> || std::same_as<T, short3> || std::same_as<T, short4> ||
+	std::same_as<T, ushort2> || std::same_as<T, ushort3> || std::same_as<T, ushort4> ||
+	std::same_as<T, int2> || std::same_as<T, int3> || std::same_as<T, int4> ||
+	std::same_as<T, uint2> || std::same_as<T, uint3> || std::same_as<T, uint4> ||
+	std::same_as<T, long2> || std::same_as<T, long3> || std::same_as<T, long4> ||
+	std::same_as<T, ulong2> || std::same_as<T, ulong3> || std::same_as<T, ulong4> ||
+	std::same_as<T, float2> || std::same_as<T, float3> || std::same_as<T, float4> ||
+	std::same_as<T, double2> || std::same_as<T, double3> || std::same_as<T, double4> ||
+	std::same_as<T, rfloat2x2> || std::same_as<T, rfloat2x3> || std::same_as<T, rfloat2x4> ||
+	std::same_as<T, rfloat3x2> || std::same_as<T, rfloat3x3> || std::same_as<T, rfloat3x4> ||
+	std::same_as<T, rfloat4x2> || std::same_as<T, rfloat4x3> || std::same_as<T, rfloat4x4> ||
+	std::same_as<T, rdouble2x2> || std::same_as<T, rdouble2x3> || std::same_as<T, rdouble2x4> ||
+	std::same_as<T, rdouble3x2> || std::same_as<T, rdouble3x3> || std::same_as<T, rdouble3x4> ||
+	std::same_as<T, rdouble4x2> || std::same_as<T, rdouble4x3> || std::same_as<T, rdouble4x4> ||
+	std::same_as<T, cfloat2x2> || std::same_as<T, cfloat2x3> || std::same_as<T, cfloat2x4> ||
+	std::same_as<T, cfloat3x2> || std::same_as<T, cfloat3x3> || std::same_as<T, cfloat3x4> ||
+	std::same_as<T, cfloat4x2> || std::same_as<T, cfloat4x3> || std::same_as<T, cfloat4x4> ||
+	std::same_as<T, cdouble2x2> || std::same_as<T, cdouble2x3> || std::same_as<T, cdouble2x4> ||
+	std::same_as<T, cdouble3x2> || std::same_as<T, cdouble3x3> || std::same_as<T, cdouble3x4> ||
+	std::same_as<T, cdouble4x2> || std::same_as<T, cdouble4x3> || std::same_as<T, cdouble4x4>;
+
 class ShaderVariable
 {
 	friend class ShaderParameter;
@@ -24,6 +58,7 @@ class ShaderVariable
 		ShaderParameterImpl*         impl,
 		const ReflectionNode*        node,
 		ShaderParameterBlockStorage* block,
+		uint32_t                     array_idx,
 		uint32_t                     offset);
 public:
 	ShaderVariable() = default;
@@ -46,10 +81,10 @@ public:
 		size_t      offset = 0,
 		size_t      range  = 0);
 
-	void operator=(obj<Sampler> sampler) { setSampler(sampler); }
-	void operator=(obj<TextureView> texture_view) { setTextureView(texture_view); }
-	void operator=(obj<BufferView> buffer_view) { setBufferView(buffer_view); }
-	void operator=(obj<Buffer> buffer) { setBuffer(buffer); }
+	void operator=(obj<Sampler> sampler) { setSampler(std::move(sampler)); }
+	void operator=(obj<TextureView> texture_view) { setTextureView(std::move(texture_view)); }
+	void operator=(obj<BufferView> buffer_view) { setBufferView(std::move(buffer_view)); }
+	void operator=(obj<Buffer> buffer) { setBuffer(std::move(buffer)); }
 
 	// primitive types
 	void setValue(const bool value);
@@ -138,12 +173,14 @@ public:
 	void setValue(const cdouble4x3& value);
 	void setValue(const cdouble4x4& value);
 
-	template <class T>
-		requires requires(ShaderVariable& s, const T& t) { s.setValue(t); }
+	template <IsShaderPrimitiveValueType T>
 	void operator=(const T& value)
 	{
 		setValue(value);
 	}
+
+	void setBindless(bool enable);
+	VERA_NODISCARD bool isBindless() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD bool empty() const VERA_NOEXCEPT;
 
@@ -151,6 +188,7 @@ private:
 	ShaderParameterImpl*         m_impl;
 	const ReflectionNode*        m_node;
 	ShaderParameterBlockStorage* m_block;
+	uint32_t                     m_array_idx;
 	uint32_t                     m_offset;
 };
 

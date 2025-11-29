@@ -58,24 +58,33 @@ struct NodeLayoutValidation
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPushConstantNode, block, Block));
 
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, type, Type));
-	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, offset, Offset));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, stageFlags, StageFlags));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, name, Name));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, set, Set));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, binding, Binding));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, offset, Offset));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, paddedSize, PaddedSize));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, memberNodes, MemberNodes));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, nameMap, NameMap));
 	
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, type, Type));
-	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, offset, Offset));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, stageFlags, StageFlags));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, name, Name));
-	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, paddedSize, PaddedSize));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, set, Set));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, binding, Binding));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, offset, Offset));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, paddedSize, PaddedSize));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, elementNode, ElementNode));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, elementCount, ElementCount));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionArrayNode, stride, Stride));
 
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, type, Type));
-	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, offset, Offset));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, stageFlags, StageFlags));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, name, Name));
-	static_assert(VALIDATE_NODE_LAYOUT(ReflectionStructNode, paddedSize, PaddedSize));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, set, Set));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, binding, Binding));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, offset, Offset));
+	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, paddedSize, PaddedSize));
 	static_assert(VALIDATE_NODE_LAYOUT(ReflectionPrimitiveNode, primitiveType, PrimitiveType));
 };
 
@@ -541,6 +550,8 @@ static char* construct_string(std::pmr::memory_resource* memory, const char* str
 static const ReflectionBlockNode* parse_block_variable(
 	ReflectionContext&             ctx,
 	const SpvReflectBlockVariable& block,
+	const uint32_t                 set,
+	const uint32_t                 binding,
 	const uint32_t                 array_dim = 0
 ) {
 	if (block.array.dims_count != array_dim) {
@@ -548,9 +559,11 @@ static const ReflectionBlockNode* parse_block_variable(
 		array_node->type         = ReflectionNodeType::Array;
 		array_node->stageFlags   = ctx.stageFlags;
 		array_node->name         = construct_string(ctx.memory, block.name);
+		array_node->set          = set;
+		array_node->binding      = binding;
 		array_node->offset       = block.offset;
 		array_node->paddedSize   = block.padded_size;
-		array_node->elementNode  = parse_block_variable(ctx, block, array_dim + 1);
+		array_node->elementNode  = parse_block_variable(ctx, block, set, binding, array_dim + 1);
 		array_node->elementCount = block.array.dims[array_dim] <= 1 ? UINT32_MAX : block.array.dims[array_dim];
 		array_node->stride       = get_array_stride(block.array, array_dim);
 
@@ -562,7 +575,10 @@ static const ReflectionBlockNode* parse_block_variable(
 		struct_node->type       = ReflectionNodeType::Struct;
 		struct_node->stageFlags = ctx.stageFlags;
 		struct_node->name       = construct_string(ctx.memory, block.name);
+		struct_node->set        = set;
+		struct_node->binding    = binding;
 		struct_node->offset     = block.offset;
+		struct_node->paddedSize = block.padded_size;
 
 		ReflectionNameMap name_map(ctx.tempMemory);
 
@@ -572,7 +588,7 @@ static const ReflectionBlockNode* parse_block_variable(
 		const auto&  last_member  = block.members[member_count - 1];
 
 		for (const auto& member : array_view(block.members, member_count)) {
-			auto* new_node = parse_block_variable(ctx, member);
+			auto* new_node = parse_block_variable(ctx, member, set, binding);
 
 			member_nodes[member_idx++] = new_node;
 			name_map.insert({ new_node->name, new_node });
@@ -589,6 +605,8 @@ static const ReflectionBlockNode* parse_block_variable(
 	prim_node->type          = ReflectionNodeType::Primitive;
 	prim_node->stageFlags    = ctx.stageFlags;
 	prim_node->name          = construct_string(ctx.memory, block.name);
+	prim_node->set           = set;
+	prim_node->binding       = binding;
 	prim_node->offset        = block.offset;
 	prim_node->paddedSize    = block.padded_size;
 	prim_node->primitiveType = parse_primitive_type(block);
@@ -606,7 +624,8 @@ const ReflectionPushConstantNode* parse_push_constant(
 	pc_node->name       = construct_string(ctx.memory, block.name);
 	pc_node->offset     = block.offset;
 	pc_node->paddedSize = block.padded_size;
-	pc_node->block      = parse_block_variable(ctx, block)->as<ReflectionStructNode>();
+	pc_node->block      = parse_block_variable(ctx, block, UINT32_MAX, UINT32_MAX)
+		->as<ReflectionStructNode>();
 
 	return pc_node;
 }
@@ -643,7 +662,8 @@ static const ReflectionDescriptorNode* parse_descriptor_binding(
 		block_node->descriptorType = to_descriptor_type(binding.descriptor_type);
 		block_node->set            = binding.set;
 		block_node->binding        = binding.binding;
-		block_node->block          = parse_block_variable(ctx, binding.block)->as<ReflectionStructNode>();
+		block_node->block          = parse_block_variable(ctx, binding.block, binding.set, binding.binding)
+			->as<ReflectionStructNode>();
 
 		return block_node->as<ReflectionDescriptorNode>();
 	}
@@ -758,6 +778,8 @@ static const ReflectionBlockNode* clone_block_node(
 		new_struct->type        = ReflectionNodeType::Struct;
 		new_struct->stageFlags  = src_strcut->stageFlags;
 		new_struct->name        = construct_string(ctx.memory, src_strcut->name);
+		new_struct->set         = src_strcut->set;
+		new_struct->binding     = src_strcut->binding;
 		new_struct->offset      = src_strcut->offset;
 		new_struct->paddedSize  = src_strcut->paddedSize;
 		new_struct->memberNodes = array_view{ member_nodes, src_strcut->memberNodes.size() };
@@ -775,6 +797,8 @@ static const ReflectionBlockNode* clone_block_node(
 		new_array->type         = ReflectionNodeType::Array;
 		new_array->stageFlags   = src_array->stageFlags;
 		new_array->name         = construct_string(ctx.memory, src_array->name);
+		new_array->set          = src_array->set;
+		new_array->binding      = src_array->binding;
 		new_array->offset       = src_array->offset;
 		new_array->paddedSize   = src_array->paddedSize;
 		new_array->stride       = src_array->stride;
@@ -790,6 +814,8 @@ static const ReflectionBlockNode* clone_block_node(
 		new_prim->type          = ReflectionNodeType::Primitive;
 		new_prim->stageFlags    = src_prim->stageFlags;
 		new_prim->name          = construct_string(ctx.memory, src_prim->name);
+		new_prim->set           = src_prim->set;
+		new_prim->binding       = src_prim->binding;
 		new_prim->offset        = src_prim->offset;
 		new_prim->paddedSize    = src_prim->paddedSize;
 		new_prim->primitiveType = src_prim->primitiveType;
@@ -859,6 +885,8 @@ static const ReflectionStructNode* merge_block_node(
 	new_struct->type        = ReflectionNodeType::Struct;
 	new_struct->stageFlags  = stage_flags;
 	new_struct->name        = construct_string(ctx.memory, first_struct->name);
+	new_struct->set         = first_struct->set;
+	new_struct->binding     = first_struct->binding;
 	new_struct->offset      = first_struct->offset;
 	new_struct->paddedSize  = first_struct->paddedSize;
 	new_struct->memberNodes = array_view{ member_nodes.data(), member_nodes.size() };
@@ -893,7 +921,7 @@ static const ReflectionDescriptorNode* merge_descriptor_node(
 		PerStageDescriptorNodeArray element_nodes;
 
 		for (const auto* src : src_nodes)
-			element_nodes.push_back(src);
+			element_nodes.push_back(src->getElementNode()->as<ReflectionDescriptorNode>());
 
 		new_array->type           = ReflectionNodeType::DescriptorArray;
 		new_array->stageFlags     = stage_flags;
@@ -950,7 +978,9 @@ static bool check_block_node_compatible(
 		auto lhs_members = lhs_struct->memberNodes;
 		auto rhs_members = rhs_struct->memberNodes;
 
-		if (lhs_struct->offset != rhs_struct->offset ||
+		if (lhs_struct->set != rhs_struct->set ||
+			lhs_struct->binding != rhs_struct->binding ||
+			lhs_struct->offset != rhs_struct->offset ||
 			lhs_struct->paddedSize != rhs_struct->paddedSize ||
 			lhs_members.size() != rhs_members.size())
 			return false;
@@ -966,6 +996,8 @@ static bool check_block_node_compatible(
 		auto rhs_array = static_cast<const ReflectionArrayNode*>(rhs);
 
 		return
+			lhs_array->set == rhs_array->set &&
+			lhs_array->binding == rhs_array->binding &&
 			lhs_array->offset == rhs_array->offset &&
 			lhs_array->paddedSize == rhs_array->paddedSize &&
 			check_block_node_compatible(lhs_array->elementNode, rhs_array->elementNode) &&
@@ -977,6 +1009,8 @@ static bool check_block_node_compatible(
 		auto rhs_prim = static_cast<const ReflectionPrimitiveNode*>(rhs);
 
 		return
+			lhs_prim->set == rhs_prim->set &&
+			lhs_prim->binding == rhs_prim->binding &&
 			lhs_prim->offset == rhs_prim->offset &&
 			lhs_prim->paddedSize == rhs_prim->paddedSize &&
 			lhs_prim->primitiveType == rhs_prim->primitiveType;
@@ -1196,12 +1230,6 @@ static ReflectionRootNode* merge_impl(
 		root_node->descriptorCount++;
 	}
 
-	if (root_node->minSet == UINT32_MAX && root_node->maxSet == 0) {
-		root_node->maxSet = UINT32_MAX;
-	} else {
-		root_node->setCount = root_node->maxSet - root_node->minSet + 1;
-	}
-
 	if (!pc_nodes.empty()) {
 		std::sort(VERA_SPAN(pc_nodes), sort_by_name);
 
@@ -1246,6 +1274,7 @@ static ReflectionRootNode* merge_impl(
 			}
 
 			root_node->pushConstantCount++;
+			first = last++;
 		}
 	}
 
@@ -1255,6 +1284,40 @@ static ReflectionRootNode* merge_impl(
 
 		root_node->nameMap     = ReflectionNameMap(name_map, ctx.memory);
 		root_node->memberNodes = array_view{ root_members, member_nodes.size() };
+	}
+
+	if (root_node->minSet == UINT32_MAX && root_node->maxSet == 0) {
+		root_node->maxSet = UINT32_MAX;
+	} else {
+		if (root_node->minSet != 0)
+			throw Exception("merged descriptor sets must start from set 0");
+
+		root_node->setCount = root_node->maxSet + 1;
+
+		auto* set_ranges = construct_array<ReflectionSetRange>(ctx.memory, root_node->setCount);
+
+		uint32_t node_offset = 0;
+		uint32_t node_count  = 0;
+
+		for (uint32_t set_id = 0; set_id < root_node->setCount; set_id++) {
+			while (node_offset + node_count < root_node->descriptorCount) {
+				if (root_node->memberNodes[node_offset + node_count]->getSet() != set_id) break;
+				node_count++;
+			}
+
+			set_ranges[set_id] = ReflectionSetRange{
+				reinterpret_cast<const ReflectionDescriptorNode* const*>(
+					root_node->memberNodes.data() + node_offset),
+				node_count
+			};
+
+			node_offset = node_count;
+		}
+
+		root_node->setRanges = array_view{
+			set_ranges,
+			root_node->setCount
+		};
 	}
 
 	return root_node;

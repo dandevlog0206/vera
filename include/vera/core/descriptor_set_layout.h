@@ -30,7 +30,7 @@ public:
 
 	VERA_NODISCARD uint32_t getBindingCount() const VERA_NOEXCEPT;
 	VERA_NODISCARD const DescriptorSetLayoutBinding& getBinding(uint32_t binding) const VERA_NOEXCEPT;
-	VERA_NODISCARD const std::vector<DescriptorSetLayoutBinding>& getBindings() const VERA_NOEXCEPT;
+	VERA_NODISCARD array_view<DescriptorSetLayoutBinding> enumerateBindings() const VERA_NOEXCEPT;
 
 	VERA_NODISCARD uint64_t hash() const VERA_NOEXCEPT;
 };

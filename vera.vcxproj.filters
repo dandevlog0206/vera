@@ -372,7 +372,7 @@
     <ClInclude Include="source\impl\descriptor_set_impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\command_buffer_sync.h">
+    <ClInclude Include="include\vera\core\command_sync.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vera\util\array_view.h">
@@ -525,7 +525,7 @@
     <ClInclude Include="include\vera\util\small_vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vera\core\stream.h">
+    <ClInclude Include="include\vera\core\command_stream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -641,7 +641,7 @@
     <ClCompile Include="source\core_object\descriptor_pool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\core\command_buffer_sync.cpp">
+    <ClCompile Include="source\core\command_sync.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\core\exception.cpp">
@@ -687,6 +687,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\spirv\reflection_node.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core\command_stream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -49,7 +49,7 @@ public:
 	obj<Buffer>                  vertexBuffer;
 	obj<Buffer>                  storageBuffer;
 	ShaderStageFlags             pcStageFlags;
-	CommandBufferSync            commandBufferSync;
+	CommandSync            commandBufferSync;
 };
 
 struct GlyphPage
@@ -76,7 +76,7 @@ enum EdgeColor : uint8_t
 	EDGE_COLOR_WHITE   = 0x7
 };
 
-static weak_obj<priv::FontAtlasGlobalResource> g_global_resource;
+static wref<priv::FontAtlasGlobalResource> g_global_resource;
 
 typedef float2 SDFGlyphPoint;
 
@@ -857,7 +857,7 @@ static void prepare_page_textures(
 }
 
 // renders SDF, PSDF font glyphs into the atlas textures
-static CommandBufferSync render_sdf_glyph(
+static CommandSync render_sdf_glyph(
 	priv::FontAtlasResource&          resource,
 	priv::GlyphPage&                  page,
 	const FontAtlasCreateInfo&        info,
@@ -904,7 +904,7 @@ static CommandBufferSync render_sdf_glyph(
 	auto cmd_buffer      = resource.commandBuffer.ref();
 
 	if (!resource.commandBufferSync.empty())
-		resource.commandBufferSync.waitForComplete();
+		resource.commandBufferSync.wait();
 
 	uint32_t texture_offset = page.textures.size();
 
@@ -964,7 +964,7 @@ static priv::GlyphPage* get_glyph_page(
 	return &new_page;
 }
 
-static CommandBufferSync load_msdf_glyph(
+static CommandSync load_msdf_glyph(
 	priv::FontAtlasResource&    resource,
 	const FontAtlasCreateInfo&  info,
 	const priv::FontImplBase&   impl,
@@ -1000,7 +1000,7 @@ static CommandBufferSync load_msdf_glyph(
 	);
 }
 
-static CommandBufferSync load_msdf_glyph(
+static CommandSync load_msdf_glyph(
 	priv::FontAtlasResource&   resource,
 	const FontAtlasCreateInfo& info,
 	const priv::FontImplBase&  impl,
@@ -1010,7 +1010,7 @@ static CommandBufferSync load_msdf_glyph(
 	return {};
 }
 
-static CommandBufferSync load_sdf_glyph(
+static CommandSync load_sdf_glyph(
 	priv::FontAtlasResource&    resource,
 	const FontAtlasCreateInfo&  info,
 	const priv::FontImplBase&   impl,
@@ -1046,7 +1046,7 @@ static CommandBufferSync load_sdf_glyph(
 	);
 }
 
-static CommandBufferSync load_sdf_glyph(
+static CommandSync load_sdf_glyph(
 	priv::FontAtlasResource&   resource,
 	const FontAtlasCreateInfo& info,
 	const priv::FontImplBase&  impl,
@@ -1143,7 +1143,7 @@ extent2d FontAtlas::getTextureSize() const VERA_NOEXCEPT
 	return extent2d{ m_info.atlasWidth, m_info.atlasHeight };
 }
 
-CommandBufferSync FontAtlas::loadGlyphRange(const basic_range<GlyphID>& range, uint32_t px)
+CommandSync FontAtlas::loadGlyphRange(const basic_range<GlyphID>& range, uint32_t px)
 {
 	m_info.font->loadGlyphRange(range);
 
@@ -1182,7 +1182,7 @@ CommandBufferSync FontAtlas::loadGlyphRange(const basic_range<GlyphID>& range, u
 	return {};
 }
 
-CommandBufferSync FontAtlas::loadCodeRange(const CodeRange& range, uint32_t px)
+CommandSync FontAtlas::loadCodeRange(const CodeRange& range, uint32_t px)
 {
 	m_info.font->loadCodeRange(range);
 	
@@ -1228,7 +1228,7 @@ const PackedGlyph& FontAtlas::getGlyph(char32_t codepoint, uint32_t px)
 	auto     page_it  = m_pages.find(font_px);
 	
 	if (page_it == m_pages.end())
-		loadCodeRange(codepoint, font_px).waitForComplete();
+		loadCodeRange(codepoint, font_px).wait();
 
 	GlyphID glyph_id = m_info.font->getGlyphID(codepoint);
 

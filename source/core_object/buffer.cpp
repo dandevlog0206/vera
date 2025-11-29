@@ -54,7 +54,7 @@ static void allocate_device_memory(
 	impl.mapPtr        = nullptr;
 }
 
-const vk::Buffer& get_vk_buffer(const_ref<Buffer> buffer) VERA_NOEXCEPT
+const vk::Buffer& get_vk_buffer(cref<Buffer> buffer) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(buffer).vkBuffer;
 }
@@ -308,7 +308,7 @@ size_t Buffer::size() const
 	return getImpl(this).size;
 }
 
-const vk::BufferView& get_vk_buffer_view(const_ref<BufferView> buffer_view) VERA_NOEXCEPT
+const vk::BufferView& get_vk_buffer_view(cref<BufferView> buffer_view) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(buffer_view).vkBufferView;
 }

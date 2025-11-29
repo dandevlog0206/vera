@@ -36,8 +36,8 @@ public:
 
 	VERA_NODISCARD ShaderVariable getRootVariable() VERA_NOEXCEPT;
 
-	void setBindless(uint32_t set, bool enable = true);
-	VERA_NODISCARD bool isBindless(uint32_t set) const VERA_NOEXCEPT;
+	void setBindless(uint32_t set, uint32_t binding, bool enable = true);
+	VERA_NODISCARD bool isBindless(uint32_t set, uint32_t binding) const VERA_NOEXCEPT;
 
 	void setSampler(
 		const DescriptorIndex& idx,

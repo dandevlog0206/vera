@@ -5,6 +5,7 @@
 #include "../impl/shader_reflection_impl.h"
 #include "../impl/descriptor_set_layout_impl.h"
 
+#include "../../include/vera/core/program_reflection.h"
 #include "../../include/vera/util/hash.h"
 #include "../../include/vera/util/static_vector.h"
 
@@ -31,25 +32,6 @@ static bool operator==(const PushConstantRange& lhs, const PushConstantRange& rh
 		lhs.offset == rhs.offset &&
 		lhs.size == rhs.size &&
 		lhs.stageFlags == rhs.stageFlags;
-}
-
-static PipelineBindPoint get_pipeline_bind_point(ShaderStageFlags stage_flags)
-{
-	VERA_ASSERT_MSG(stage_flags.count() == 1, "stage flags must have exactly one bit set");
-
-	switch ((ShaderStageFlagBits)stage_flags.mask()) {
-	case ShaderStageFlagBits::Vertex:
-	case ShaderStageFlagBits::TessellationControl:
-	case ShaderStageFlagBits::TessellationEvaluation:
-	case ShaderStageFlagBits::Geometry:
-	case ShaderStageFlagBits::Fragment:
-		return PipelineBindPoint::Graphics;
-	case ShaderStageFlagBits::Compute:
-		return PipelineBindPoint::Compute;
-	}
-
-	VERA_ASSERT_MSG(false, "invalid shader stage for pipeline bind point");
-	return {};
 }
 
 static bool push_constant_ranges_overlap(
@@ -121,10 +103,10 @@ static void create_pipeline_layout(const DeviceImpl& device_impl, PipelineLayout
 	pipeline_layout_info.pushConstantRangeCount = static_cast<uint32_t>(vk_pc_ranges.size());
 	pipeline_layout_info.pPushConstantRanges    = vk_pc_ranges.data();
 
-	impl.vkPipelineLayout = device_impl.vkDevice.createPipelineLayout(pipeline_layout_info);
+	impl.vkPipelineLayout  = device_impl.vkDevice.createPipelineLayout(pipeline_layout_info);
 }
 
-static bool check_shader_device(ref<Device> device, array_view<const_ref<Shader>> shaders)
+static bool check_shader_device(ref<Device> device, array_view<cref<Shader>> shaders)
 {
 	if (shaders.empty()) return false;
 	for (const auto& shader : shaders)
@@ -135,7 +117,7 @@ static bool check_shader_device(ref<Device> device, array_view<const_ref<Shader>
 
 static bool check_shader_reflection_device(
 	ref<Device> device,
-	array_view<const_ref<ShaderReflection>> shader_reflections
+	array_view<cref<ShaderReflection>> shader_reflections
 ) {
 	if (shader_reflections.empty()) return false;
 	for (const auto& reflection : shader_reflections)
@@ -155,7 +137,7 @@ static bool check_layout_device(ref<Device> device, array_view<obj<DescriptorSet
 }
 
 static hash_t hash_shaders(
-	array_view<const_ref<Shader>> shaders
+	array_view<cref<Shader>> shaders
 ) {
 	hash_t seed = 0;
 
@@ -166,7 +148,7 @@ static hash_t hash_shaders(
 }
 
 static hash_t hash_shader_reflections(
-	array_view<const_ref<ShaderReflection>> shader_reflections
+	array_view<cref<ShaderReflection>> shader_reflections
 ) {
 	hash_t seed = 1;
 
@@ -196,7 +178,7 @@ static hash_t hash_pipeline_layout(
 	return seed;
 }
 
-const vk::PipelineLayout& get_vk_pipeline_layout(const_ref<PipelineLayout> pipeline_layout) VERA_NOEXCEPT
+const vk::PipelineLayout& get_vk_pipeline_layout(cref<PipelineLayout> pipeline_layout) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(pipeline_layout).vkPipelineLayout;
 }
@@ -206,7 +188,7 @@ vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout) 
 	return CoreObject::getImpl(pipeline_layout).vkPipelineLayout;
 }
 
-obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_ref<Shader>> shaders)
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<cref<Shader>> shaders)
 {
 	if (!device)
 		throw Exception("device is null");
@@ -225,17 +207,19 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_
 		shader_reflections.push_back(ShaderReflection::create(device, shader));
 
 	auto  obj  = PipelineLayout::create(device, 
-		array_view<const_ref<ShaderReflection>>(
-			reinterpret_cast<const const_ref<ShaderReflection>*>(shader_reflections.data()),
+		array_view<cref<ShaderReflection>>(
+			reinterpret_cast<const cref<ShaderReflection>*>(shader_reflections.data()),
 			shader_reflections.size()));
 	auto& impl = getImpl(obj);
 
 	impl.hashValueByShaders = hash_value;
 
+	device_impl.registerCachedObject<PipelineLayout>(impl.hashValueByShaders, obj);
+
 	return obj;
 }
 
-obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const_ref<ProgramReflection> program_reflection)
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, cref<ProgramReflection> program_reflection)
 {
 	if (!device)
 		throw Exception("device is null");
@@ -244,13 +228,13 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const_ref<Program
 
 	auto shader_reflections = program_reflection->enumerateShaderReflections();
 	auto reflection_crefs   = array_view(
-		reinterpret_cast<const const_ref<ShaderReflection>*>(shader_reflections.data()),
+		reinterpret_cast<const cref<ShaderReflection>*>(shader_reflections.data()),
 		shader_reflections.size());
 
 	return PipelineLayout::create(device, reflection_crefs);
 }
 
-obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_ref<ShaderReflection>> shader_reflections)
+obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<cref<ShaderReflection>> shader_reflections)
 {
 	static const auto sort_by_offset = 
 		[](const PushConstantRange& a, const PushConstantRange& b) {
@@ -334,7 +318,8 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, array_view<const_
 
 	create_pipeline_layout(device_impl, impl);
 
-	device_impl.registerCachedObject<PipelineLayout>(hash_value, obj);
+	device_impl.registerCachedObject<PipelineLayout>(impl.hashValue, obj);
+	device_impl.registerCachedObject<PipelineLayout>(impl.hashValueByReflections, obj);
 
 	return obj;
 }
@@ -365,7 +350,7 @@ obj<PipelineLayout> PipelineLayout::create(obj<Device> device, const PipelineLay
 
 	create_pipeline_layout(device_impl, impl);
 	
-	device_impl.registerCachedObject<PipelineLayout>(hash_value, obj);
+	device_impl.registerCachedObject<PipelineLayout>(impl.hashValue, obj);
 
 	return obj;
 }
@@ -450,12 +435,12 @@ array_view<PushConstantRange> PipelineLayout::getPushConstantRanges() const VERA
 	return getImpl(this).pushConstantRanges;
 }
 
-bool PipelineLayout::isCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT
+bool PipelineLayout::isCompatible(cref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT
 {
 	return isDescriptorSetLayoutCompatible(pipeline_layout) && isPushConstantCompatible(pipeline_layout);
 }
 
-bool PipelineLayout::isDescriptorSetLayoutCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT
+bool PipelineLayout::isDescriptorSetLayoutCompatible(cref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT
 {
 	auto& lhs_impl = getImpl(this);
 	auto& rhs_impl = getImpl(pipeline_layout);
@@ -469,7 +454,7 @@ bool PipelineLayout::isDescriptorSetLayoutCompatible(const_ref<PipelineLayout> p
 	);
 }
 
-bool PipelineLayout::isPushConstantCompatible(const_ref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT
+bool PipelineLayout::isPushConstantCompatible(cref<PipelineLayout> pipeline_layout) const VERA_NOEXCEPT
 {
 	auto& lhs_impl = getImpl(this);
 	auto& rhs_impl = getImpl(pipeline_layout);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "include_vulkan.h"
+#include "../../include/vera/core/logger.h"
 #include "../../include/vera/core/core_object.h"
 #include "../../include/vera/core/exception.h"
 #include "../../include/vera/core/enum_types.h"
@@ -46,41 +47,41 @@ class Context;
 		class Texture;
 		class TextureView;
 
-const vk::Instance& get_vk_instance(const_ref<Context> context) VERA_NOEXCEPT;
+const vk::Instance& get_vk_instance(cref<Context> context) VERA_NOEXCEPT;
 vk::Instance& get_vk_instance(ref<Context> context) VERA_NOEXCEPT;
-const vk::Device& get_vk_device(const_ref<Device> device) VERA_NOEXCEPT;
+const vk::Device& get_vk_device(cref<Device> device) VERA_NOEXCEPT;
 vk::Device& get_vk_device(ref<Device> device) VERA_NOEXCEPT;
-const vk::Pipeline& get_vk_pipeline(const_ref<Pipeline> pipeline) VERA_NOEXCEPT;
+const vk::Pipeline& get_vk_pipeline(cref<Pipeline> pipeline) VERA_NOEXCEPT;
 vk::Pipeline& get_vk_pipeline(ref<Pipeline> pipeline) VERA_NOEXCEPT;
-const vk::PipelineLayout& get_vk_pipeline_layout(const_ref<PipelineLayout> pipeline_layout) VERA_NOEXCEPT;
+const vk::PipelineLayout& get_vk_pipeline_layout(cref<PipelineLayout> pipeline_layout) VERA_NOEXCEPT;
 vk::PipelineLayout& get_vk_pipeline_layout(ref<PipelineLayout> pipeline_layout) VERA_NOEXCEPT;
-const vk::ShaderModule& get_vk_shader_module(const_ref<Shader> shader) VERA_NOEXCEPT;
+const vk::ShaderModule& get_vk_shader_module(cref<Shader> shader) VERA_NOEXCEPT;
 vk::ShaderModule& get_vk_shader_module(ref<Shader> shader) VERA_NOEXCEPT;
-const vk::CommandBuffer& get_vk_command_buffer(const_ref<CommandBuffer> cmd_buffer) VERA_NOEXCEPT;
+const vk::CommandBuffer& get_vk_command_buffer(cref<CommandBuffer> cmd_buffer) VERA_NOEXCEPT;
 vk::CommandBuffer& get_vk_command_buffer(ref<CommandBuffer> cmd_buffer) VERA_NOEXCEPT;
-const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT;
+const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(cref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT;
 vk::DescriptorSetLayout& get_vk_descriptor_set_layout(ref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT;
-const vk::DescriptorPool& get_vk_descriptor_pool(const_ref<DescriptorPool> descriptor_pool) VERA_NOEXCEPT;
+const vk::DescriptorPool& get_vk_descriptor_pool(cref<DescriptorPool> descriptor_pool) VERA_NOEXCEPT;
 vk::DescriptorPool& get_vk_descriptor_pool(ref<DescriptorPool> descriptor_pool) VERA_NOEXCEPT;
-const vk::DescriptorSet& get_vk_descriptor_set(const_ref<DescriptorSet> descriptor_set) VERA_NOEXCEPT;
+const vk::DescriptorSet& get_vk_descriptor_set(cref<DescriptorSet> descriptor_set) VERA_NOEXCEPT;
 vk::DescriptorSet& get_vk_descriptor_set(ref<DescriptorSet> descriptor_set) VERA_NOEXCEPT;
-const vk::Fence& get_vk_fence(const_ref<Fence> fence) VERA_NOEXCEPT;
+const vk::Fence& get_vk_fence(cref<Fence> fence) VERA_NOEXCEPT;
 vk::Fence& get_vk_fence(ref<Fence> fence) VERA_NOEXCEPT;
-const vk::Semaphore& get_vk_semaphore(const_ref<Semaphore> semaphore) VERA_NOEXCEPT;
+const vk::Semaphore& get_vk_semaphore(cref<Semaphore> semaphore) VERA_NOEXCEPT;
 vk::Semaphore& get_vk_semaphore(ref<Semaphore> semaphore) VERA_NOEXCEPT;
-const vk::Semaphore& get_vk_semaphore(const_ref<TimelineSemaphore> timeline_semaphore) VERA_NOEXCEPT;
+const vk::Semaphore& get_vk_semaphore(cref<TimelineSemaphore> timeline_semaphore) VERA_NOEXCEPT;
 vk::Semaphore& get_vk_semaphore(ref<TimelineSemaphore> timeline_semaphore) VERA_NOEXCEPT;
-const vk::Sampler& get_vk_sampler(const_ref<Sampler> sampler) VERA_NOEXCEPT;
+const vk::Sampler& get_vk_sampler(cref<Sampler> sampler) VERA_NOEXCEPT;
 vk::Sampler& get_vk_sampler(ref<Sampler> sampler) VERA_NOEXCEPT;
-const vk::DeviceMemory& get_vk_device_memory(const_ref<DeviceMemory> device_memory) VERA_NOEXCEPT;
+const vk::DeviceMemory& get_vk_device_memory(cref<DeviceMemory> device_memory) VERA_NOEXCEPT;
 vk::DeviceMemory& get_vk_device_memory(ref<DeviceMemory> device_memory) VERA_NOEXCEPT;
-const vk::Buffer& get_vk_buffer(const_ref<Buffer> buffer) VERA_NOEXCEPT;
+const vk::Buffer& get_vk_buffer(cref<Buffer> buffer) VERA_NOEXCEPT;
 vk::Buffer& get_vk_buffer(ref<Buffer> buffer) VERA_NOEXCEPT;
-const vk::BufferView& get_vk_buffer_view(const_ref<BufferView> buffer_view) VERA_NOEXCEPT;
+const vk::BufferView& get_vk_buffer_view(cref<BufferView> buffer_view) VERA_NOEXCEPT;
 vk::BufferView& get_vk_buffer_view(ref<BufferView> buffer_view) VERA_NOEXCEPT;
-const vk::Image& get_vk_image(const_ref<Texture> texture) VERA_NOEXCEPT;
+const vk::Image& get_vk_image(cref<Texture> texture) VERA_NOEXCEPT;
 vk::Image& get_vk_image(ref<Texture> texture) VERA_NOEXCEPT;
-const vk::ImageView& get_vk_image_view(const_ref<TextureView> texture_view) VERA_NOEXCEPT;
+const vk::ImageView& get_vk_image_view(cref<TextureView> texture_view) VERA_NOEXCEPT;
 vk::ImageView& get_vk_image_view(ref<TextureView> texture_view) VERA_NOEXCEPT;
 
 static vk::DeviceFaultAddressTypeEXT to_vk_device_fault_address_type(DeviceFaultAddressType type) VERA_NOEXCEPT
@@ -210,8 +211,8 @@ static vk::DescriptorBindingFlags to_vk_descriptor_binding_flags(DescriptorSetLa
 
 static vk::DescriptorType to_vk_descriptor_type(DescriptorType type)
 {
-	VERA_ASSERT(type != DescriptorType::Unknown);
-	return static_cast<vk::DescriptorType>(static_cast<uint32_t>(type) - 1);
+	// vr::DescriptorType is VERA_VK_ABI_COMPATIBLE with vk::DescriptorType
+	return static_cast<vk::DescriptorType>(static_cast<uint32_t>(type));
 }
 
 static vk::DescriptorPoolCreateFlags to_vk_descriptor_pool_create_flags(DescriptorPoolCreateFlags flags)

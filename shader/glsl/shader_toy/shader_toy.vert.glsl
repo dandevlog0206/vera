@@ -4,12 +4,12 @@ layout (location=0) out vec2 outUV;
 
 vec2 vertices[] =
 {
-	vec2(-1.f, +1.f),
-	vec2(+1.f, +1.f),
-	vec2(+1.f, -1.f),
-	vec2(-1.f, +1.f),
 	vec2(-1.f, -1.f),
 	vec2(+1.f, -1.f),
+	vec2(+1.f, +1.f),
+	vec2(-1.f, -1.f),
+	vec2(-1.f, +1.f),
+	vec2(+1.f, +1.f),
 };
 
 vec2 uvs[] =

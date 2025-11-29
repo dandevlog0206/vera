@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../core/texture_view.h"
-#include "../core/command_buffer_sync.h"
+#include "../core/command_sync.h"
 #include "../util/rect_packer.h"
 #include "font.h"
 #include <unordered_map>
@@ -58,8 +58,8 @@ public:
 	VERA_NODISCARD uint32_t getTextureCount(uint32_t px) const VERA_NOEXCEPT;
 	VERA_NODISCARD extent2d getTextureSize() const VERA_NOEXCEPT;
 
-	CommandBufferSync loadGlyphRange(const basic_range<GlyphID>& range, uint32_t px);
-	CommandBufferSync loadCodeRange(const CodeRange& range, uint32_t px);
+	CommandSync loadGlyphRange(const basic_range<GlyphID>& range, uint32_t px);
+	CommandSync loadCodeRange(const CodeRange& range, uint32_t px);
 
 	VERA_NODISCARD const PackedGlyph& getGlyph(char32_t codepoint, uint32_t px);
 

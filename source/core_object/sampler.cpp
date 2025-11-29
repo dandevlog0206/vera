@@ -44,7 +44,7 @@ static size_t hash_sampler(const SamplerCreateInfo& info)
 	return seed;
 }
 
-const vk::Sampler& get_vk_sampler(const_ref<Sampler> sampler) VERA_NOEXCEPT
+const vk::Sampler& get_vk_sampler(cref<Sampler> sampler) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(sampler).vkSampler;
 }

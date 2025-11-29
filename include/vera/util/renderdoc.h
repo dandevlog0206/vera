@@ -221,12 +221,12 @@ public:
 	static bool isTargetControlConnected();
 	static bool launchReplayUI(uint32_t connectTargetControl, const char* cmdline);
 
-	static void setActiveWindow(const_ref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
+	static void setActiveWindow(cref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
 
-	static void startFrameCapture(const_ref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
+	static void startFrameCapture(cref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
 	static bool isFrameCapturing();
-	static bool endFrameCapture(const_ref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
-	static bool discardFrameCapture(const_ref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
+	static bool endFrameCapture(cref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
+	static bool discardFrameCapture(cref<Context> context = nullptr, const os::Window* wndHandle = nullptr);
 
 	static void setCaptureFileComments(const char* filePath, const char* comments);
 	static void showReplayUI();

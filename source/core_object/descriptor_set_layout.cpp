@@ -62,7 +62,7 @@ static hash_t hash_descriptor_set_layout(const DescriptorSetLayoutCreateInfo& in
 	return seed;
 }
 
-const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(const_ref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT
+const vk::DescriptorSetLayout& get_vk_descriptor_set_layout(cref<DescriptorSetLayout> set_layout) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(set_layout).vkDescriptorSetLayout;
 }
@@ -163,7 +163,7 @@ const DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(uint32_t bindi
 	return *getImpl(this).bindingMap.at(binding);
 }
 
-const std::vector<DescriptorSetLayoutBinding>& DescriptorSetLayout::getBindings() const VERA_NOEXCEPT
+array_view<DescriptorSetLayoutBinding> DescriptorSetLayout::enumerateBindings() const VERA_NOEXCEPT
 {
 	return getImpl(this).bindings;
 }

@@ -52,7 +52,7 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Gr
 	if (info.pipelineLayout)
 		return info.pipelineLayout;
 
-	static_vector<const_ref<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
+	static_vector<cref<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
 	
 	check_shader_stage(info.vertexShader, ShaderStageFlagBits::Vertex);
 	check_shader_stage(info.fragmentShader, ShaderStageFlagBits::Fragment);
@@ -81,7 +81,7 @@ static obj<PipelineLayout> register_pipeline_layout(obj<Device> device, const Me
 	if (info.pipelineLayout)
 		return info.pipelineLayout;
 
-	static_vector<const_ref<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
+	static_vector<cref<Shader>, MAX_SHADER_STAGE_COUNT> shaders;
 
 	check_shader_stage(info.meshShader, ShaderStageFlagBits::Mesh);
 	check_shader_stage(info.fragmentShader, ShaderStageFlagBits::Fragment);
@@ -447,7 +447,7 @@ static hash_t hash_pipeline_info(const ComputePipelineCreateInfo& info)
 	return seed;
 }
 
-const vk::Pipeline& get_vk_pipeline(const_ref<Pipeline> pipeline) VERA_NOEXCEPT
+const vk::Pipeline& get_vk_pipeline(cref<Pipeline> pipeline) VERA_NOEXCEPT
 {
 	return CoreObject::getImpl(pipeline).vkPipeline;
 }
